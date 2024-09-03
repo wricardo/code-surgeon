@@ -15,7 +15,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/wricardo/structparser"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
@@ -202,9 +201,9 @@ func upsertDeclaration(file *ast.File, newDecl ast.Decl, overwrite bool) {
 			}
 
 			if existing.Name.Name == newFunc.Name.Name {
-				fmt.Printf("newDecl\n%s", spew.Sdump(newDecl))   // TODO: wallace debug
-				fmt.Printf("existing\n%s", spew.Sdump(existing)) // TODO: wallace debug
-				fmt.Printf("newFunc\n%s", spew.Sdump(newFunc))   // TODO: wallace debug
+				// fmt.Printf("newDecl\n%s", spew.Sdump(newDecl))   // TODO: wallace debug
+				// fmt.Printf("existing\n%s", spew.Sdump(existing)) // TODO: wallace debug
+				// fmt.Printf("newFunc\n%s", spew.Sdump(newFunc))   // TODO: wallace debug
 
 				existingRecv := getReceiverType(existing)
 				newRecv := getReceiverType(newFunc)

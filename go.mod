@@ -3,7 +3,6 @@ module github.com/wricardo/code-surgeon
 go 1.23.0
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/instructor-ai/instructor-go v0.0.0-20240827181533-b63ca60f159b
 	github.com/sashabaranov/go-openai v1.29.0
 	github.com/stretchr/testify v1.8.4
@@ -15,6 +14,7 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cohere-ai/cohere-go/v2 v2.8.1 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
