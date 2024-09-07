@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	codesurgeon "github.com/wricardo/code-surgeon"
 	structparser "github.com/wricardo/structparser"
@@ -15,29 +16,36 @@ func main() {
 	}
 	pkg := tmp.Packages[0]
 
-	fragments := []codesurgeon.CodeFragment{}
-
 	for _, s := range pkg.Functions {
 		if len(s.Docs) > 0 && len(s.Docs[0]) > 0 {
 			continue
 		}
-		fmt.Println(s.Signature + " needs doc")
-		content := "// " + s.Name + " my automatic comment\nfunc " + s.Signature + s.Body
-		fmt.Println(content)
-		fragments = append(fragments, codesurgeon.CodeFragment{
-			Content:   content,
-			Overwrite: true,
-		})
+		content := "" + s.Name + " my automatic comment"
+		modified, err := codesurgeon.UpsertDocumentationToFunction("other.go", "", s.Name, content)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if modified {
+			fmt.Println("Documentation added to function", s.Name)
+		}
 
 	}
 
-	fmap := map[string][]codesurgeon.CodeFragment{
-		"other.go": fragments,
+	for _, s := range pkg.Structs {
+		for _, m := range s.Methods {
+			content := "" + m.Name + " my automatic comment for method for struct " + s.Name
+			m.Receiver = strings.Replace(m.Receiver, "*", "", -1)
+			modified, err := codesurgeon.UpsertDocumentationToFunction("other.go", m.Receiver, m.Name, content)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			if modified {
+				fmt.Println("Documentation added to method", m.Name)
+			}
+		}
+
 	}
 
-	err = codesurgeon.InsertCodeFragments(fmap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 }

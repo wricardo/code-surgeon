@@ -2,6 +2,7 @@ package codesurgeon
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/format"
@@ -208,8 +209,9 @@ func upsertDeclaration(file *ast.File, newDecl ast.Decl, overwrite bool) {
 				existingRecv := getReceiverType(existing)
 				newRecv := getReceiverType(newFunc)
 				if existingRecv == newRecv {
+					// Add a default comment if none exists
+					// AddDocumentationToFunc(file, existing.Name.Name, fmt.Sprintf("%s auto-generated documentation", existing.Name.Name))
 					if overwrite {
-						existing.Doc = newFunc.Doc
 						c.Replace(newDecl)
 					}
 					shouldAppend = false
@@ -431,6 +433,121 @@ func FormatWithGoImports(filename string) error {
 	// Run the command
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run goimports: %v, stderr: %s", err, stderr.String())
+	}
+
+	return nil
+}
+
+// UpsertDocumentationToFunction uses Comby to upsert documentation in a function. Replace the existing documentation if it exists.
+// It returns true if the documentation was updated, false otherwise.
+func UpsertDocumentationToFunction(filePath, receiver, functionName, documentation string) (bool, error) {
+	type matchRewrite struct {
+		Match    string
+		Rewrite  string
+		Rule     string
+		Continue bool
+	}
+
+	mrs := []matchRewrite{}
+
+	documentation = fmt.Sprintf("// %s", strings.ReplaceAll(documentation, "\n", "\n// "))
+
+	if receiver != "" {
+		// Patterns for methods associated with a struct
+		mrs = append(mrs,
+			// // Replace existing documentation above a method
+			matchRewrite{
+				Match:    fmt.Sprintf(":[comments~(//[^\n]*\n)*]func (:[receiver] %s) %s(:[args]) :[rest]", receiver, functionName),
+				Rewrite:  fmt.Sprintf("func (:[receiver] %s) %s(:[args]) :[rest]", receiver, functionName),
+				Rule:     fmt.Sprintf("where rewrite :[comments] { \"//:[comment]\" -> \"%s\" }", documentation),
+				Continue: true,
+			},
+			// // Replace existing documentation above a method with Pointer receiver
+			matchRewrite{
+				Match:    fmt.Sprintf(":[comments~(//[^\n]*\n)*]func (:[receiver] *%s) %s(:[args]) :[rest]", receiver, functionName),
+				Rewrite:  fmt.Sprintf("func (:[receiver] *%s) %s(:[args]) :[rest]", receiver, functionName),
+				Rule:     fmt.Sprintf("where rewrite :[comments] { \"//:[comment]\" -> \"%s\" }", documentation),
+				Continue: true,
+			},
+			// Add new documentation to a method without documentation
+			matchRewrite{
+				Match:   fmt.Sprintf(":[a~\n]:[b~\n]func (:[receiver]%s) %s(:[c])", receiver, functionName),
+				Rewrite: fmt.Sprintf(":[a]%s\nfunc (:[receiver]%s) %s(:[c])", documentation, receiver, functionName),
+			},
+			// Add new documentation to a method without documentation with Pointer receiver
+			matchRewrite{
+				Match:   fmt.Sprintf(":[a~\n]:[b~\n]func (:[receiver]*%s) %s(:[c])", receiver, functionName),
+				Rewrite: fmt.Sprintf(":[a]%s\nfunc (:[receiver]*%s) %s(:[c])", documentation, receiver, functionName),
+			},
+		)
+	} else {
+		// Updated Match, Rewrite, and Rule
+		mrs = append(mrs,
+			matchRewrite{
+				Match:    fmt.Sprintf(":[comments~(//[^\n]*\n)*]func %s(:[args]) :[rest]", functionName),
+				Rewrite:  fmt.Sprintf("func %s(:[args]) :[rest]", functionName),
+				Rule:     fmt.Sprintf("where rewrite :[comments] { \"//:[comment]\" -> \"// %s\" }", documentation),
+				Continue: true,
+			},
+			matchRewrite{
+				Match:   fmt.Sprintf(":[a~\n]:[b~\n]func %s(:[c])", functionName),
+				Rewrite: fmt.Sprintf(":[a]%s:[b]func %s(:[c])", documentation, functionName),
+			},
+		)
+	}
+
+	modified := false
+	for _, mr := range mrs {
+		args := []string{mr.Match, mr.Rewrite, filePath, "-json-lines", "-match-newline-at-toplevel", "-matcher", ".go"}
+		if mr.Rule != "" {
+			args = append(args, "-rule", mr.Rule)
+		}
+		cmd := exec.Command("comby", args...)
+
+		output, err := cmd.CombinedOutput()
+		outputStr := string(output)
+		if err != nil {
+			return modified, fmt.Errorf("failed to run comby: %w, output: %s", err, string(output))
+		}
+
+		if outputStr != "" {
+			expectedOutput := &struct {
+				RewrittenSource string `json:"rewritten_source"`
+			}{}
+			if err := json.Unmarshal(output, expectedOutput); err != nil {
+				return modified, fmt.Errorf("failed to unmarshal comby output: %w", err)
+			}
+			if expectedOutput.RewrittenSource == "" {
+				continue
+			}
+			err = writeFile(filePath, expectedOutput.RewrittenSource)
+			if err != nil {
+				return modified, fmt.Errorf("failed to write file: %w", err)
+			}
+			modified = true
+			if !mr.Continue {
+				return modified, nil
+			}
+		}
+	}
+
+	return modified, nil
+}
+
+// writeFile writes the given content to the specified file path.
+// If the file does not exist, it creates a new one. If it exists, it overwrites the file.
+func writeFile(filePath, content string) error {
+	// Create or open the file with write permissions.
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	// Write content to the file.
+	_, err = file.WriteString(content)
+	if err != nil {
+		return fmt.Errorf("failed to write content to file: %w", err)
 	}
 
 	return nil

@@ -591,7 +591,8 @@ func getMapStructsFieldsType(content string) map[string]map[string]string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, s := range parsed.Structs {
+
+	for _, s := range parsed.Packages[0].Structs {
 		structs[s.Name] = map[string]string{}
 		for _, f := range s.Fields {
 			structs[s.Name][f.Name] = f.Type
