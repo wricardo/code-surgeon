@@ -33,7 +33,7 @@ func MyFunction() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "", "MyFunction", "This is a new documentation")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "", "MyFunction", "// This is a new documentation")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -66,7 +66,7 @@ func MyFunction() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "", "MyFunction", "This is a new documentation")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "", "MyFunction", "// This is a new documentation")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -104,7 +104,7 @@ func (_ *MyStruct) MyMethod() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "This is a new documentation for MyMethod")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "// This is a new documentation for MyMethod")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -138,7 +138,7 @@ func (m MyStruct) MyMethod() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "This is a new documentation for MyMethod")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "// This is a new documentation for MyMethod")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -173,7 +173,7 @@ func (m *MyStruct) MyMethod() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "This is a new documentation for MyMethod")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "// This is a new documentation for MyMethod")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -207,7 +207,7 @@ func (m *MyStruct) MyMethod() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "This is a new documentation for MyMethod")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyMethod", "// This is a new documentation for MyMethod")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -246,7 +246,7 @@ func MyFunction() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation for the standalone function only
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "", "MyFunction", "This is a new documentation for the function")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "", "MyFunction", "// This is a new documentation for the function")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -294,7 +294,7 @@ func MyFunction() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation for the method only
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyFunction", "This is a new documentation for the method")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct", "MyFunction", "// This is a new documentation for the method")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -345,7 +345,7 @@ func (m *MyStruct2) MyFunction() {
 	defer os.Remove(tmpfile.Name()) // Clean up
 
 	// Call the function to upsert documentation for the method only in MyStruct1
-	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct1", "MyFunction", "This is new documentation for MyStruct1.MyFunction")
+	modified, err := UpsertDocumentationToFunction(tmpfile.Name(), "MyStruct1", "MyFunction", "// This is new documentation for MyStruct1.MyFunction")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

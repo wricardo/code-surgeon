@@ -16,7 +16,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/wricardo/structparser"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 )
@@ -79,7 +78,7 @@ func InsertCodeFragments(implementationsMap map[string][]CodeFragment) error {
 
 		// // Process each change separately
 		for _, fragment := range fragments {
-			decls, err := parseDeclarations(fragment)
+			decls, err := parseDeclarationsFromCodeFrament(fragment)
 			if err != nil {
 				fmt.Printf("Failed to parse change: %v\n", err)
 				continue
@@ -143,8 +142,7 @@ func FormatCodeAndFixImports(filePath string) error {
 	return nil
 }
 
-// Parse multiple declarations from a string
-func parseDeclarations(f CodeFragment) ([]ast.Decl, error) {
+func parseDeclarationsFromCodeFrament(f CodeFragment) ([]ast.Decl, error) {
 	code := strings.TrimSpace(f.Content)
 	// check if no package is defined
 	if !strings.HasPrefix(code, "package") {
@@ -185,7 +183,7 @@ func upsertDeclaration(file *ast.File, newDecl ast.Decl, overwrite bool) {
 
 			// Handle type declarations
 			if ts, ok := existing.Specs[0].(*ast.TypeSpec); ok {
-				if ts.Name.Name == getTypeName(newDecl) {
+				if ts.Name.Name == getDeclName(newDecl) {
 					if overwrite {
 						c.Replace(newDecl)
 					}
@@ -250,18 +248,15 @@ func getReceiverType(funcDecl *ast.FuncDecl) string {
 	}
 	return ""
 }
-func getTypeName(decl ast.Decl) string {
+
+func getDeclName(decl ast.Decl) string {
+	if fd, ok := decl.(*ast.FuncDecl); ok {
+		return fd.Name.Name
+	}
 	if gd, ok := decl.(*ast.GenDecl); ok {
 		if ts, ok := gd.Specs[0].(*ast.TypeSpec); ok {
 			return ts.Name.Name
 		}
-	}
-	return ""
-}
-
-func getFuncName(decl ast.Decl) string {
-	if fd, ok := decl.(*ast.FuncDecl); ok {
-		return fd.Name.Name
 	}
 	return ""
 }
@@ -291,121 +286,6 @@ func renderModifiedNode(fset *token.FileSet, node ast.Node) (string, error) {
 	return buf.String(), nil
 }
 
-func GenerateCypher(output structparser.Output) ([]string, error) {
-
-	var cypherQueries []string
-
-	// // Prepare inline data for batch operations
-	// var structsData []string
-	// var fieldsData []string
-	// var methodsData []string
-	// var functionsData []string
-	// var paramsData []string
-	// var returnsData []string
-
-	// for _, p := range output.Packages {
-	// 	// Collect data for structs
-	// 	for _, s := range p.Structs {
-	// 		structsData = append(structsData, fmt.Sprintf("{name: '%s'}", s.Name))
-
-	// 		// Collect data for fields
-	// 		for _, f := range s.Fields {
-	// 			fieldsData = append(fieldsData, fmt.Sprintf(
-	// 				"{structName: '%s', name: '%s', type: '%s', private: %t, pointer: %t, slice: %t, comment: '%s'}",
-	// 				s.Name, f.Name, f.Type, f.Private, f.Pointer, f.Slice, f.Comment,
-	// 			))
-	// 		}
-
-	// 		// Collect data for methods
-	// 		for _, m := range s.Methods {
-	// 			methodsData = append(methodsData, fmt.Sprintf(
-	// 				"{structName: '%s', name: '%s', receiver: '%s', signature: '%s'}",
-	// 				s.Name, m.Name, m.Receiver, m.Signature,
-	// 			))
-	// 		}
-	// 	}
-
-	// 	// Collect data for functions
-	// 	for _, f := range p.Functions {
-	// 		functionsData = append(functionsData, fmt.Sprintf("{name: '%s', signature: '%s'}", f.Name, f.Signature))
-
-	// 		// Collect data for parameters
-	// 		for _, p := range f.Params {
-	// 			paramsData = append(paramsData, fmt.Sprintf(
-	// 				"{functionName: '%s', name: '%s', type: '%s'}",
-	// 				f.Name, p.Name, p.Type,
-	// 			))
-	// 		}
-
-	// 		// Collect data for return values
-	// 		for _, r := range f.Returns {
-	// 			returnsData = append(returnsData, fmt.Sprintf(
-	// 				"{functionName: '%s', name: '%s', type: '%s'}",
-	// 				f.Name, r.Name, r.Type,
-	// 			))
-	// 		}
-	// 	}
-	// }
-
-	// // Batch creation of Struct nodes
-	// cypherQueries = append(cypherQueries, fmt.Sprintf(`
-	// UNWIND [%s] AS structData
-	// CREATE (:Struct {name: structData.name});
-	// `, strings.Join(structsData, ", ")))
-
-	// // Batch creation of Field nodes and relationships
-	// cypherQueries = append(cypherQueries, fmt.Sprintf(`
-	// UNWIND [%s] AS fieldData
-	// MATCH (s:Struct {name: fieldData.structName})
-	// CREATE (f:Field {name: fieldData.name, type: fieldData.type, private: fieldData.private, pointer: fieldData.pointer, slice: fieldData.slice, comment: fieldData.comment})
-	// CREATE (s)-[:HAS_FIELD]->(f);
-	// `, strings.Join(fieldsData, ", ")))
-
-	// // Batch creation of Method nodes and relationships
-	// cypherQueries = append(cypherQueries, fmt.Sprintf(`
-	// UNWIND [%s] AS methodData
-	// MATCH (s:Struct {name: methodData.structName})
-	// CREATE (m:Method {name: methodData.name, receiver: methodData.receiver, signature: methodData.signature})
-	// CREATE (s)-[:HAS_METHOD]->(m);
-	// `, strings.Join(methodsData, ", ")))
-
-	// // Batch creation of Function nodes
-	// cypherQueries = append(cypherQueries, fmt.Sprintf(`
-	// UNWIND [%s] AS functionData
-	// CREATE (:Function {name: functionData.name, signature: functionData.signature});
-	// `, strings.Join(functionsData, ", ")))
-
-	// // Batch creation of Parameter nodes and relationships
-	// cypherQueries = append(cypherQueries, fmt.Sprintf(`
-	// UNWIND [%s] AS paramData
-	// MATCH (f:Function {name: paramData.functionName})
-	// CREATE (p:Param {name: paramData.name, type: paramData.type})
-	// CREATE (f)-[:HAS_PARAM]->(p);
-	// `, strings.Join(paramsData, ", ")))
-
-	// // Batch creation of Return nodes and relationships
-	// cypherQueries = append(cypherQueries, fmt.Sprintf(`
-	// UNWIND [%s] AS returnData
-	// MATCH (f:Function {name: returnData.functionName})
-	// CREATE (r:Return {name: returnData.name, type: returnData.type})
-	// CREATE (f)-[:HAS_RETURN]->(r);
-	// `, strings.Join(returnsData, ", ")))
-
-	return cypherQueries, nil
-}
-
-func EnsureFileExists(filename string, packageName string) error {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		if f, err := os.Create(filename); err != nil {
-			return fmt.Errorf("Failed to create file: %v", err)
-		} else {
-			f.Write([]byte("package " + packageName + "\n"))
-			defer f.Close()
-		}
-	}
-	return nil
-}
-
 func ToSnakeCase(s string) string {
 	var result []rune
 	for i, c := range s {
@@ -417,30 +297,36 @@ func ToSnakeCase(s string) string {
 	return strings.ToLower(string(result))
 }
 
-func FormatWithGoImports(filename string) error {
-	// Check if the file exists
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return fmt.Errorf("file does not exist: %s", filename)
+// FindFunction uses Comby to find a function in a directory.
+// returns the file path and nil error if found
+// returns empty string and nil error if not found
+// returns empty string and error if there was an error
+func FindFunction(directory, receiver, functionName string) (foundFilePath string, err error) {
+	// Walk through the directory to find Go files
+	err = filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// Check if the file is a Go file
+		if !info.IsDir() && filepath.Ext(path) == ".go" {
+			found, err := findFunctionInFile(path, receiver, functionName)
+			if err != nil {
+				return err
+			}
+			if found {
+				foundFilePath = path
+				return filepath.SkipDir // Stop searching further as we found the function
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
-
-	// Prepare the command to run `goimports`
-	cmd := exec.Command("goimports", "-w", filename) // "-w" flag to write result to the file
-
-	// Capture the output and error
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	// Run the command
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run goimports: %v, stderr: %s", err, stderr.String())
-	}
-
-	return nil
+	return foundFilePath, nil
 }
 
-// UpsertDocumentationToFunction uses Comby to upsert documentation in a function. Replace the existing documentation if it exists.
-// It returns true if the documentation was updated, false otherwise.
-func UpsertDocumentationToFunction(filePath, receiver, functionName, documentation string) (bool, error) {
+func findFunctionInFile(filePath, receiver, functionName string) (bool, error) {
 	type matchRewrite struct {
 		Match    string
 		Rewrite  string
@@ -450,53 +336,30 @@ func UpsertDocumentationToFunction(filePath, receiver, functionName, documentati
 
 	mrs := []matchRewrite{}
 
-	documentation = fmt.Sprintf("// %s", strings.ReplaceAll(documentation, "\n", "\n// "))
-
 	if receiver != "" {
 		// Patterns for methods associated with a struct
 		mrs = append(mrs,
-			// // Replace existing documentation above a method
-			matchRewrite{
-				Match:    fmt.Sprintf(":[comments~(//[^\n]*\n)*]func (:[receiver] %s) %s(:[args]) :[rest]", receiver, functionName),
-				Rewrite:  fmt.Sprintf("func (:[receiver] %s) %s(:[args]) :[rest]", receiver, functionName),
-				Rule:     fmt.Sprintf("where rewrite :[comments] { \"//:[comment]\" -> \"%s\" }", documentation),
-				Continue: true,
-			},
-			// // Replace existing documentation above a method with Pointer receiver
-			matchRewrite{
-				Match:    fmt.Sprintf(":[comments~(//[^\n]*\n)*]func (:[receiver] *%s) %s(:[args]) :[rest]", receiver, functionName),
-				Rewrite:  fmt.Sprintf("func (:[receiver] *%s) %s(:[args]) :[rest]", receiver, functionName),
-				Rule:     fmt.Sprintf("where rewrite :[comments] { \"//:[comment]\" -> \"%s\" }", documentation),
-				Continue: true,
-			},
 			// Add new documentation to a method without documentation
 			matchRewrite{
-				Match:   fmt.Sprintf(":[a~\n]:[b~\n]func (:[receiver]%s) %s(:[c])", receiver, functionName),
-				Rewrite: fmt.Sprintf(":[a]%s\nfunc (:[receiver]%s) %s(:[c])", documentation, receiver, functionName),
+				Match:   fmt.Sprintf("func (:[receiver]%s) %s(:[c])", receiver, functionName),
+				Rewrite: "nop",
 			},
 			// Add new documentation to a method without documentation with Pointer receiver
 			matchRewrite{
-				Match:   fmt.Sprintf(":[a~\n]:[b~\n]func (:[receiver]*%s) %s(:[c])", receiver, functionName),
-				Rewrite: fmt.Sprintf(":[a]%s\nfunc (:[receiver]*%s) %s(:[c])", documentation, receiver, functionName),
+				Match:   fmt.Sprintf("func (:[receiver]*%s) %s(:[c])", receiver, functionName),
+				Rewrite: "nop",
 			},
 		)
 	} else {
 		// Updated Match, Rewrite, and Rule
 		mrs = append(mrs,
 			matchRewrite{
-				Match:    fmt.Sprintf(":[comments~(//[^\n]*\n)*]func %s(:[args]) :[rest]", functionName),
-				Rewrite:  fmt.Sprintf("func %s(:[args]) :[rest]", functionName),
-				Rule:     fmt.Sprintf("where rewrite :[comments] { \"//:[comment]\" -> \"// %s\" }", documentation),
-				Continue: true,
-			},
-			matchRewrite{
-				Match:   fmt.Sprintf(":[a~\n]:[b~\n]func %s(:[c])", functionName),
-				Rewrite: fmt.Sprintf(":[a]%s:[b]func %s(:[c])", documentation, functionName),
+				Match:   fmt.Sprintf("func %s(:[c])", functionName),
+				Rewrite: "nop",
 			},
 		)
 	}
 
-	modified := false
 	for _, mr := range mrs {
 		args := []string{mr.Match, mr.Rewrite, filePath, "-json-lines", "-match-newline-at-toplevel", "-matcher", ".go"}
 		if mr.Rule != "" {
@@ -507,7 +370,7 @@ func UpsertDocumentationToFunction(filePath, receiver, functionName, documentati
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
 		if err != nil {
-			return modified, fmt.Errorf("failed to run comby: %w, output: %s", err, string(output))
+			return false, fmt.Errorf("failed to run comby: %w, output: %s", err, string(output))
 		}
 
 		if outputStr != "" {
@@ -515,23 +378,16 @@ func UpsertDocumentationToFunction(filePath, receiver, functionName, documentati
 				RewrittenSource string `json:"rewritten_source"`
 			}{}
 			if err := json.Unmarshal(output, expectedOutput); err != nil {
-				return modified, fmt.Errorf("failed to unmarshal comby output: %w", err)
+				return false, fmt.Errorf("failed to unmarshal comby output: %w", err)
 			}
 			if expectedOutput.RewrittenSource == "" {
 				continue
 			}
-			err = writeFile(filePath, expectedOutput.RewrittenSource)
-			if err != nil {
-				return modified, fmt.Errorf("failed to write file: %w", err)
-			}
-			modified = true
-			if !mr.Continue {
-				return modified, nil
-			}
+			return true, nil
 		}
 	}
 
-	return modified, nil
+	return false, nil
 }
 
 // writeFile writes the given content to the specified file path.

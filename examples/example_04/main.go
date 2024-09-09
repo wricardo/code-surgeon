@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	codesurgeon "github.com/wricardo/code-surgeon"
-	structparser "github.com/wricardo/structparser"
 )
 
 type INode interface {
@@ -16,7 +15,7 @@ type INode interface {
 }
 
 func main() {
-	tmp, err := structparser.ParseFile("other.go")
+	tmp, err := codesurgeon.ParseFile("other.go")
 	if err != nil {
 		fmt.Println(err)
 		return
