@@ -1,0 +1,486 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"title": "codesurgeon",
+		"version": "1.0.0"
+	},
+	"paths": {
+		"/codesurgeon.GptService/GetOpenAPI": {
+			"post": {
+				"summary": "GetOpenAPI",
+				"operationId": "codesurgeon.GptService.GetOpenAPI",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.GetOpenAPIRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.GetOpenAPIResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/Introduction": {
+			"post": {
+				"summary": "Introduction",
+				"operationId": "codesurgeon.GptService.Introduction",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.IntroductionRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.IntroductionResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/ParseCodebase": {
+			"post": {
+				"summary": "ParseCodebase",
+				"operationId": "codesurgeon.GptService.ParseCodebase",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ParseCodebaseRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ParseCodebaseResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/SearchForFunction": {
+			"post": {
+				"summary": "SearchForFunction",
+				"operationId": "codesurgeon.GptService.SearchForFunction",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.SearchForFunctionRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.SearchForFunctionResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/UpsertDocumentationToFunction": {
+			"post": {
+				"summary": "UpsertDocumentationToFunction",
+				"operationId": "codesurgeon.GptService.UpsertDocumentationToFunction",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.UpsertDocumentationToFunctionRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.UpsertDocumentationToFunctionResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/UpsertCodeBlock": {
+			"post": {
+				"summary": "UpsertCodeBlock",
+				"operationId": "codesurgeon.GptService.UpsertCodeBlock",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"codesurgeon.GetOpenAPIRequest": {
+				"type": "object",
+				"properties": {
+				}
+			},
+			"codesurgeon.GetOpenAPIResponse": {
+				"type": "object",
+				"properties": {
+					"openapi": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.IntroductionRequest": {
+				"type": "object",
+				"properties": {
+					"short": {
+						"type": "boolean"
+					}
+				}
+			},
+			"codesurgeon.IntroductionResponse": {
+				"type": "object",
+				"properties": {
+					"introduction": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.SearchForFunctionRequest": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"function_name": {
+						"type": "string"
+					},
+					"receiver": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.SearchForFunctionResponse": {
+				"type": "object",
+				"properties": {
+					"filepath": {
+						"type": "string"
+					},
+					"function_name": {
+						"type": "string"
+					},
+					"documentation": {
+						"type": "string"
+					},
+					"receiver": {
+						"type": "string"
+					},
+					"body": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.UpsertDocumentationToFunctionRequest": {
+				"type": "object",
+				"properties": {
+					"filepath": {
+						"type": "string"
+					},
+					"function_name": {
+						"type": "string"
+					},
+					"documentation": {
+						"type": "string"
+					},
+					"receiver": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.UpsertDocumentationToFunctionResponse": {
+				"type": "object",
+				"properties": {
+					"ok": {
+						"type": "boolean"
+					}
+				}
+			},
+			"codesurgeon.UpsertCodeBlockRequest": {
+				"type": "object",
+				"properties": {
+					"modification": {
+						"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockRequest.Modification"
+					}
+				}
+			},
+			"codesurgeon.UpsertCodeBlockRequest.Modification": {
+				"type": "object",
+				"properties": {
+					"filepath": {
+						"type": "string"
+					},
+					"package_name": {
+						"type": "string"
+					},
+					"code_block": {
+						"type": "string"
+					},
+					"overwrite": {
+						"type": "boolean"
+					}
+				}
+			},
+			"codesurgeon.UpsertCodeBlockResponse": {
+				"type": "object",
+				"properties": {
+					"ok": {
+						"type": "boolean"
+					}
+				}
+			},
+			"codesurgeon.ParseCodebaseRequest": {
+				"type": "object",
+				"properties": {
+					"file_or_directory": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ParseCodebaseResponse": {
+				"type": "object",
+				"properties": {
+					"packages": {
+						"$ref": "#/components/schemas/codesurgeon.Package"
+					}
+				}
+			},
+			"codesurgeon.Package": {
+				"type": "object",
+				"properties": {
+					"package": {
+						"type": "string"
+					},
+					"imports": {
+						"type": "string"
+					},
+					"structs": {
+						"$ref": "#/components/schemas/codesurgeon.Struct"
+					},
+					"functions": {
+						"$ref": "#/components/schemas/codesurgeon.Function"
+					},
+					"variables": {
+						"$ref": "#/components/schemas/codesurgeon.Variable"
+					},
+					"constants": {
+						"$ref": "#/components/schemas/codesurgeon.Constant"
+					},
+					"interfaces": {
+						"$ref": "#/components/schemas/codesurgeon.Interface"
+					}
+				}
+			},
+			"codesurgeon.Interface": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"methods": {
+						"$ref": "#/components/schemas/codesurgeon.Method"
+					},
+					"docs": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Struct": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"fields": {
+						"$ref": "#/components/schemas/codesurgeon.Field"
+					},
+					"methods": {
+						"$ref": "#/components/schemas/codesurgeon.Method"
+					},
+					"docs": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Method": {
+				"type": "object",
+				"properties": {
+					"receiver": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"params": {
+						"$ref": "#/components/schemas/codesurgeon.Param"
+					},
+					"returns": {
+						"$ref": "#/components/schemas/codesurgeon.Param"
+					},
+					"docs": {
+						"type": "string"
+					},
+					"signature": {
+						"type": "string"
+					},
+					"body": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Function": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"params": {
+						"$ref": "#/components/schemas/codesurgeon.Param"
+					},
+					"returns": {
+						"$ref": "#/components/schemas/codesurgeon.Param"
+					},
+					"docs": {
+						"type": "string"
+					},
+					"signature": {
+						"type": "string"
+					},
+					"body": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Param": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Field": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"tag": {
+						"type": "string"
+					},
+					"private": {
+						"type": "boolean"
+					},
+					"pointer": {
+						"type": "boolean"
+					},
+					"slice": {
+						"type": "boolean"
+					},
+					"docs": {
+						"type": "string"
+					},
+					"comment": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Variable": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"docs": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Constant": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"value": {
+						"type": "string"
+					},
+					"docs": {
+						"type": "string"
+					}
+				}
+			}
+		}
+	}
+}

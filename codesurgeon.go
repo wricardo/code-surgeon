@@ -98,9 +98,9 @@ func InsertCodeFragments(implementationsMap map[string][]CodeFragment) error {
 	return nil
 }
 
-// RenderTemplate is a helper function to render a template with the given data.
+// MustRenderTemplate is a helper function to render a template with the given data.
 // It panics if the template is invalid.
-func RenderTemplate(tmpl string, data interface{}) string {
+func MustRenderTemplate(tmpl string, data interface{}) string {
 	t, err := template.New("tpl").Parse(tmpl)
 	if err != nil {
 		panic(err)
@@ -112,6 +112,20 @@ func RenderTemplate(tmpl string, data interface{}) string {
 	}
 
 	return buf.String()
+}
+
+func RenderTemplate(tmpl string, data interface{}) (string, error) {
+	t, err := template.New("tpl").Parse(tmpl)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 // FormatCodeAndFixImports applies gofmt and goimports to the modified files.
@@ -320,7 +334,7 @@ func FindFunction(directory, receiver, functionName string) (foundFilePath strin
 		}
 		return nil
 	})
-	if err != nil {
+	if err != nil && err != filepath.SkipDir {
 		return "", err
 	}
 	return foundFilePath, nil

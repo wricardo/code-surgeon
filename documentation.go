@@ -32,6 +32,7 @@ func UpsertDocumentationToFunction(filePath, receiver, functionName, documentati
 	}
 
 	if receiver != "" {
+		receiver = strings.TrimLeft(receiver, "*")
 		// Patterns for methods associated with a struct
 		mrs = append(mrs,
 			// // Replace existing documentation above a method

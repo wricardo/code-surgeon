@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package codesurgeon;
+
+
+// Service definition
+service GptService {
+  rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
+  rpc Introduction(IntroductionRequest) returns (IntroductionResponse);
+  rpc ParseCodebase(ParseCodebaseRequest) returns (ParseCodebaseResponse);
+  rpc SearchForFunction(SearchForFunctionRequest) returns (SearchForFunctionResponse);
+  rpc UpsertDocumentationToFunction(UpsertDocumentationToFunctionRequest) returns (UpsertDocumentationToFunctionResponse);
+  rpc UpsertCodeBlock(UpsertCodeBlockRequest) returns (UpsertCodeBlockResponse);
+}
+
+// Request message for GetOpenAPI
+message GetOpenAPIRequest {
+}
+
+// Response message for GetOpenAPI
+message GetOpenAPIResponse {
+  string openapi = 1;
+}
+
+// Request message for Introductiono
+message IntroductionRequest {
+  bool short = 1;
+}
+
+// Response message for Introduction
+message IntroductionResponse {
+  string introduction = 1;
+}
+
+message SearchForFunctionRequest {
+  // path is the path to the file or directory to search for the function
+  string path = 1;
+  string function_name = 2;
+  // receiver is optional, only used if search for a method in a struct
+  string receiver = 3;
+}
+
+message SearchForFunctionResponse {
+  string filepath = 1;
+  string function_name = 2;
+  string documentation = 3;
+  // receiver is optional, only used if search for a method in a struct
+  string receiver = 4;
+  string body = 5;
+}
+
+message UpsertDocumentationToFunctionRequest {
+  // filepath is the path to the file where the function is located
+  string filepath = 1;
+  string function_name = 2;
+  string documentation = 3;
+  // receiver is optional, only used if search for a method in a struct
+  string receiver = 4;
+}
+
+message UpsertDocumentationToFunctionResponse {
+  bool ok = 1;
+} 
+
+message UpsertCodeBlockRequest {
+  message Modification {
+  // filepath is the path to the file where the code block will be upserted
+  string filepath = 1;
+  // package_name is the package name of the file that is used to create the file if not exists
+  string package_name = 2;
+
+  // code_block is the code block to be upserted
+  string code_block = 3;
+
+  // overwrite is a flag to indicate if the code block should be overwritten if it already exists
+  bool overwrite = 4;
+  }
+  Modification modification = 1;
+}
+
+message UpsertCodeBlockResponse {
+  bool ok = 1;
+}
+  
+
+  // Request message for ParseCodebase
+message ParseCodebaseRequest {
+  string file_or_directory = 1; // The path to the file or directory to be parsed
+}
+
+// Response message for ParseCodebase
+message ParseCodebaseResponse {
+  repeated Package packages = 1; // List of parsed packages
+}
+
+// Representation of a parsed package
+message Package {
+  string package = 1;
+  repeated string imports = 2;
+  repeated Struct structs = 3;
+  repeated Function functions = 4;
+  repeated Variable variables = 5;
+  repeated Constant constants = 6;
+  repeated Interface interfaces = 7;
+}
+
+// Representation of a parsed interface
+message Interface {
+  string name = 1;
+  repeated Method methods = 2;
+  repeated string docs = 3;
+}
+
+// Representation of a parsed struct
+message Struct {
+  string name = 1;
+  repeated Field fields = 2;
+  repeated Method methods = 3;
+  repeated string docs = 4;
+}
+
+// Representation of a parsed method
+message Method {
+  string receiver = 1; // Receiver type (e.g., "*MyStruct" or "MyStruct")
+  string name = 2;
+  repeated Param params = 3;
+  repeated Param returns = 4;
+  repeated string docs = 5;
+  string signature = 6;
+  string body = 7; // Body of the method
+}
+
+// Representation of a parsed function
+message Function {
+  string name = 1;
+  repeated Param params = 2;
+  repeated Param returns = 3;
+  repeated string docs = 4;
+  string signature = 5;
+  string body = 6; // Body of the function
+}
+
+// Representation of a parameter for functions and methods
+message Param {
+  string name = 1; // Name of the parameter or return value
+  string type = 2; // Type (e.g., "int", "*string")
+}
+
+// Representation of a field in a struct
+message Field {
+  string name = 1;
+  string type = 2;
+  string tag = 3;
+  bool private = 4;
+  bool pointer = 5;
+  bool slice = 6;
+  repeated string docs = 7;
+  string comment = 8;
+}
+
+// Representation of a parsed variable
+message Variable {
+  string name = 1;
+  string type = 2;
+  repeated string docs = 3;
+}
+
+// Representation of a parsed constant
+message Constant {
+  string name = 1;
+  string value = 2;
+  repeated string docs = 3;
+}

@@ -2,6 +2,7 @@ package codesurgeon
 
 import (
 	"bytes"
+	"embed"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -13,6 +14,10 @@ import (
 	"os"
 	"strings"
 )
+
+//go:embed api/codesurgeon.openapi.json
+//go:embed api/codesurgeon.proto
+var FS embed.FS
 
 type ParsedInfo struct {
 	Packages []Package `json:"packages"`

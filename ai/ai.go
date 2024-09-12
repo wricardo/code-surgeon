@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Jeffail/gabs"
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
@@ -235,4 +236,69 @@ func Render(tempstring string, data interface{}) string {
 	}
 
 	return builder.String()
+}
+
+func GetGPTInstructions(openapi string) (string, error) {
+	actions, err := getActionsFromOpenApiDev(openapi)
+	if err != nil {
+		return "", err
+	}
+	m := map[string]interface{}{
+		"Actions": actions,
+	}
+	return codesurgeon.RenderTemplate(`
+	{{.Actions}}
+
+You are a helpful and experienced golang developer that can follow the instructions and produce the desired output. 
+You should use the actions defined to call functions that find information about type definitions, specially functions and methods on the project we are working on.
+Call the API with the operation you want see that the user want you to execute, if any.
+`, m)
+}
+
+func getActionsFromOpenApiDev(openapi string) (string, error) {
+	actions := []string{}
+	parsed, err := gabs.ParseJSON([]byte(openapi))
+	if err != nil {
+		return "", err
+	}
+
+	paths, err := parsed.Path("paths").ChildrenMap()
+	if err != nil {
+		return "", err
+	}
+
+	for _, pathData := range paths {
+		methods, err := pathData.ChildrenMap()
+		if err != nil {
+			return "", err
+		}
+		// get operationId and append to actions
+		for _, methodData := range methods {
+			operationID := methodData.Path("operationId").Data().(string)
+			actions = append(actions, operationID)
+		}
+
+	}
+
+	return codesurgeon.RenderTemplate(`You may use these Actions:
+			{{range .Actions}}
+			- {{.}}
+			{{end}}
+			`, map[string]interface{}{
+		"Actions": actions,
+	})
+}
+
+func GetGPTIntroduction(openapiDef string) (string, error) {
+	actions, err := getActionsFromOpenApiDev(openapiDef)
+	if err != nil {
+		return "", err
+	}
+	return codesurgeon.RenderTemplate(`
+	Hi, I'm Patna and I'm a helpful and experienced golang developer. I can help you with your project.
+			{{.Actions}}
+
+			`, map[string]any{
+		"Actions": actions,
+	})
 }

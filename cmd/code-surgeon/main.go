@@ -4,12 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
+	"connectrpc.com/connect"
 	"github.com/urfave/cli/v2"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
+	"github.com/wricardo/code-surgeon/api"
+	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/wricardo/code-surgeon/grpc/server"
 )
+
+const DEFAULT_PORT = 8002
 
 func main() {
 	app := &cli.App{
@@ -92,6 +99,126 @@ func main() {
 					} else {
 						fmt.Println("Nothing to do")
 					}
+					return nil
+
+				},
+			},
+			{
+				Name:  "gpt-service-server",
+				Usage: "Run the gpt service server",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:     "port",
+						Aliases:  []string{"p"},
+						Usage:    "port number",
+						Required: false,
+						Value:    DEFAULT_PORT,
+					},
+					&cli.BoolFlag{
+						Name:     "use-ngrok",
+						Aliases:  []string{"n"},
+						Usage:    "use ngrok to expose the server",
+						Required: false,
+						Value:    false,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					return server.Start(cCtx.Int("port"), cCtx.Bool("use-ngrok"))
+
+				},
+			},
+			{
+				Name:  "openapi-json",
+				Usage: "Generate open api json",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "url",
+						Aliases:  []string{"u"},
+						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
+						Required: false,
+						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
+					ctx := cCtx.Context
+					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
+					if err != nil {
+						return err
+					}
+					fmt.Println(openAPI.Msg.Openapi)
+					return nil
+
+				},
+			},
+			{
+				Name:  "instructions",
+				Usage: "get instructions to be used in custom chatgpt",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "url",
+						Aliases:  []string{"u"},
+						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
+						Required: false,
+						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
+					ctx := cCtx.Context
+					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
+					if err != nil {
+						return err
+					}
+					rendered, err := ai.GetGPTInstructions(openAPI.Msg.Openapi)
+					if err != nil {
+						log.Println("Error getting prompt", err)
+						return err
+					}
+					fmt.Println(rendered)
+					return nil
+
+				},
+			},
+			{
+				Name:  "introduction",
+				Usage: "introductions that are displayed to the user when he asks for it, this is used to give context to the llm.",
+				Flags: []cli.Flag{
+					// &cli.StringFlag{
+					// 	Name:     "proto-filepath",
+					// 	Aliases:  []string{"f"},
+					// 	Usage:    "path to the api proto file",
+					// 	Required: false,
+					// 	Value:    "api/codesurgeon.proto",
+					// },
+					&cli.StringFlag{
+						Name:     "url",
+						Aliases:  []string{"u"},
+						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
+						Required: false,
+						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+					},
+					&cli.StringFlag{
+						Name:     "url",
+						Aliases:  []string{"u"},
+						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
+						Required: false,
+						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
+					ctx := cCtx.Context
+					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
+					if err != nil {
+						return err
+					}
+					rendered, err := ai.GetGPTIntroduction(openAPI.Msg.Openapi)
+					if err != nil {
+						log.Println("Error getting prompt", err)
+						return err
+					}
+					fmt.Println(rendered)
 					return nil
 
 				},
