@@ -20,8 +20,6 @@ import (
 )
 
 func Start(port int, useNgrok bool) error {
-	os.Setenv("NGROK_AUTHTOKEN", "2lyXGhoCXzVVisHPLV1hyQNx7Ys_6mXN1SrvLa6syGMv1JJzi")
-
 	log.Printf("Starting server on port %d\n", port)
 	// Initialize ngrok listener
 	ctx := context.Background()
