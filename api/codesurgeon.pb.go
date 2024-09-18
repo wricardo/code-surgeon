@@ -20,6 +20,237 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ExecuteGoplsImplementationsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FilePath string `protobuf:"bytes,1,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"` // Path to the Go file
+	Line     int32  `protobuf:"varint,2,opt,name=line,proto3" json:"line,omitempty"`                        // Line number
+	Column   int32  `protobuf:"varint,3,opt,name=column,proto3" json:"column,omitempty"`                    // Column number
+}
+
+func (x *ExecuteGoplsImplementationsRequest) Reset() {
+	*x = ExecuteGoplsImplementationsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExecuteGoplsImplementationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteGoplsImplementationsRequest) ProtoMessage() {}
+
+func (x *ExecuteGoplsImplementationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteGoplsImplementationsRequest.ProtoReflect.Descriptor instead.
+func (*ExecuteGoplsImplementationsRequest) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ExecuteGoplsImplementationsRequest) GetFilePath() string {
+	if x != nil {
+		return x.FilePath
+	}
+	return ""
+}
+
+func (x *ExecuteGoplsImplementationsRequest) GetLine() int32 {
+	if x != nil {
+		return x.Line
+	}
+	return 0
+}
+
+func (x *ExecuteGoplsImplementationsRequest) GetColumn() int32 {
+	if x != nil {
+		return x.Column
+	}
+	return 0
+}
+
+// Response message for ExecuteGoplsImplementations RPC
+type ExecuteGoplsImplementationsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Output string `protobuf:"bytes,1,opt,name=output,proto3" json:"output,omitempty"` // Standard output of the gopls implementations command
+	Error  string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`   // Standard error of the gopls implementations command, if any
+}
+
+func (x *ExecuteGoplsImplementationsResponse) Reset() {
+	*x = ExecuteGoplsImplementationsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExecuteGoplsImplementationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteGoplsImplementationsResponse) ProtoMessage() {}
+
+func (x *ExecuteGoplsImplementationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteGoplsImplementationsResponse.ProtoReflect.Descriptor instead.
+func (*ExecuteGoplsImplementationsResponse) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ExecuteGoplsImplementationsResponse) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+func (x *ExecuteGoplsImplementationsResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// Request message for ExecuteBash RPC
+type ExecuteBashRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Command string `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"` // The shell command to execute
+}
+
+func (x *ExecuteBashRequest) Reset() {
+	*x = ExecuteBashRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExecuteBashRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteBashRequest) ProtoMessage() {}
+
+func (x *ExecuteBashRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteBashRequest.ProtoReflect.Descriptor instead.
+func (*ExecuteBashRequest) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ExecuteBashRequest) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
+}
+
+// Response message for ExecuteBash RPC
+type ExecuteBashResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Stdout   string `protobuf:"bytes,1,opt,name=stdout,proto3" json:"stdout,omitempty"`      // Standard output of the executed command
+	Stderr   string `protobuf:"bytes,2,opt,name=stderr,proto3" json:"stderr,omitempty"`      // Standard error of the executed command
+	ExitCode int32  `protobuf:"varint,3,opt,name=exitCode,proto3" json:"exitCode,omitempty"` // Exit code of the executed command
+}
+
+func (x *ExecuteBashResponse) Reset() {
+	*x = ExecuteBashResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExecuteBashResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteBashResponse) ProtoMessage() {}
+
+func (x *ExecuteBashResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteBashResponse.ProtoReflect.Descriptor instead.
+func (*ExecuteBashResponse) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ExecuteBashResponse) GetStdout() string {
+	if x != nil {
+		return x.Stdout
+	}
+	return ""
+}
+
+func (x *ExecuteBashResponse) GetStderr() string {
+	if x != nil {
+		return x.Stderr
+	}
+	return ""
+}
+
+func (x *ExecuteBashResponse) GetExitCode() int32 {
+	if x != nil {
+		return x.ExitCode
+	}
+	return 0
+}
+
 // Request message for GetOpenAPI
 type GetOpenAPIRequest struct {
 	state         protoimpl.MessageState
@@ -30,7 +261,7 @@ type GetOpenAPIRequest struct {
 func (x *GetOpenAPIRequest) Reset() {
 	*x = GetOpenAPIRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[0]
+		mi := &file_api_codesurgeon_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -43,7 +274,7 @@ func (x *GetOpenAPIRequest) String() string {
 func (*GetOpenAPIRequest) ProtoMessage() {}
 
 func (x *GetOpenAPIRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[0]
+	mi := &file_api_codesurgeon_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +287,7 @@ func (x *GetOpenAPIRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOpenAPIRequest.ProtoReflect.Descriptor instead.
 func (*GetOpenAPIRequest) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{0}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{4}
 }
 
 // Response message for GetOpenAPI
@@ -71,7 +302,7 @@ type GetOpenAPIResponse struct {
 func (x *GetOpenAPIResponse) Reset() {
 	*x = GetOpenAPIResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[1]
+		mi := &file_api_codesurgeon_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -84,7 +315,7 @@ func (x *GetOpenAPIResponse) String() string {
 func (*GetOpenAPIResponse) ProtoMessage() {}
 
 func (x *GetOpenAPIResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[1]
+	mi := &file_api_codesurgeon_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -97,7 +328,7 @@ func (x *GetOpenAPIResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOpenAPIResponse.ProtoReflect.Descriptor instead.
 func (*GetOpenAPIResponse) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{1}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetOpenAPIResponse) GetOpenapi() string {
@@ -119,7 +350,7 @@ type IntroductionRequest struct {
 func (x *IntroductionRequest) Reset() {
 	*x = IntroductionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[2]
+		mi := &file_api_codesurgeon_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -132,7 +363,7 @@ func (x *IntroductionRequest) String() string {
 func (*IntroductionRequest) ProtoMessage() {}
 
 func (x *IntroductionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[2]
+	mi := &file_api_codesurgeon_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -145,7 +376,7 @@ func (x *IntroductionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntroductionRequest.ProtoReflect.Descriptor instead.
 func (*IntroductionRequest) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{2}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *IntroductionRequest) GetShort() bool {
@@ -167,7 +398,7 @@ type IntroductionResponse struct {
 func (x *IntroductionResponse) Reset() {
 	*x = IntroductionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[3]
+		mi := &file_api_codesurgeon_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -180,7 +411,7 @@ func (x *IntroductionResponse) String() string {
 func (*IntroductionResponse) ProtoMessage() {}
 
 func (x *IntroductionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[3]
+	mi := &file_api_codesurgeon_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -193,7 +424,7 @@ func (x *IntroductionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntroductionResponse.ProtoReflect.Descriptor instead.
 func (*IntroductionResponse) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{3}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *IntroductionResponse) GetIntroduction() string {
@@ -203,7 +434,7 @@ func (x *IntroductionResponse) GetIntroduction() string {
 	return ""
 }
 
-type SearchForFunctionRequest struct {
+type SearchForGolangFunctionRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -215,23 +446,23 @@ type SearchForFunctionRequest struct {
 	Receiver string `protobuf:"bytes,3,opt,name=receiver,proto3" json:"receiver,omitempty"`
 }
 
-func (x *SearchForFunctionRequest) Reset() {
-	*x = SearchForFunctionRequest{}
+func (x *SearchForGolangFunctionRequest) Reset() {
+	*x = SearchForGolangFunctionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[4]
+		mi := &file_api_codesurgeon_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
 }
 
-func (x *SearchForFunctionRequest) String() string {
+func (x *SearchForGolangFunctionRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SearchForFunctionRequest) ProtoMessage() {}
+func (*SearchForGolangFunctionRequest) ProtoMessage() {}
 
-func (x *SearchForFunctionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[4]
+func (x *SearchForGolangFunctionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -242,62 +473,61 @@ func (x *SearchForFunctionRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SearchForFunctionRequest.ProtoReflect.Descriptor instead.
-func (*SearchForFunctionRequest) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{4}
+// Deprecated: Use SearchForGolangFunctionRequest.ProtoReflect.Descriptor instead.
+func (*SearchForGolangFunctionRequest) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *SearchForFunctionRequest) GetPath() string {
+func (x *SearchForGolangFunctionRequest) GetPath() string {
 	if x != nil {
 		return x.Path
 	}
 	return ""
 }
 
-func (x *SearchForFunctionRequest) GetFunctionName() string {
+func (x *SearchForGolangFunctionRequest) GetFunctionName() string {
 	if x != nil {
 		return x.FunctionName
 	}
 	return ""
 }
 
-func (x *SearchForFunctionRequest) GetReceiver() string {
+func (x *SearchForGolangFunctionRequest) GetReceiver() string {
 	if x != nil {
 		return x.Receiver
 	}
 	return ""
 }
 
-type SearchForFunctionResponse struct {
+type SearchForGolangFunctionResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Filepath      string `protobuf:"bytes,1,opt,name=filepath,proto3" json:"filepath,omitempty"`
-	FunctionName  string `protobuf:"bytes,2,opt,name=function_name,json=functionName,proto3" json:"function_name,omitempty"`
+	Signature     string `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	Documentation string `protobuf:"bytes,3,opt,name=documentation,proto3" json:"documentation,omitempty"`
 	// receiver is optional, only used if search for a method in a struct
-	Receiver string `protobuf:"bytes,4,opt,name=receiver,proto3" json:"receiver,omitempty"`
-	Body     string `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Body string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 }
 
-func (x *SearchForFunctionResponse) Reset() {
-	*x = SearchForFunctionResponse{}
+func (x *SearchForGolangFunctionResponse) Reset() {
+	*x = SearchForGolangFunctionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[5]
+		mi := &file_api_codesurgeon_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
 }
 
-func (x *SearchForFunctionResponse) String() string {
+func (x *SearchForGolangFunctionResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SearchForFunctionResponse) ProtoMessage() {}
+func (*SearchForGolangFunctionResponse) ProtoMessage() {}
 
-func (x *SearchForFunctionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[5]
+func (x *SearchForGolangFunctionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -308,40 +538,33 @@ func (x *SearchForFunctionResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SearchForFunctionResponse.ProtoReflect.Descriptor instead.
-func (*SearchForFunctionResponse) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{5}
+// Deprecated: Use SearchForGolangFunctionResponse.ProtoReflect.Descriptor instead.
+func (*SearchForGolangFunctionResponse) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *SearchForFunctionResponse) GetFilepath() string {
+func (x *SearchForGolangFunctionResponse) GetFilepath() string {
 	if x != nil {
 		return x.Filepath
 	}
 	return ""
 }
 
-func (x *SearchForFunctionResponse) GetFunctionName() string {
+func (x *SearchForGolangFunctionResponse) GetSignature() string {
 	if x != nil {
-		return x.FunctionName
+		return x.Signature
 	}
 	return ""
 }
 
-func (x *SearchForFunctionResponse) GetDocumentation() string {
+func (x *SearchForGolangFunctionResponse) GetDocumentation() string {
 	if x != nil {
 		return x.Documentation
 	}
 	return ""
 }
 
-func (x *SearchForFunctionResponse) GetReceiver() string {
-	if x != nil {
-		return x.Receiver
-	}
-	return ""
-}
-
-func (x *SearchForFunctionResponse) GetBody() string {
+func (x *SearchForGolangFunctionResponse) GetBody() string {
 	if x != nil {
 		return x.Body
 	}
@@ -364,7 +587,7 @@ type UpsertDocumentationToFunctionRequest struct {
 func (x *UpsertDocumentationToFunctionRequest) Reset() {
 	*x = UpsertDocumentationToFunctionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[6]
+		mi := &file_api_codesurgeon_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -377,7 +600,7 @@ func (x *UpsertDocumentationToFunctionRequest) String() string {
 func (*UpsertDocumentationToFunctionRequest) ProtoMessage() {}
 
 func (x *UpsertDocumentationToFunctionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[6]
+	mi := &file_api_codesurgeon_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -390,7 +613,7 @@ func (x *UpsertDocumentationToFunctionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use UpsertDocumentationToFunctionRequest.ProtoReflect.Descriptor instead.
 func (*UpsertDocumentationToFunctionRequest) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{6}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpsertDocumentationToFunctionRequest) GetFilepath() string {
@@ -432,7 +655,7 @@ type UpsertDocumentationToFunctionResponse struct {
 func (x *UpsertDocumentationToFunctionResponse) Reset() {
 	*x = UpsertDocumentationToFunctionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[7]
+		mi := &file_api_codesurgeon_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -445,7 +668,7 @@ func (x *UpsertDocumentationToFunctionResponse) String() string {
 func (*UpsertDocumentationToFunctionResponse) ProtoMessage() {}
 
 func (x *UpsertDocumentationToFunctionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[7]
+	mi := &file_api_codesurgeon_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -458,7 +681,7 @@ func (x *UpsertDocumentationToFunctionResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use UpsertDocumentationToFunctionResponse.ProtoReflect.Descriptor instead.
 func (*UpsertDocumentationToFunctionResponse) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{7}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpsertDocumentationToFunctionResponse) GetOk() bool {
@@ -479,7 +702,7 @@ type UpsertCodeBlockRequest struct {
 func (x *UpsertCodeBlockRequest) Reset() {
 	*x = UpsertCodeBlockRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[8]
+		mi := &file_api_codesurgeon_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -492,7 +715,7 @@ func (x *UpsertCodeBlockRequest) String() string {
 func (*UpsertCodeBlockRequest) ProtoMessage() {}
 
 func (x *UpsertCodeBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[8]
+	mi := &file_api_codesurgeon_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -505,7 +728,7 @@ func (x *UpsertCodeBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertCodeBlockRequest.ProtoReflect.Descriptor instead.
 func (*UpsertCodeBlockRequest) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{8}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpsertCodeBlockRequest) GetModification() *UpsertCodeBlockRequest_Modification {
@@ -526,7 +749,7 @@ type UpsertCodeBlockResponse struct {
 func (x *UpsertCodeBlockResponse) Reset() {
 	*x = UpsertCodeBlockResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[9]
+		mi := &file_api_codesurgeon_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -539,7 +762,7 @@ func (x *UpsertCodeBlockResponse) String() string {
 func (*UpsertCodeBlockResponse) ProtoMessage() {}
 
 func (x *UpsertCodeBlockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[9]
+	mi := &file_api_codesurgeon_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +775,7 @@ func (x *UpsertCodeBlockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertCodeBlockResponse.ProtoReflect.Descriptor instead.
 func (*UpsertCodeBlockResponse) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{9}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpsertCodeBlockResponse) GetOk() bool {
@@ -574,7 +797,7 @@ type ParseCodebaseRequest struct {
 func (x *ParseCodebaseRequest) Reset() {
 	*x = ParseCodebaseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[10]
+		mi := &file_api_codesurgeon_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -587,7 +810,7 @@ func (x *ParseCodebaseRequest) String() string {
 func (*ParseCodebaseRequest) ProtoMessage() {}
 
 func (x *ParseCodebaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[10]
+	mi := &file_api_codesurgeon_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,7 +823,7 @@ func (x *ParseCodebaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParseCodebaseRequest.ProtoReflect.Descriptor instead.
 func (*ParseCodebaseRequest) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{10}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ParseCodebaseRequest) GetFileOrDirectory() string {
@@ -622,7 +845,7 @@ type ParseCodebaseResponse struct {
 func (x *ParseCodebaseResponse) Reset() {
 	*x = ParseCodebaseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[11]
+		mi := &file_api_codesurgeon_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -635,7 +858,7 @@ func (x *ParseCodebaseResponse) String() string {
 func (*ParseCodebaseResponse) ProtoMessage() {}
 
 func (x *ParseCodebaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[11]
+	mi := &file_api_codesurgeon_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -648,7 +871,7 @@ func (x *ParseCodebaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParseCodebaseResponse.ProtoReflect.Descriptor instead.
 func (*ParseCodebaseResponse) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{11}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ParseCodebaseResponse) GetPackages() []*Package {
@@ -676,7 +899,7 @@ type Package struct {
 func (x *Package) Reset() {
 	*x = Package{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[12]
+		mi := &file_api_codesurgeon_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -689,7 +912,7 @@ func (x *Package) String() string {
 func (*Package) ProtoMessage() {}
 
 func (x *Package) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[12]
+	mi := &file_api_codesurgeon_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -702,7 +925,7 @@ func (x *Package) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Package.ProtoReflect.Descriptor instead.
 func (*Package) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{12}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Package) GetPackage() string {
@@ -768,7 +991,7 @@ type Interface struct {
 func (x *Interface) Reset() {
 	*x = Interface{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[13]
+		mi := &file_api_codesurgeon_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -781,7 +1004,7 @@ func (x *Interface) String() string {
 func (*Interface) ProtoMessage() {}
 
 func (x *Interface) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[13]
+	mi := &file_api_codesurgeon_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -794,7 +1017,7 @@ func (x *Interface) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Interface.ProtoReflect.Descriptor instead.
 func (*Interface) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{13}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Interface) GetName() string {
@@ -833,7 +1056,7 @@ type Struct struct {
 func (x *Struct) Reset() {
 	*x = Struct{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[14]
+		mi := &file_api_codesurgeon_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -846,7 +1069,7 @@ func (x *Struct) String() string {
 func (*Struct) ProtoMessage() {}
 
 func (x *Struct) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[14]
+	mi := &file_api_codesurgeon_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -859,7 +1082,7 @@ func (x *Struct) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Struct.ProtoReflect.Descriptor instead.
 func (*Struct) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{14}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Struct) GetName() string {
@@ -908,7 +1131,7 @@ type Method struct {
 func (x *Method) Reset() {
 	*x = Method{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[15]
+		mi := &file_api_codesurgeon_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -921,7 +1144,7 @@ func (x *Method) String() string {
 func (*Method) ProtoMessage() {}
 
 func (x *Method) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[15]
+	mi := &file_api_codesurgeon_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -934,7 +1157,7 @@ func (x *Method) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Method.ProtoReflect.Descriptor instead.
 func (*Method) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{15}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Method) GetReceiver() string {
@@ -1003,7 +1226,7 @@ type Function struct {
 func (x *Function) Reset() {
 	*x = Function{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[16]
+		mi := &file_api_codesurgeon_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1016,7 +1239,7 @@ func (x *Function) String() string {
 func (*Function) ProtoMessage() {}
 
 func (x *Function) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[16]
+	mi := &file_api_codesurgeon_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1029,7 +1252,7 @@ func (x *Function) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Function.ProtoReflect.Descriptor instead.
 func (*Function) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{16}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Function) GetName() string {
@@ -1087,7 +1310,7 @@ type Param struct {
 func (x *Param) Reset() {
 	*x = Param{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[17]
+		mi := &file_api_codesurgeon_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1100,7 +1323,7 @@ func (x *Param) String() string {
 func (*Param) ProtoMessage() {}
 
 func (x *Param) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[17]
+	mi := &file_api_codesurgeon_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1113,7 +1336,7 @@ func (x *Param) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Param.ProtoReflect.Descriptor instead.
 func (*Param) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{17}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *Param) GetName() string {
@@ -1149,7 +1372,7 @@ type Field struct {
 func (x *Field) Reset() {
 	*x = Field{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[18]
+		mi := &file_api_codesurgeon_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1162,7 +1385,7 @@ func (x *Field) String() string {
 func (*Field) ProtoMessage() {}
 
 func (x *Field) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[18]
+	mi := &file_api_codesurgeon_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1175,7 +1398,7 @@ func (x *Field) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Field.ProtoReflect.Descriptor instead.
 func (*Field) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{18}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Field) GetName() string {
@@ -1248,7 +1471,7 @@ type Variable struct {
 func (x *Variable) Reset() {
 	*x = Variable{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[19]
+		mi := &file_api_codesurgeon_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1261,7 +1484,7 @@ func (x *Variable) String() string {
 func (*Variable) ProtoMessage() {}
 
 func (x *Variable) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[19]
+	mi := &file_api_codesurgeon_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1274,7 +1497,7 @@ func (x *Variable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Variable.ProtoReflect.Descriptor instead.
 func (*Variable) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{19}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Variable) GetName() string {
@@ -1312,7 +1535,7 @@ type Constant struct {
 func (x *Constant) Reset() {
 	*x = Constant{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[20]
+		mi := &file_api_codesurgeon_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1325,7 +1548,7 @@ func (x *Constant) String() string {
 func (*Constant) ProtoMessage() {}
 
 func (x *Constant) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[20]
+	mi := &file_api_codesurgeon_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1338,7 +1561,7 @@ func (x *Constant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Constant.ProtoReflect.Descriptor instead.
 func (*Constant) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{20}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *Constant) GetName() string {
@@ -1362,6 +1585,347 @@ func (x *Constant) GetDocs() []string {
 	return nil
 }
 
+// Request message for AnswerQuestion
+type AnswerQuestionRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Questions string `protobuf:"bytes,1,opt,name=questions,proto3" json:"questions,omitempty"`
+}
+
+func (x *AnswerQuestionRequest) Reset() {
+	*x = AnswerQuestionRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[25]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AnswerQuestionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnswerQuestionRequest) ProtoMessage() {}
+
+func (x *AnswerQuestionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[25]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnswerQuestionRequest.ProtoReflect.Descriptor instead.
+func (*AnswerQuestionRequest) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *AnswerQuestionRequest) GetQuestions() string {
+	if x != nil {
+		return x.Questions
+	}
+	return ""
+}
+
+// Response message for AnswerQuestion
+type AnswerQuestionResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Answers []*AnswerQuestionResponse_Answer `protobuf:"bytes,1,rep,name=answers,proto3" json:"answers,omitempty"`
+}
+
+func (x *AnswerQuestionResponse) Reset() {
+	*x = AnswerQuestionResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[26]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AnswerQuestionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnswerQuestionResponse) ProtoMessage() {}
+
+func (x *AnswerQuestionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[26]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnswerQuestionResponse.ProtoReflect.Descriptor instead.
+func (*AnswerQuestionResponse) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *AnswerQuestionResponse) GetAnswers() []*AnswerQuestionResponse_Answer {
+	if x != nil {
+		return x.Answers
+	}
+	return nil
+}
+
+type SaveToKnowledgeBaseRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ConversationSummary string `protobuf:"bytes,1,opt,name=conversation_summary,json=conversationSummary,proto3" json:"conversation_summary,omitempty"`
+	DateIso             string `protobuf:"bytes,2,opt,name=date_iso,json=dateIso,proto3" json:"date_iso,omitempty"`
+}
+
+func (x *SaveToKnowledgeBaseRequest) Reset() {
+	*x = SaveToKnowledgeBaseRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[27]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SaveToKnowledgeBaseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveToKnowledgeBaseRequest) ProtoMessage() {}
+
+func (x *SaveToKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[27]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveToKnowledgeBaseRequest.ProtoReflect.Descriptor instead.
+func (*SaveToKnowledgeBaseRequest) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *SaveToKnowledgeBaseRequest) GetConversationSummary() string {
+	if x != nil {
+		return x.ConversationSummary
+	}
+	return ""
+}
+
+func (x *SaveToKnowledgeBaseRequest) GetDateIso() string {
+	if x != nil {
+		return x.DateIso
+	}
+	return ""
+}
+
+type SaveToKnowledgeBaseResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ok bool `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+}
+
+func (x *SaveToKnowledgeBaseResponse) Reset() {
+	*x = SaveToKnowledgeBaseResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[28]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SaveToKnowledgeBaseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveToKnowledgeBaseResponse) ProtoMessage() {}
+
+func (x *SaveToKnowledgeBaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[28]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveToKnowledgeBaseResponse.ProtoReflect.Descriptor instead.
+func (*SaveToKnowledgeBaseResponse) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *SaveToKnowledgeBaseResponse) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+// Request message for GitDiff
+type GitDiffRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GitDiffRequest) Reset() {
+	*x = GitDiffRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[29]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GitDiffRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GitDiffRequest) ProtoMessage() {}
+
+func (x *GitDiffRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[29]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GitDiffRequest.ProtoReflect.Descriptor instead.
+func (*GitDiffRequest) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{29}
+}
+
+// Response message for GitDiff
+type GitDiffResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Output string `protobuf:"bytes,1,opt,name=output,proto3" json:"output,omitempty"` // Standard output of the git diff command
+}
+
+func (x *GitDiffResponse) Reset() {
+	*x = GitDiffResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[30]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GitDiffResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GitDiffResponse) ProtoMessage() {}
+
+func (x *GitDiffResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[30]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GitDiffResponse.ProtoReflect.Descriptor instead.
+func (*GitDiffResponse) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GitDiffResponse) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+// Representation of a file and its content
+type FileContent struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Filename string `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"` // Name of the file
+	Content  string `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`   // Content of the file
+}
+
+func (x *FileContent) Reset() {
+	*x = FileContent{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[31]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FileContent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileContent) ProtoMessage() {}
+
+func (x *FileContent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[31]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileContent.ProtoReflect.Descriptor instead.
+func (*FileContent) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *FileContent) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *FileContent) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
 type UpsertCodeBlockRequest_Modification struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1380,7 +1944,7 @@ type UpsertCodeBlockRequest_Modification struct {
 func (x *UpsertCodeBlockRequest_Modification) Reset() {
 	*x = UpsertCodeBlockRequest_Modification{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_codesurgeon_proto_msgTypes[21]
+		mi := &file_api_codesurgeon_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1393,7 +1957,7 @@ func (x *UpsertCodeBlockRequest_Modification) String() string {
 func (*UpsertCodeBlockRequest_Modification) ProtoMessage() {}
 
 func (x *UpsertCodeBlockRequest_Modification) ProtoReflect() protoreflect.Message {
-	mi := &file_api_codesurgeon_proto_msgTypes[21]
+	mi := &file_api_codesurgeon_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1406,7 +1970,7 @@ func (x *UpsertCodeBlockRequest_Modification) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use UpsertCodeBlockRequest_Modification.ProtoReflect.Descriptor instead.
 func (*UpsertCodeBlockRequest_Modification) Descriptor() ([]byte, []int) {
-	return file_api_codesurgeon_proto_rawDescGZIP(), []int{8, 0}
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{12, 0}
 }
 
 func (x *UpsertCodeBlockRequest_Modification) GetFilepath() string {
@@ -1437,40 +2001,115 @@ func (x *UpsertCodeBlockRequest_Modification) GetOverwrite() bool {
 	return false
 }
 
+type AnswerQuestionResponse_Answer struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Answer   string `protobuf:"bytes,1,opt,name=answer,proto3" json:"answer,omitempty"`
+	Question string `protobuf:"bytes,2,opt,name=question,proto3" json:"question,omitempty"`
+}
+
+func (x *AnswerQuestionResponse_Answer) Reset() {
+	*x = AnswerQuestionResponse_Answer{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_codesurgeon_proto_msgTypes[33]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AnswerQuestionResponse_Answer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnswerQuestionResponse_Answer) ProtoMessage() {}
+
+func (x *AnswerQuestionResponse_Answer) ProtoReflect() protoreflect.Message {
+	mi := &file_api_codesurgeon_proto_msgTypes[33]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnswerQuestionResponse_Answer.ProtoReflect.Descriptor instead.
+func (*AnswerQuestionResponse_Answer) Descriptor() ([]byte, []int) {
+	return file_api_codesurgeon_proto_rawDescGZIP(), []int{26, 0}
+}
+
+func (x *AnswerQuestionResponse_Answer) GetAnswer() string {
+	if x != nil {
+		return x.Answer
+	}
+	return ""
+}
+
+func (x *AnswerQuestionResponse_Answer) GetQuestion() string {
+	if x != nil {
+		return x.Question
+	}
+	return ""
+}
+
 var File_api_codesurgeon_proto protoreflect.FileDescriptor
 
 var file_api_codesurgeon_proto_rawDesc = []byte{
 	0x0a, 0x15, 0x61, 0x70, 0x69, 0x2f, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f,
 	0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x0b, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72,
-	0x67, 0x65, 0x6f, 0x6e, 0x22, 0x13, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x4f, 0x70, 0x65, 0x6e, 0x41,
-	0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x2e, 0x0a, 0x12, 0x47, 0x65, 0x74,
-	0x4f, 0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x18, 0x0a, 0x07, 0x6f, 0x70, 0x65, 0x6e, 0x61, 0x70, 0x69, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x07, 0x6f, 0x70, 0x65, 0x6e, 0x61, 0x70, 0x69, 0x22, 0x2b, 0x0a, 0x13, 0x49, 0x6e, 0x74,
-	0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x14, 0x0a, 0x05, 0x73, 0x68, 0x6f, 0x72, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52,
-	0x05, 0x73, 0x68, 0x6f, 0x72, 0x74, 0x22, 0x3a, 0x0a, 0x14, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64,
-	0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x22,
-	0x0a, 0x0c, 0x69, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x69, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69,
-	0x6f, 0x6e, 0x22, 0x6f, 0x0a, 0x18, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x46,
-	0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12,
-	0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61,
-	0x74, 0x68, 0x12, 0x23, 0x0a, 0x0d, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6e,
-	0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x66, 0x75, 0x6e, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69,
-	0x76, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69,
-	0x76, 0x65, 0x72, 0x22, 0xb2, 0x01, 0x0a, 0x19, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f,
-	0x72, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x1a, 0x0a, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x70, 0x61, 0x74, 0x68, 0x12, 0x23, 0x0a,
-	0x0d, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4e, 0x61,
-	0x6d, 0x65, 0x12, 0x24, 0x0a, 0x0d, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x64, 0x6f, 0x63, 0x75, 0x6d,
-	0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x63, 0x65,
-	0x69, 0x76, 0x65, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x63, 0x65,
-	0x69, 0x76, 0x65, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x18, 0x05, 0x20, 0x01,
+	0x67, 0x65, 0x6f, 0x6e, 0x22, 0x6d, 0x0a, 0x22, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x47,
+	0x6f, 0x70, 0x6c, 0x73, 0x49, 0x6d, 0x70, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x66, 0x69,
+	0x6c, 0x65, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x66,
+	0x69, 0x6c, 0x65, 0x50, 0x61, 0x74, 0x68, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x69, 0x6e, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x6c, 0x69, 0x6e, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x63,
+	0x6f, 0x6c, 0x75, 0x6d, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x63, 0x6f, 0x6c,
+	0x75, 0x6d, 0x6e, 0x22, 0x53, 0x0a, 0x23, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x47, 0x6f,
+	0x70, 0x6c, 0x73, 0x49, 0x6d, 0x70, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x75,
+	0x74, 0x70, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6f, 0x75, 0x74, 0x70,
+	0x75, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x22, 0x2e, 0x0a, 0x12, 0x45, 0x78, 0x65, 0x63,
+	0x75, 0x74, 0x65, 0x42, 0x61, 0x73, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18,
+	0x0a, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x22, 0x61, 0x0a, 0x13, 0x45, 0x78, 0x65, 0x63,
+	0x75, 0x74, 0x65, 0x42, 0x61, 0x73, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x16, 0x0a, 0x06, 0x73, 0x74, 0x64, 0x6f, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x73, 0x74, 0x64, 0x6f, 0x75, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x64, 0x65, 0x72,
+	0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x64, 0x65, 0x72, 0x72, 0x12,
+	0x1a, 0x0a, 0x08, 0x65, 0x78, 0x69, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x08, 0x65, 0x78, 0x69, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x22, 0x13, 0x0a, 0x11, 0x47,
+	0x65, 0x74, 0x4f, 0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x22, 0x2e, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x4f, 0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x6f, 0x70, 0x65, 0x6e, 0x61, 0x70,
+	0x69, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6f, 0x70, 0x65, 0x6e, 0x61, 0x70, 0x69,
+	0x22, 0x2b, 0x0a, 0x13, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x68, 0x6f, 0x72, 0x74,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x73, 0x68, 0x6f, 0x72, 0x74, 0x22, 0x3a, 0x0a,
+	0x14, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x22, 0x0a, 0x0c, 0x69, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75,
+	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x69, 0x6e, 0x74,
+	0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x75, 0x0a, 0x1e, 0x53, 0x65, 0x61,
+	0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x47, 0x6f, 0x6c, 0x61, 0x6e, 0x67, 0x46, 0x75, 0x6e, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70,
+	0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12,
+	0x23, 0x0a, 0x0d, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6e, 0x61, 0x6d, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72,
+	0x22, 0x95, 0x01, 0x0a, 0x1f, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x47, 0x6f,
+	0x6c, 0x61, 0x6e, 0x67, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x70, 0x61, 0x74, 0x68,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x70, 0x61, 0x74, 0x68,
+	0x12, 0x1c, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x12, 0x24,
+	0x0a, 0x0d, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x18, 0x04, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x22, 0xa9, 0x01, 0x0a, 0x24, 0x55, 0x70, 0x73,
 	0x65, 0x72, 0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e,
 	0x54, 0x6f, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
@@ -1598,54 +2237,117 @@ var file_api_codesurgeon_proto_rawDesc = []byte{
 	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14,
 	0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76,
 	0x61, 0x6c, 0x75, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x6f, 0x63, 0x73, 0x18, 0x03, 0x20, 0x03,
-	0x28, 0x09, 0x52, 0x04, 0x64, 0x6f, 0x63, 0x73, 0x32, 0xd3, 0x04, 0x0a, 0x0a, 0x47, 0x70, 0x74,
-	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x4d, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x4f, 0x70,
-	0x65, 0x6e, 0x41, 0x50, 0x49, 0x12, 0x1e, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67,
-	0x65, 0x6f, 0x6e, 0x2e, 0x47, 0x65, 0x74, 0x4f, 0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67,
-	0x65, 0x6f, 0x6e, 0x2e, 0x47, 0x65, 0x74, 0x4f, 0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x53, 0x0a, 0x0c, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64,
-	0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x20, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72,
-	0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x21, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73,
-	0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x56, 0x0a, 0x0d, 0x50,
-	0x61, 0x72, 0x73, 0x65, 0x43, 0x6f, 0x64, 0x65, 0x62, 0x61, 0x73, 0x65, 0x12, 0x21, 0x2e, 0x63,
-	0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x50, 0x61, 0x72, 0x73, 0x65,
-	0x43, 0x6f, 0x64, 0x65, 0x62, 0x61, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x22, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x50, 0x61,
-	0x72, 0x73, 0x65, 0x43, 0x6f, 0x64, 0x65, 0x62, 0x61, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x62, 0x0a, 0x11, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72,
-	0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x25, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73,
-	0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72,
-	0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x26, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x53, 0x65,
-	0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x86, 0x01, 0x0a, 0x1d, 0x55, 0x70, 0x73, 0x65,
-	0x72, 0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54,
-	0x6f, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x31, 0x2e, 0x63, 0x6f, 0x64, 0x65,
-	0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x44, 0x6f,
-	0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x46, 0x75, 0x6e,
-	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x32, 0x2e, 0x63,
-	0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65, 0x72,
-	0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x6f,
-	0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x5c, 0x0a, 0x0f, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x12, 0x23, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f,
-	0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x42, 0x6c, 0x6f, 0x63,
-	0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73,
-	0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x43, 0x6f, 0x64,
-	0x65, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x95,
-	0x01, 0x0a, 0x0f, 0x63, 0x6f, 0x6d, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65,
-	0x6f, 0x6e, 0x42, 0x10, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x50,
-	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x77, 0x72, 0x69, 0x63, 0x61, 0x72, 0x64, 0x6f, 0x2f, 0x63, 0x6f, 0x64, 0x65,
-	0x2d, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2f, 0x61, 0x70, 0x69, 0xa2, 0x02, 0x03, 0x43,
-	0x58, 0x58, 0xaa, 0x02, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e,
-	0xca, 0x02, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0xe2, 0x02,
-	0x17, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x5c, 0x47, 0x50, 0x42,
-	0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x73,
-	0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x28, 0x09, 0x52, 0x04, 0x64, 0x6f, 0x63, 0x73, 0x22, 0x35, 0x0a, 0x15, 0x41, 0x6e, 0x73, 0x77,
+	0x65, 0x72, 0x51, 0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x1c, 0x0a, 0x09, 0x71, 0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x71, 0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22,
+	0x9c, 0x01, 0x0a, 0x16, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x51, 0x75, 0x65, 0x73, 0x74, 0x69,
+	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x44, 0x0a, 0x07, 0x61, 0x6e,
+	0x73, 0x77, 0x65, 0x72, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2a, 0x2e, 0x63, 0x6f,
+	0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72,
+	0x51, 0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x2e, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x52, 0x07, 0x61, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x73,
+	0x1a, 0x3c, 0x0a, 0x06, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x12, 0x16, 0x0a, 0x06, 0x61, 0x6e,
+	0x73, 0x77, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x61, 0x6e, 0x73, 0x77,
+	0x65, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x71, 0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x71, 0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x6a,
+	0x0a, 0x1a, 0x53, 0x61, 0x76, 0x65, 0x54, 0x6f, 0x4b, 0x6e, 0x6f, 0x77, 0x6c, 0x65, 0x64, 0x67,
+	0x65, 0x42, 0x61, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x31, 0x0a, 0x14,
+	0x63, 0x6f, 0x6e, 0x76, 0x65, 0x72, 0x73, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x73, 0x75, 0x6d,
+	0x6d, 0x61, 0x72, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x13, 0x63, 0x6f, 0x6e, 0x76,
+	0x65, 0x72, 0x73, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x12,
+	0x19, 0x0a, 0x08, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x69, 0x73, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x07, 0x64, 0x61, 0x74, 0x65, 0x49, 0x73, 0x6f, 0x22, 0x2d, 0x0a, 0x1b, 0x53, 0x61,
+	0x76, 0x65, 0x54, 0x6f, 0x4b, 0x6e, 0x6f, 0x77, 0x6c, 0x65, 0x64, 0x67, 0x65, 0x42, 0x61, 0x73,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x10, 0x0a, 0x0e, 0x47, 0x69, 0x74,
+	0x44, 0x69, 0x66, 0x66, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x29, 0x0a, 0x0f, 0x47,
+	0x69, 0x74, 0x44, 0x69, 0x66, 0x66, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16,
+	0x0a, 0x06, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
+	0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x22, 0x43, 0x0a, 0x0b, 0x46, 0x69, 0x6c, 0x65, 0x43, 0x6f,
+	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x6e, 0x61, 0x6d,
+	0x65, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x32, 0xc5, 0x08, 0x0a, 0x0a,
+	0x47, 0x70, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x68, 0x0a, 0x13, 0x53, 0x61,
+	0x76, 0x65, 0x54, 0x6f, 0x4b, 0x6e, 0x6f, 0x77, 0x6c, 0x65, 0x64, 0x67, 0x65, 0x42, 0x61, 0x73,
+	0x65, 0x12, 0x27, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e,
+	0x53, 0x61, 0x76, 0x65, 0x54, 0x6f, 0x4b, 0x6e, 0x6f, 0x77, 0x6c, 0x65, 0x64, 0x67, 0x65, 0x42,
+	0x61, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e, 0x63, 0x6f, 0x64,
+	0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x53, 0x61, 0x76, 0x65, 0x54, 0x6f, 0x4b,
+	0x6e, 0x6f, 0x77, 0x6c, 0x65, 0x64, 0x67, 0x65, 0x42, 0x61, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x59, 0x0a, 0x0e, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x51, 0x75,
+	0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x22, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72,
+	0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x51, 0x75, 0x65, 0x73, 0x74,
+	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x63, 0x6f, 0x64,
+	0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x41, 0x6e, 0x73, 0x77, 0x65, 0x72, 0x51,
+	0x75, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x4d, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x4f, 0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x12, 0x1e, 0x2e,
+	0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x47, 0x65, 0x74, 0x4f,
+	0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e,
+	0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x47, 0x65, 0x74, 0x4f,
+	0x70, 0x65, 0x6e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x53,
+	0x0a, 0x0c, 0x49, 0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x20,
+	0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x49, 0x6e, 0x74,
+	0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x21, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x49,
+	0x6e, 0x74, 0x72, 0x6f, 0x64, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x56, 0x0a, 0x0d, 0x50, 0x61, 0x72, 0x73, 0x65, 0x43, 0x6f, 0x64, 0x65,
+	0x62, 0x61, 0x73, 0x65, 0x12, 0x21, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65,
+	0x6f, 0x6e, 0x2e, 0x50, 0x61, 0x72, 0x73, 0x65, 0x43, 0x6f, 0x64, 0x65, 0x62, 0x61, 0x73, 0x65,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x22, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75,
+	0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x50, 0x61, 0x72, 0x73, 0x65, 0x43, 0x6f, 0x64, 0x65, 0x62,
+	0x61, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x74, 0x0a, 0x17, 0x53,
+	0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x47, 0x6f, 0x6c, 0x61, 0x6e, 0x67, 0x46, 0x75,
+	0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2b, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72,
+	0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x47, 0x6f,
+	0x6c, 0x61, 0x6e, 0x67, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f,
+	0x6e, 0x2e, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x46, 0x6f, 0x72, 0x47, 0x6f, 0x6c, 0x61, 0x6e,
+	0x67, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x86, 0x01, 0x0a, 0x1d, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x44, 0x6f, 0x63, 0x75,
+	0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x46, 0x75, 0x6e, 0x63, 0x74,
+	0x69, 0x6f, 0x6e, 0x12, 0x31, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f,
+	0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x32, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72,
+	0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d,
+	0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x6f, 0x46, 0x75, 0x6e, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5c, 0x0a, 0x0f, 0x55, 0x70,
+	0x73, 0x65, 0x72, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x23, 0x2e,
+	0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x55, 0x70, 0x73, 0x65,
+	0x72, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x24, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e,
+	0x2e, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x50, 0x0a, 0x0b, 0x45, 0x78, 0x65, 0x63,
+	0x75, 0x74, 0x65, 0x42, 0x61, 0x73, 0x68, 0x12, 0x1f, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75,
+	0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x42, 0x61, 0x73,
+	0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73,
+	0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x42, 0x61,
+	0x73, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x80, 0x01, 0x0a, 0x1b, 0x45,
+	0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x47, 0x6f, 0x70, 0x6c, 0x73, 0x49, 0x6d, 0x70, 0x6c, 0x65,
+	0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x2f, 0x2e, 0x63, 0x6f, 0x64,
+	0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65,
+	0x47, 0x6f, 0x70, 0x6c, 0x73, 0x49, 0x6d, 0x70, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x30, 0x2e, 0x63, 0x6f,
+	0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74,
+	0x65, 0x47, 0x6f, 0x70, 0x6c, 0x73, 0x49, 0x6d, 0x70, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x44, 0x0a,
+	0x07, 0x47, 0x69, 0x74, 0x44, 0x69, 0x66, 0x66, 0x12, 0x1b, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73,
+	0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2e, 0x47, 0x69, 0x74, 0x44, 0x69, 0x66, 0x66, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67,
+	0x65, 0x6f, 0x6e, 0x2e, 0x47, 0x69, 0x74, 0x44, 0x69, 0x66, 0x66, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x42, 0x95, 0x01, 0x0a, 0x0f, 0x63, 0x6f, 0x6d, 0x2e, 0x63, 0x6f, 0x64, 0x65,
+	0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x42, 0x10, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72,
+	0x67, 0x65, 0x6f, 0x6e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x24, 0x67, 0x69, 0x74,
+	0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x77, 0x72, 0x69, 0x63, 0x61, 0x72, 0x64, 0x6f,
+	0x2f, 0x63, 0x6f, 0x64, 0x65, 0x2d, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x2f, 0x61, 0x70,
+	0x69, 0xa2, 0x02, 0x03, 0x43, 0x58, 0x58, 0xaa, 0x02, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75,
+	0x72, 0x67, 0x65, 0x6f, 0x6e, 0xca, 0x02, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67,
+	0x65, 0x6f, 0x6e, 0xe2, 0x02, 0x17, 0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f,
+	0x6e, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x0b,
+	0x43, 0x6f, 0x64, 0x65, 0x73, 0x75, 0x72, 0x67, 0x65, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1660,63 +2362,86 @@ func file_api_codesurgeon_proto_rawDescGZIP() []byte {
 	return file_api_codesurgeon_proto_rawDescData
 }
 
-var file_api_codesurgeon_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_api_codesurgeon_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_api_codesurgeon_proto_goTypes = []any{
-	(*GetOpenAPIRequest)(nil),                     // 0: codesurgeon.GetOpenAPIRequest
-	(*GetOpenAPIResponse)(nil),                    // 1: codesurgeon.GetOpenAPIResponse
-	(*IntroductionRequest)(nil),                   // 2: codesurgeon.IntroductionRequest
-	(*IntroductionResponse)(nil),                  // 3: codesurgeon.IntroductionResponse
-	(*SearchForFunctionRequest)(nil),              // 4: codesurgeon.SearchForFunctionRequest
-	(*SearchForFunctionResponse)(nil),             // 5: codesurgeon.SearchForFunctionResponse
-	(*UpsertDocumentationToFunctionRequest)(nil),  // 6: codesurgeon.UpsertDocumentationToFunctionRequest
-	(*UpsertDocumentationToFunctionResponse)(nil), // 7: codesurgeon.UpsertDocumentationToFunctionResponse
-	(*UpsertCodeBlockRequest)(nil),                // 8: codesurgeon.UpsertCodeBlockRequest
-	(*UpsertCodeBlockResponse)(nil),               // 9: codesurgeon.UpsertCodeBlockResponse
-	(*ParseCodebaseRequest)(nil),                  // 10: codesurgeon.ParseCodebaseRequest
-	(*ParseCodebaseResponse)(nil),                 // 11: codesurgeon.ParseCodebaseResponse
-	(*Package)(nil),                               // 12: codesurgeon.Package
-	(*Interface)(nil),                             // 13: codesurgeon.Interface
-	(*Struct)(nil),                                // 14: codesurgeon.Struct
-	(*Method)(nil),                                // 15: codesurgeon.Method
-	(*Function)(nil),                              // 16: codesurgeon.Function
-	(*Param)(nil),                                 // 17: codesurgeon.Param
-	(*Field)(nil),                                 // 18: codesurgeon.Field
-	(*Variable)(nil),                              // 19: codesurgeon.Variable
-	(*Constant)(nil),                              // 20: codesurgeon.Constant
-	(*UpsertCodeBlockRequest_Modification)(nil),   // 21: codesurgeon.UpsertCodeBlockRequest.Modification
+	(*ExecuteGoplsImplementationsRequest)(nil),    // 0: codesurgeon.ExecuteGoplsImplementationsRequest
+	(*ExecuteGoplsImplementationsResponse)(nil),   // 1: codesurgeon.ExecuteGoplsImplementationsResponse
+	(*ExecuteBashRequest)(nil),                    // 2: codesurgeon.ExecuteBashRequest
+	(*ExecuteBashResponse)(nil),                   // 3: codesurgeon.ExecuteBashResponse
+	(*GetOpenAPIRequest)(nil),                     // 4: codesurgeon.GetOpenAPIRequest
+	(*GetOpenAPIResponse)(nil),                    // 5: codesurgeon.GetOpenAPIResponse
+	(*IntroductionRequest)(nil),                   // 6: codesurgeon.IntroductionRequest
+	(*IntroductionResponse)(nil),                  // 7: codesurgeon.IntroductionResponse
+	(*SearchForGolangFunctionRequest)(nil),        // 8: codesurgeon.SearchForGolangFunctionRequest
+	(*SearchForGolangFunctionResponse)(nil),       // 9: codesurgeon.SearchForGolangFunctionResponse
+	(*UpsertDocumentationToFunctionRequest)(nil),  // 10: codesurgeon.UpsertDocumentationToFunctionRequest
+	(*UpsertDocumentationToFunctionResponse)(nil), // 11: codesurgeon.UpsertDocumentationToFunctionResponse
+	(*UpsertCodeBlockRequest)(nil),                // 12: codesurgeon.UpsertCodeBlockRequest
+	(*UpsertCodeBlockResponse)(nil),               // 13: codesurgeon.UpsertCodeBlockResponse
+	(*ParseCodebaseRequest)(nil),                  // 14: codesurgeon.ParseCodebaseRequest
+	(*ParseCodebaseResponse)(nil),                 // 15: codesurgeon.ParseCodebaseResponse
+	(*Package)(nil),                               // 16: codesurgeon.Package
+	(*Interface)(nil),                             // 17: codesurgeon.Interface
+	(*Struct)(nil),                                // 18: codesurgeon.Struct
+	(*Method)(nil),                                // 19: codesurgeon.Method
+	(*Function)(nil),                              // 20: codesurgeon.Function
+	(*Param)(nil),                                 // 21: codesurgeon.Param
+	(*Field)(nil),                                 // 22: codesurgeon.Field
+	(*Variable)(nil),                              // 23: codesurgeon.Variable
+	(*Constant)(nil),                              // 24: codesurgeon.Constant
+	(*AnswerQuestionRequest)(nil),                 // 25: codesurgeon.AnswerQuestionRequest
+	(*AnswerQuestionResponse)(nil),                // 26: codesurgeon.AnswerQuestionResponse
+	(*SaveToKnowledgeBaseRequest)(nil),            // 27: codesurgeon.SaveToKnowledgeBaseRequest
+	(*SaveToKnowledgeBaseResponse)(nil),           // 28: codesurgeon.SaveToKnowledgeBaseResponse
+	(*GitDiffRequest)(nil),                        // 29: codesurgeon.GitDiffRequest
+	(*GitDiffResponse)(nil),                       // 30: codesurgeon.GitDiffResponse
+	(*FileContent)(nil),                           // 31: codesurgeon.FileContent
+	(*UpsertCodeBlockRequest_Modification)(nil),   // 32: codesurgeon.UpsertCodeBlockRequest.Modification
+	(*AnswerQuestionResponse_Answer)(nil),         // 33: codesurgeon.AnswerQuestionResponse.Answer
 }
 var file_api_codesurgeon_proto_depIdxs = []int32{
-	21, // 0: codesurgeon.UpsertCodeBlockRequest.modification:type_name -> codesurgeon.UpsertCodeBlockRequest.Modification
-	12, // 1: codesurgeon.ParseCodebaseResponse.packages:type_name -> codesurgeon.Package
-	14, // 2: codesurgeon.Package.structs:type_name -> codesurgeon.Struct
-	16, // 3: codesurgeon.Package.functions:type_name -> codesurgeon.Function
-	19, // 4: codesurgeon.Package.variables:type_name -> codesurgeon.Variable
-	20, // 5: codesurgeon.Package.constants:type_name -> codesurgeon.Constant
-	13, // 6: codesurgeon.Package.interfaces:type_name -> codesurgeon.Interface
-	15, // 7: codesurgeon.Interface.methods:type_name -> codesurgeon.Method
-	18, // 8: codesurgeon.Struct.fields:type_name -> codesurgeon.Field
-	15, // 9: codesurgeon.Struct.methods:type_name -> codesurgeon.Method
-	17, // 10: codesurgeon.Method.params:type_name -> codesurgeon.Param
-	17, // 11: codesurgeon.Method.returns:type_name -> codesurgeon.Param
-	17, // 12: codesurgeon.Function.params:type_name -> codesurgeon.Param
-	17, // 13: codesurgeon.Function.returns:type_name -> codesurgeon.Param
-	0,  // 14: codesurgeon.GptService.GetOpenAPI:input_type -> codesurgeon.GetOpenAPIRequest
-	2,  // 15: codesurgeon.GptService.Introduction:input_type -> codesurgeon.IntroductionRequest
-	10, // 16: codesurgeon.GptService.ParseCodebase:input_type -> codesurgeon.ParseCodebaseRequest
-	4,  // 17: codesurgeon.GptService.SearchForFunction:input_type -> codesurgeon.SearchForFunctionRequest
-	6,  // 18: codesurgeon.GptService.UpsertDocumentationToFunction:input_type -> codesurgeon.UpsertDocumentationToFunctionRequest
-	8,  // 19: codesurgeon.GptService.UpsertCodeBlock:input_type -> codesurgeon.UpsertCodeBlockRequest
-	1,  // 20: codesurgeon.GptService.GetOpenAPI:output_type -> codesurgeon.GetOpenAPIResponse
-	3,  // 21: codesurgeon.GptService.Introduction:output_type -> codesurgeon.IntroductionResponse
-	11, // 22: codesurgeon.GptService.ParseCodebase:output_type -> codesurgeon.ParseCodebaseResponse
-	5,  // 23: codesurgeon.GptService.SearchForFunction:output_type -> codesurgeon.SearchForFunctionResponse
-	7,  // 24: codesurgeon.GptService.UpsertDocumentationToFunction:output_type -> codesurgeon.UpsertDocumentationToFunctionResponse
-	9,  // 25: codesurgeon.GptService.UpsertCodeBlock:output_type -> codesurgeon.UpsertCodeBlockResponse
-	20, // [20:26] is the sub-list for method output_type
-	14, // [14:20] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	32, // 0: codesurgeon.UpsertCodeBlockRequest.modification:type_name -> codesurgeon.UpsertCodeBlockRequest.Modification
+	16, // 1: codesurgeon.ParseCodebaseResponse.packages:type_name -> codesurgeon.Package
+	18, // 2: codesurgeon.Package.structs:type_name -> codesurgeon.Struct
+	20, // 3: codesurgeon.Package.functions:type_name -> codesurgeon.Function
+	23, // 4: codesurgeon.Package.variables:type_name -> codesurgeon.Variable
+	24, // 5: codesurgeon.Package.constants:type_name -> codesurgeon.Constant
+	17, // 6: codesurgeon.Package.interfaces:type_name -> codesurgeon.Interface
+	19, // 7: codesurgeon.Interface.methods:type_name -> codesurgeon.Method
+	22, // 8: codesurgeon.Struct.fields:type_name -> codesurgeon.Field
+	19, // 9: codesurgeon.Struct.methods:type_name -> codesurgeon.Method
+	21, // 10: codesurgeon.Method.params:type_name -> codesurgeon.Param
+	21, // 11: codesurgeon.Method.returns:type_name -> codesurgeon.Param
+	21, // 12: codesurgeon.Function.params:type_name -> codesurgeon.Param
+	21, // 13: codesurgeon.Function.returns:type_name -> codesurgeon.Param
+	33, // 14: codesurgeon.AnswerQuestionResponse.answers:type_name -> codesurgeon.AnswerQuestionResponse.Answer
+	27, // 15: codesurgeon.GptService.SaveToKnowledgeBase:input_type -> codesurgeon.SaveToKnowledgeBaseRequest
+	25, // 16: codesurgeon.GptService.AnswerQuestion:input_type -> codesurgeon.AnswerQuestionRequest
+	4,  // 17: codesurgeon.GptService.GetOpenAPI:input_type -> codesurgeon.GetOpenAPIRequest
+	6,  // 18: codesurgeon.GptService.Introduction:input_type -> codesurgeon.IntroductionRequest
+	14, // 19: codesurgeon.GptService.ParseCodebase:input_type -> codesurgeon.ParseCodebaseRequest
+	8,  // 20: codesurgeon.GptService.SearchForGolangFunction:input_type -> codesurgeon.SearchForGolangFunctionRequest
+	10, // 21: codesurgeon.GptService.UpsertDocumentationToFunction:input_type -> codesurgeon.UpsertDocumentationToFunctionRequest
+	12, // 22: codesurgeon.GptService.UpsertCodeBlock:input_type -> codesurgeon.UpsertCodeBlockRequest
+	2,  // 23: codesurgeon.GptService.ExecuteBash:input_type -> codesurgeon.ExecuteBashRequest
+	0,  // 24: codesurgeon.GptService.ExecuteGoplsImplementations:input_type -> codesurgeon.ExecuteGoplsImplementationsRequest
+	29, // 25: codesurgeon.GptService.GitDiff:input_type -> codesurgeon.GitDiffRequest
+	28, // 26: codesurgeon.GptService.SaveToKnowledgeBase:output_type -> codesurgeon.SaveToKnowledgeBaseResponse
+	26, // 27: codesurgeon.GptService.AnswerQuestion:output_type -> codesurgeon.AnswerQuestionResponse
+	5,  // 28: codesurgeon.GptService.GetOpenAPI:output_type -> codesurgeon.GetOpenAPIResponse
+	7,  // 29: codesurgeon.GptService.Introduction:output_type -> codesurgeon.IntroductionResponse
+	15, // 30: codesurgeon.GptService.ParseCodebase:output_type -> codesurgeon.ParseCodebaseResponse
+	9,  // 31: codesurgeon.GptService.SearchForGolangFunction:output_type -> codesurgeon.SearchForGolangFunctionResponse
+	11, // 32: codesurgeon.GptService.UpsertDocumentationToFunction:output_type -> codesurgeon.UpsertDocumentationToFunctionResponse
+	13, // 33: codesurgeon.GptService.UpsertCodeBlock:output_type -> codesurgeon.UpsertCodeBlockResponse
+	3,  // 34: codesurgeon.GptService.ExecuteBash:output_type -> codesurgeon.ExecuteBashResponse
+	1,  // 35: codesurgeon.GptService.ExecuteGoplsImplementations:output_type -> codesurgeon.ExecuteGoplsImplementationsResponse
+	30, // 36: codesurgeon.GptService.GitDiff:output_type -> codesurgeon.GitDiffResponse
+	26, // [26:37] is the sub-list for method output_type
+	15, // [15:26] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_api_codesurgeon_proto_init() }
@@ -1726,7 +2451,7 @@ func file_api_codesurgeon_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_api_codesurgeon_proto_msgTypes[0].Exporter = func(v any, i int) any {
-			switch v := v.(*GetOpenAPIRequest); i {
+			switch v := v.(*ExecuteGoplsImplementationsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1738,7 +2463,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[1].Exporter = func(v any, i int) any {
-			switch v := v.(*GetOpenAPIResponse); i {
+			switch v := v.(*ExecuteGoplsImplementationsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1750,7 +2475,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[2].Exporter = func(v any, i int) any {
-			switch v := v.(*IntroductionRequest); i {
+			switch v := v.(*ExecuteBashRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1762,7 +2487,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[3].Exporter = func(v any, i int) any {
-			switch v := v.(*IntroductionResponse); i {
+			switch v := v.(*ExecuteBashResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1774,7 +2499,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[4].Exporter = func(v any, i int) any {
-			switch v := v.(*SearchForFunctionRequest); i {
+			switch v := v.(*GetOpenAPIRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1786,7 +2511,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[5].Exporter = func(v any, i int) any {
-			switch v := v.(*SearchForFunctionResponse); i {
+			switch v := v.(*GetOpenAPIResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1798,7 +2523,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[6].Exporter = func(v any, i int) any {
-			switch v := v.(*UpsertDocumentationToFunctionRequest); i {
+			switch v := v.(*IntroductionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1810,7 +2535,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[7].Exporter = func(v any, i int) any {
-			switch v := v.(*UpsertDocumentationToFunctionResponse); i {
+			switch v := v.(*IntroductionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1822,7 +2547,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[8].Exporter = func(v any, i int) any {
-			switch v := v.(*UpsertCodeBlockRequest); i {
+			switch v := v.(*SearchForGolangFunctionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1834,7 +2559,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[9].Exporter = func(v any, i int) any {
-			switch v := v.(*UpsertCodeBlockResponse); i {
+			switch v := v.(*SearchForGolangFunctionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1846,7 +2571,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[10].Exporter = func(v any, i int) any {
-			switch v := v.(*ParseCodebaseRequest); i {
+			switch v := v.(*UpsertDocumentationToFunctionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1858,7 +2583,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[11].Exporter = func(v any, i int) any {
-			switch v := v.(*ParseCodebaseResponse); i {
+			switch v := v.(*UpsertDocumentationToFunctionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1870,7 +2595,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[12].Exporter = func(v any, i int) any {
-			switch v := v.(*Package); i {
+			switch v := v.(*UpsertCodeBlockRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1882,7 +2607,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[13].Exporter = func(v any, i int) any {
-			switch v := v.(*Interface); i {
+			switch v := v.(*UpsertCodeBlockResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1894,7 +2619,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[14].Exporter = func(v any, i int) any {
-			switch v := v.(*Struct); i {
+			switch v := v.(*ParseCodebaseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1906,7 +2631,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[15].Exporter = func(v any, i int) any {
-			switch v := v.(*Method); i {
+			switch v := v.(*ParseCodebaseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1918,7 +2643,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[16].Exporter = func(v any, i int) any {
-			switch v := v.(*Function); i {
+			switch v := v.(*Package); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1930,7 +2655,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[17].Exporter = func(v any, i int) any {
-			switch v := v.(*Param); i {
+			switch v := v.(*Interface); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1942,7 +2667,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[18].Exporter = func(v any, i int) any {
-			switch v := v.(*Field); i {
+			switch v := v.(*Struct); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1954,7 +2679,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[19].Exporter = func(v any, i int) any {
-			switch v := v.(*Variable); i {
+			switch v := v.(*Method); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1966,7 +2691,7 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[20].Exporter = func(v any, i int) any {
-			switch v := v.(*Constant); i {
+			switch v := v.(*Function); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1978,7 +2703,151 @@ func file_api_codesurgeon_proto_init() {
 			}
 		}
 		file_api_codesurgeon_proto_msgTypes[21].Exporter = func(v any, i int) any {
+			switch v := v.(*Param); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[22].Exporter = func(v any, i int) any {
+			switch v := v.(*Field); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[23].Exporter = func(v any, i int) any {
+			switch v := v.(*Variable); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[24].Exporter = func(v any, i int) any {
+			switch v := v.(*Constant); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[25].Exporter = func(v any, i int) any {
+			switch v := v.(*AnswerQuestionRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[26].Exporter = func(v any, i int) any {
+			switch v := v.(*AnswerQuestionResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[27].Exporter = func(v any, i int) any {
+			switch v := v.(*SaveToKnowledgeBaseRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[28].Exporter = func(v any, i int) any {
+			switch v := v.(*SaveToKnowledgeBaseResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[29].Exporter = func(v any, i int) any {
+			switch v := v.(*GitDiffRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[30].Exporter = func(v any, i int) any {
+			switch v := v.(*GitDiffResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[31].Exporter = func(v any, i int) any {
+			switch v := v.(*FileContent); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[32].Exporter = func(v any, i int) any {
 			switch v := v.(*UpsertCodeBlockRequest_Modification); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_codesurgeon_proto_msgTypes[33].Exporter = func(v any, i int) any {
+			switch v := v.(*AnswerQuestionResponse_Answer); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1996,7 +2865,7 @@ func file_api_codesurgeon_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_codesurgeon_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

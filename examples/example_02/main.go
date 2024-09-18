@@ -9,27 +9,39 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
+	"github.com/wricardo/code-surgeon/ai"
 )
 
 func main() {
 	request := getUserRequest()
+
+	inst := instructor.FromOpenAI(
+		openai.NewClient(os.Getenv("OPENAI_API_KEY")),
+		instructor.WithMode(instructor.ModeJSON),
+		instructor.WithMaxRetries(3),
+	)
+	client, err := ai.NewClient(inst)
+	if err != nil {
+		log.Fatalf("Failed to create AI client: %v", err)
+
+	}
 
 	fmt.Println("AI Software Engineer response:")
 	fileContent, err := readFileContents("dynamic.go")
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
-	implementationsMap := analyzeRequest(fileContent, request)
+	implementationsMap := analyzeRequest(client, fileContent, request)
 	fmt.Println(implementationsMap)
 
 	codesurgeon.InsertCodeFragments(implementationsMap)
 }
 
 // Simulate the AI analysis and response
-func analyzeRequest(fileContents, request string) map[string][]codesurgeon.CodeFragment {
-	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+func analyzeRequest(client *ai.Client, fileContents, request string) map[string][]codesurgeon.CodeFragment {
 	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
 		Model: openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{

@@ -5,6 +5,60 @@
 		"version": "1.0.0"
 	},
 	"paths": {
+		"/codesurgeon.GptService/SaveToKnowledgeBase": {
+			"post": {
+				"summary": "SaveToKnowledgeBase",
+				"operationId": "codesurgeon.GptService.SaveToKnowledgeBase",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.SaveToKnowledgeBaseRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.SaveToKnowledgeBaseResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/AnswerQuestion": {
+			"post": {
+				"summary": "AnswerQuestion",
+				"operationId": "codesurgeon.GptService.AnswerQuestion",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.AnswerQuestionRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.AnswerQuestionResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/codesurgeon.GptService/GetOpenAPI": {
 			"post": {
 				"summary": "GetOpenAPI",
@@ -86,15 +140,15 @@
 				}
 			}
 		},
-		"/codesurgeon.GptService/SearchForFunction": {
+		"/codesurgeon.GptService/SearchForGolangFunction": {
 			"post": {
-				"summary": "SearchForFunction",
-				"operationId": "codesurgeon.GptService.SearchForFunction",
+				"summary": "SearchForGolangFunction",
+				"operationId": "codesurgeon.GptService.SearchForGolangFunction",
 				"requestBody": {
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.SearchForFunctionRequest"
+								"$ref": "#/components/schemas/codesurgeon.SearchForGolangFunctionRequest"
 							}
 						}
 					}
@@ -105,7 +159,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.SearchForFunctionResponse"
+									"$ref": "#/components/schemas/codesurgeon.SearchForGolangFunctionResponse"
 								}
 							}
 						}
@@ -166,10 +220,138 @@
 					}
 				}
 			}
+		},
+		"/codesurgeon.GptService/ExecuteBash": {
+			"post": {
+				"summary": "ExecuteBash",
+				"operationId": "codesurgeon.GptService.ExecuteBash",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ExecuteBashRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ExecuteBashResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/ExecuteGoplsImplementations": {
+			"post": {
+				"summary": "ExecuteGoplsImplementations",
+				"operationId": "codesurgeon.GptService.ExecuteGoplsImplementations",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ExecuteGoplsImplementationsRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ExecuteGoplsImplementationsResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/GitDiff": {
+			"post": {
+				"summary": "GitDiff",
+				"operationId": "codesurgeon.GptService.GitDiff",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.GitDiffRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.GitDiffResponse"
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"components": {
 		"schemas": {
+			"codesurgeon.ExecuteGoplsImplementationsRequest": {
+				"type": "object",
+				"properties": {
+					"file_path": {
+						"type": "string"
+					},
+					"line": {
+						"type": "integer"
+					},
+					"column": {
+						"type": "integer"
+					}
+				}
+			},
+			"codesurgeon.ExecuteGoplsImplementationsResponse": {
+				"type": "object",
+				"properties": {
+					"output": {
+						"type": "string"
+					},
+					"error": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ExecuteBashRequest": {
+				"type": "object",
+				"properties": {
+					"command": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ExecuteBashResponse": {
+				"type": "object",
+				"properties": {
+					"stdout": {
+						"type": "string"
+					},
+					"stderr": {
+						"type": "string"
+					},
+					"exitCode": {
+						"type": "integer"
+					}
+				}
+			},
 			"codesurgeon.GetOpenAPIRequest": {
 				"type": "object",
 				"properties": {
@@ -199,7 +381,7 @@
 					}
 				}
 			},
-			"codesurgeon.SearchForFunctionRequest": {
+			"codesurgeon.SearchForGolangFunctionRequest": {
 				"type": "object",
 				"properties": {
 					"path": {
@@ -213,19 +395,16 @@
 					}
 				}
 			},
-			"codesurgeon.SearchForFunctionResponse": {
+			"codesurgeon.SearchForGolangFunctionResponse": {
 				"type": "object",
 				"properties": {
 					"filepath": {
 						"type": "string"
 					},
-					"function_name": {
+					"signature": {
 						"type": "string"
 					},
 					"documentation": {
-						"type": "string"
-					},
-					"receiver": {
 						"type": "string"
 					},
 					"body": {
@@ -477,6 +656,65 @@
 						"type": "string"
 					},
 					"docs": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.AnswerQuestionRequest": {
+				"type": "object",
+				"properties": {
+					"questions": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.AnswerQuestionResponse": {
+				"type": "object",
+				"properties": {
+					"answers": {
+						"$ref": "#/components/schemas/codesurgeon.AnswerQuestionResponse.Answer"
+					}
+				}
+			},
+			"codesurgeon.AnswerQuestionResponse.Answer": {
+				"type": "object",
+				"properties": {
+					"answer": {
+						"type": "string"
+					},
+					"question": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.SaveToKnowledgeBaseRequest": {
+				"type": "object",
+				"properties": {
+					"conversation_summary": {
+						"type": "string"
+					},
+					"date_iso": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.SaveToKnowledgeBaseResponse": {
+				"type": "object",
+				"properties": {
+					"ok": {
+						"type": "boolean"
+					}
+				}
+			},
+			"codesurgeon.GitDiffRequest": {
+				"type": "object",
+				"properties": {
+				}
+			},
+			"codesurgeon.GitDiffResponse": {
+				"type": "object",
+				"properties": {
+					"output": {
 						"type": "string"
 					}
 				}

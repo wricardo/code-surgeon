@@ -15,14 +15,18 @@ import (
 	"strings"
 )
 
+// FS embeds OpenAPI and proto files for the codesurgeon package.
+//
 //go:embed api/codesurgeon.openapi.json
 //go:embed api/codesurgeon.proto
 var FS embed.FS
 
+// ParsedInfo holds parsed information about Go packages.
 type ParsedInfo struct {
 	Packages []Package `json:"packages"`
 }
 
+// Package represents a Go package with its components such as imports, structs, functions, etc.
 type Package struct {
 	Package    string      `json:"package"`
 	Imports    []string    `json:"imports,omitemity"`
@@ -33,12 +37,14 @@ type Package struct {
 	Interfaces []Interface `json:"interfaces,omitemity"`
 }
 
+// Interface represents a Go interface and its methods.
 type Interface struct {
 	Name    string   `json:"name"`
 	Methods []Method `json:"methods,omitemity"`
 	Docs    []string `json:"docs,omitemity"`
 }
 
+// Struct represents a Go struct and its fields and methods.
 type Struct struct {
 	Name    string   `json:"name"`
 	Fields  []Field  `json:"fields,omitemity"`
@@ -46,6 +52,7 @@ type Struct struct {
 	Docs    []string `json:"docs,omitemity"`
 }
 
+// Method represents a method in a Go struct or interface.
 type Method struct {
 	Receiver  string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
 	Name      string   `json:"name"`
@@ -56,6 +63,7 @@ type Method struct {
 	Body      string   `json:"body,omitempty"` // New field for method body
 }
 
+// Function represents a Go function with its parameters, return types, and documentation.
 type Function struct {
 	Name      string   `json:"name"`
 	Params    []Param  `json:"params,omitemity"`
@@ -64,11 +72,14 @@ type Function struct {
 	Signature string   `json:"signature"`
 	Body      string   `json:"body,omitempty"` // New field for function body
 }
+
+// Param represents a parameter or return value in a Go function or method.
 type Param struct {
 	Name string `json:"name"` // Name of the parameter or return value
 	Type string `json:"type"` // Type (e.g., "int", "*string")
 }
 
+// Field represents a field in a Go struct.
 type Field struct {
 	Name    string   `json:"name"`
 	Type    string   `json:"type"`
@@ -80,26 +91,31 @@ type Field struct {
 	Comment string   `json:"comment,omitempty"`
 }
 
+// Variable represents a global variable in a Go package.
 type Variable struct {
 	Name string   `json:"name"`
 	Type string   `json:"type"`
 	Docs []string `json:"docs,omitemity"`
 }
 
+// Constant represents a constant in a Go package.
 type Constant struct {
 	Name  string   `json:"name"`
 	Value string   `json:"value"`
 	Docs  []string `json:"docs,omitemity"`
 }
 
+// ParseFile parses a Go file or directory and returns the parsed information.
 func ParseFile(fileOrDirectory string) (*ParsedInfo, error) {
 	return ParseDirectory(fileOrDirectory)
 }
 
+// ParseDirectory parses a directory containing Go files and returns the parsed information.
 func ParseDirectory(fileOrDirectory string) (*ParsedInfo, error) {
 	return ParseDirectoryWithFilter(fileOrDirectory, nil)
 }
 
+// ParseString parses Go source code provided as a string and returns the parsed information.
 func ParseString(fileContent string) (*ParsedInfo, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "", fileContent, parser.ParseComments|parser.AllErrors|parser.DeclarationErrors)
@@ -117,6 +133,7 @@ func ParseString(fileContent string) (*ParsedInfo, error) {
 	return extractStructsFromPackages(packages)
 }
 
+// ParseDirectoryWithFilter parses a directory with an optional filter function to include specific files.
 func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) bool) (*ParsedInfo, error) {
 	fi, err := os.Stat(fileOrDirectory)
 	if err != nil {
@@ -148,6 +165,7 @@ func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) b
 	return extractStructsFromPackages(packages)
 }
 
+// extractStructsFromPackages processes parsed Go packages to extract structs, interfaces, functions, and more.
 func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, error) {
 	output := &ParsedInfo{
 		Packages: make([]Package, 0, len(packages)),

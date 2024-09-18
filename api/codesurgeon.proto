@@ -5,12 +5,50 @@ package codesurgeon;
 
 // Service definition
 service GptService {
-  rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
+  
+  // Main RPCs
   rpc Introduction(IntroductionRequest) returns (IntroductionResponse);
   rpc ParseCodebase(ParseCodebaseRequest) returns (ParseCodebaseResponse);
-  rpc SearchForFunction(SearchForFunctionRequest) returns (SearchForFunctionResponse);
-  rpc UpsertDocumentationToFunction(UpsertDocumentationToFunctionRequest) returns (UpsertDocumentationToFunctionResponse);
   rpc UpsertCodeBlock(UpsertCodeBlockRequest) returns (UpsertCodeBlockResponse);
+  // New RPC for executing shell commands
+  rpc ExecuteBash(ExecuteBashRequest) returns (ExecuteBashResponse);
+
+  rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
+  rpc SearchForGolangFunction(SearchForGolangFunctionRequest) returns (SearchForGolangFunctionResponse);
+  rpc UpsertDocumentationToFunction(UpsertDocumentationToFunctionRequest) returns (UpsertDocumentationToFunctionResponse);
+  // New RPC for executing gopls implementations command
+  rpc ExecuteGoplsImplementations(ExecuteGoplsImplementationsRequest) returns (ExecuteGoplsImplementationsResponse);
+
+  // RPC to list modified files and return their contents
+  rpc GitDiff(GitDiffRequest) returns (GitDiffResponse);
+
+  rpc SaveToKnowledgeBase(SaveToKnowledgeBaseRequest) returns (SaveToKnowledgeBaseResponse);
+  rpc AnswerQuestion(AnswerQuestionRequest) returns (AnswerQuestionResponse);
+}
+
+message ExecuteGoplsImplementationsRequest {
+  string file_path = 1;  // Path to the Go file
+  int32 line = 2;        // Line number
+  int32 column = 3;      // Column number
+}
+
+// Response message for ExecuteGoplsImplementations RPC
+message ExecuteGoplsImplementationsResponse {
+  string output = 1;  // Standard output of the gopls implementations command
+  string error = 2;   // Standard error of the gopls implementations command, if any
+}
+
+
+// Request message for ExecuteBash RPC
+message ExecuteBashRequest {
+  string command = 1;  // The shell command to execute
+}
+
+// Response message for ExecuteBash RPC
+message ExecuteBashResponse {
+  string stdout = 1;   // Standard output of the executed command
+  string stderr = 2;   // Standard error of the executed command
+  int32 exitCode = 3;  // Exit code of the executed command
 }
 
 // Request message for GetOpenAPI
@@ -32,7 +70,7 @@ message IntroductionResponse {
   string introduction = 1;
 }
 
-message SearchForFunctionRequest {
+message SearchForGolangFunctionRequest {
   // path is the path to the file or directory to search for the function
   string path = 1;
   string function_name = 2;
@@ -40,13 +78,12 @@ message SearchForFunctionRequest {
   string receiver = 3;
 }
 
-message SearchForFunctionResponse {
+message SearchForGolangFunctionResponse {
   string filepath = 1;
-  string function_name = 2;
+  string signature = 2;
   string documentation = 3;
   // receiver is optional, only used if search for a method in a struct
-  string receiver = 4;
-  string body = 5;
+  string body = 4;
 }
 
 message UpsertDocumentationToFunctionRequest {
@@ -64,16 +101,16 @@ message UpsertDocumentationToFunctionResponse {
 
 message UpsertCodeBlockRequest {
   message Modification {
-  // filepath is the path to the file where the code block will be upserted
-  string filepath = 1;
-  // package_name is the package name of the file that is used to create the file if not exists
-  string package_name = 2;
+    // filepath is the path to the file where the code block will be upserted
+    string filepath = 1;
+    // package_name is the package name of the file that is used to create the file if not exists
+    string package_name = 2;
 
-  // code_block is the code block to be upserted
-  string code_block = 3;
+    // code_block is the code block to be upserted
+    string code_block = 3;
 
-  // overwrite is a flag to indicate if the code block should be overwritten if it already exists
-  bool overwrite = 4;
+    // overwrite is a flag to indicate if the code block should be overwritten if it already exists
+    bool overwrite = 4;
   }
   Modification modification = 1;
 }
@@ -81,9 +118,9 @@ message UpsertCodeBlockRequest {
 message UpsertCodeBlockResponse {
   bool ok = 1;
 }
-  
 
-  // Request message for ParseCodebase
+
+// Request message for ParseCodebase
 message ParseCodebaseRequest {
   string file_or_directory = 1; // The path to the file or directory to be parsed
 }
@@ -170,4 +207,43 @@ message Constant {
   string name = 1;
   string value = 2;
   repeated string docs = 3;
+}
+
+// Request message for AnswerQuestion
+message AnswerQuestionRequest {
+  string questions = 1;
+}
+
+
+// Response message for AnswerQuestion
+message AnswerQuestionResponse {
+  message Answer {
+    string answer = 1;
+    string question = 2;
+  }
+  repeated Answer answers = 1;
+}
+
+message SaveToKnowledgeBaseRequest {
+  string conversation_summary = 1;
+  string date_iso = 2;
+}
+
+message SaveToKnowledgeBaseResponse {
+  bool ok = 1;
+}
+
+// Request message for GitDiff
+message GitDiffRequest {
+}
+
+// Response message for GitDiff
+message GitDiffResponse {
+  string output = 1;  // Standard output of the git diff command
+}
+
+// Representation of a file and its content
+message FileContent {
+  string filename = 1;   // Name of the file
+  string content = 2;    // Content of the file
 }

@@ -3,6 +3,7 @@ package ai
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -16,6 +17,42 @@ import (
 	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
+func GetGPTInstructions(openapi string) (string, error) {
+	actions, err := getActionsFromOpenApiDev(openapi)
+	if err != nil {
+		return "", err
+	}
+	m := map[string]interface{}{
+		"Actions": actions,
+	}
+	return codesurgeon.RenderTemplate(`
+	{{.Actions}}
+
+You are a helpful and experienced golang developer that can follow the instructions and produce the desired output. 
+You should use the actions defined to call functions that find information about type definitions, specially functions and methods on the project we are working on.
+Call the API with the operation you want see that the user want you to execute, if any.
+You may sometimes execute bash commands to fulfill the user request.
+`, m)
+}
+
+func GetGPTIntroduction(openapiDef string) (string, error) {
+	actions, err := getActionsFromOpenApiDev(openapiDef)
+	if err != nil {
+		return "", err
+	}
+	// if symbolsByFileCache == "" {
+	// 	CacheSymbols()
+	// }
+
+	return codesurgeon.RenderTemplate(`
+	Hi, I'm Patna and I'm a helpful and experienced golang developer. I can help you with your project.
+			{{.Actions}}
+
+			`, map[string]any{
+		"Actions": actions,
+	})
+}
+
 type GenerateDocumentationRequest struct {
 	Path              string
 	OverwriteExisting bool
@@ -23,7 +60,7 @@ type GenerateDocumentationRequest struct {
 	FunctionName      string
 }
 
-func GenerateDocumentation(req GenerateDocumentationRequest) (bool, error) {
+func GenerateDocumentation(instructorClient *instructor.InstructorOpenAI, req GenerateDocumentationRequest) (bool, error) {
 	receiverName := strings.Replace(req.ReceiverName, "*", "", -1)
 
 	parsedInfo, err := codesurgeon.ParseDirectory(req.Path)
@@ -52,7 +89,7 @@ func GenerateDocumentation(req GenerateDocumentationRequest) (bool, error) {
 				fmt.Printf("Function %s not found in any file\n", fn.Name)
 				continue
 			}
-			documentation, err := documentFunction(&fn, nil)
+			documentation, err := documentFunction(instructorClient, &fn, nil)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -92,7 +129,7 @@ func GenerateDocumentation(req GenerateDocumentationRequest) (bool, error) {
 					fmt.Printf("Function %s not found in any file\n", fn.Name)
 					continue
 				}
-				documentation, err := documentFunction(nil, &fn)
+				documentation, err := documentFunction(instructorClient, nil, &fn)
 				if err != nil {
 					fmt.Println(err)
 					continue
@@ -116,15 +153,15 @@ func GenerateDocumentation(req GenerateDocumentationRequest) (bool, error) {
 	return hasModifiedAny, nil
 }
 
-func documentFunction(sf *codesurgeon.Function, meth *codesurgeon.Method) (string, error) {
+func documentFunction(client *instructor.InstructorOpenAI, sf *codesurgeon.Function, meth *codesurgeon.Method) (string, error) {
 	type AiOutput struct {
 		Documentation string `json:"documentation" jsonschema:"title=documentation,description=the few lines max of documentation that goes above a golang function. Each line starts with //."`
 	}
-	client := instructor.FromOpenAI(
-		openai.NewClient(os.Getenv("OPENAI_API_KEY")),
-		instructor.WithMode(instructor.ModeJSON),
-		instructor.WithMaxRetries(3),
-	)
+	// client := instructor.FromOpenAI(
+	// 	openai.NewClient(os.Getenv("OPENAI_API_KEY")),
+	// 	instructor.WithMode(instructor.ModeJSON),
+	// 	instructor.WithMaxRetries(3),
+	// )
 
 	ctx := context.Background()
 	var aiOut AiOutput
@@ -238,23 +275,6 @@ func Render(tempstring string, data interface{}) string {
 	return builder.String()
 }
 
-func GetGPTInstructions(openapi string) (string, error) {
-	actions, err := getActionsFromOpenApiDev(openapi)
-	if err != nil {
-		return "", err
-	}
-	m := map[string]interface{}{
-		"Actions": actions,
-	}
-	return codesurgeon.RenderTemplate(`
-	{{.Actions}}
-
-You are a helpful and experienced golang developer that can follow the instructions and produce the desired output. 
-You should use the actions defined to call functions that find information about type definitions, specially functions and methods on the project we are working on.
-Call the API with the operation you want see that the user want you to execute, if any.
-`, m)
-}
-
 func getActionsFromOpenApiDev(openapi string) (string, error) {
 	actions := []string{}
 	parsed, err := gabs.ParseJSON([]byte(openapi))
@@ -289,16 +309,15 @@ func getActionsFromOpenApiDev(openapi string) (string, error) {
 	})
 }
 
-func GetGPTIntroduction(openapiDef string) (string, error) {
-	actions, err := getActionsFromOpenApiDev(openapiDef)
+// EmbedQuestion embeds a user's question into a vector representation using a predefined embedding model.
+func EmbedQuestion(client *openai.Client, question string) ([]float32, error) {
+	resp, err := client.CreateEmbeddings(context.Background(), openai.
+		EmbeddingRequest{Input: []string{question}, Model: openai.AdaEmbeddingV2})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return codesurgeon.RenderTemplate(`
-	Hi, I'm Patna and I'm a helpful and experienced golang developer. I can help you with your project.
-			{{.Actions}}
-
-			`, map[string]any{
-		"Actions": actions,
-	})
+	if len(resp.Data) == 0 {
+		return nil, errors.New("no embedding found in response")
+	}
+	return resp.Data[0].Embedding, nil
 }

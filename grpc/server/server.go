@@ -11,6 +11,9 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
+	"github.com/instructor-ai/instructor-go/pkg/instructor"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/sashabaranov/go-openai"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 	"github.com/wricardo/code-surgeon/grpc"
 	"golang.ngrok.com/ngrok"
@@ -19,15 +22,24 @@ import (
 	"golang.org/x/net/http2/h2c"
 )
 
-func Start(port int, useNgrok bool) error {
+func Start(
+	port int,
+	useNgrok bool,
+	ngrokDomain string,
+	openaiApiKey string,
+	neo4jDbUri string,
+	neo4jDbUser string,
+	neo4jDbPassword string,
+) error {
 	log.Printf("Starting server on port %d\n", port)
 	// Initialize ngrok listener
 	ctx := context.Background()
 	var ln ngrok.Tunnel
 	if useNgrok {
 		var err error
+		//frog-able-inherently.ngrok-free.app
 		ln, err = ngrok.Listen(ctx,
-			config.HTTPEndpoint(),
+			config.HTTPEndpoint(config.WithDomain(ngrokDomain)),
 			ngrok.WithAuthtokenFromEnv(), // Make sure to set your ngrok authtoken in environment variables
 		)
 		if err != nil {
@@ -41,8 +53,29 @@ func Start(port int, useNgrok bool) error {
 		url = ln.URL()
 	}
 
+	oaiClient := openai.NewClient(openaiApiKey)
+
+	// Create an OpenAI instructorClient using the instructor package
+	instructorClient := instructor.FromOpenAI(
+		oaiClient,
+		instructor.WithMode(instructor.ModeJSON),
+		instructor.WithMaxRetries(3),
+	)
+
+	driver, err := neo4j.NewDriverWithContext(
+		neo4jDbUri,
+		neo4j.BasicAuth(neo4jDbUser, neo4jDbPassword, ""))
+	if err == nil && driver != nil {
+		defer driver.Close(ctx)
+
+		err = driver.VerifyConnectivity(ctx)
+		if err != nil {
+			log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+		}
+	}
+
 	// graceful shutdown
-	rulesServer := grpc.NewHandler(url)
+	rulesServer := grpc.NewHandler(url, instructorClient, oaiClient, driver)
 
 	mux := http.NewServeMux()
 

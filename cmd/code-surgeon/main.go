@@ -8,6 +8,9 @@ import (
 	"os"
 
 	"connectrpc.com/connect"
+	"github.com/instructor-ai/instructor-go/pkg/instructor"
+	"github.com/joho/godotenv"
+	"github.com/sashabaranov/go-openai"
 	"github.com/urfave/cli/v2"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
@@ -19,11 +22,18 @@ import (
 const DEFAULT_PORT = 8002
 
 func main() {
+
+	var myEnv map[string]string
+	myEnv, err := godotenv.Read()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	app := &cli.App{
 		Name:  "code-surgeon",
 		Usage: "A CLI tool to help you manage your codebase",
 		Action: func(*cli.Context) error {
-			fmt.Println("boom! I say!")
+			fmt.Println("checkout --help for more information.")
 			return nil
 		},
 		Commands: []*cli.Command{
@@ -84,13 +94,24 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
+					if !ok {
+						return fmt.Errorf("OPENAI_API_KEY env var is required")
+					}
+					oaiClient := openai.NewClient(openaiApiKey)
+					instructorClient := instructor.FromOpenAI(
+						oaiClient,
+						instructor.WithMode(instructor.ModeJSON),
+						instructor.WithMaxRetries(3),
+					)
+
 					req := ai.GenerateDocumentationRequest{
 						Path:              cCtx.String("path"),
 						OverwriteExisting: cCtx.Bool("overwrite"),
 						ReceiverName:      cCtx.String("receiver"),
 						FunctionName:      cCtx.String("function"),
 					}
-					ok, err := ai.GenerateDocumentation(req)
+					ok, err := ai.GenerateDocumentation(instructorClient, req)
 					if err != nil {
 						return err
 					}
@@ -104,7 +125,7 @@ func main() {
 				},
 			},
 			{
-				Name:  "gpt-service-server",
+				Name:  "server",
 				Usage: "Run the gpt service server",
 				Flags: []cli.Flag{
 					&cli.IntFlag{
@@ -114,16 +135,28 @@ func main() {
 						Required: false,
 						Value:    DEFAULT_PORT,
 					},
-					&cli.BoolFlag{
-						Name:     "use-ngrok",
-						Aliases:  []string{"n"},
-						Usage:    "use ngrok to expose the server",
+					&cli.StringFlag{
+						Name:     "ngrok-domain",
+						Aliases:  []string{"d"},
+						Usage:    "ngrok domain like: something-else-inherently.ngrok-free.app",
 						Required: false,
-						Value:    false,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					return server.Start(cCtx.Int("port"), cCtx.Bool("use-ngrok"))
+					if cCtx.Bool("use-ngrok") && cCtx.String("ngrok-domain") == "" {
+						return fmt.Errorf("ngrok domain is required when using ngrok")
+					}
+					openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
+					if !ok {
+						return fmt.Errorf("OPENAI_API_KEY env var is required")
+					}
+
+					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
+					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+
+					return server.Start(cCtx.Int("port"), useNgrok, ngrokDomain, openaiApiKey, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 
 				},
 			},
@@ -184,20 +217,6 @@ func main() {
 				Name:  "introduction",
 				Usage: "introductions that are displayed to the user when he asks for it, this is used to give context to the llm.",
 				Flags: []cli.Flag{
-					// &cli.StringFlag{
-					// 	Name:     "proto-filepath",
-					// 	Aliases:  []string{"f"},
-					// 	Usage:    "path to the api proto file",
-					// 	Required: false,
-					// 	Value:    "api/codesurgeon.proto",
-					// },
-					&cli.StringFlag{
-						Name:     "url",
-						Aliases:  []string{"u"},
-						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
-						Required: false,
-						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
-					},
 					&cli.StringFlag{
 						Name:     "url",
 						Aliases:  []string{"u"},

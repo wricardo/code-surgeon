@@ -33,6 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// GptServiceSaveToKnowledgeBaseProcedure is the fully-qualified name of the GptService's
+	// SaveToKnowledgeBase RPC.
+	GptServiceSaveToKnowledgeBaseProcedure = "/codesurgeon.GptService/SaveToKnowledgeBase"
+	// GptServiceAnswerQuestionProcedure is the fully-qualified name of the GptService's AnswerQuestion
+	// RPC.
+	GptServiceAnswerQuestionProcedure = "/codesurgeon.GptService/AnswerQuestion"
 	// GptServiceGetOpenAPIProcedure is the fully-qualified name of the GptService's GetOpenAPI RPC.
 	GptServiceGetOpenAPIProcedure = "/codesurgeon.GptService/GetOpenAPI"
 	// GptServiceIntroductionProcedure is the fully-qualified name of the GptService's Introduction RPC.
@@ -40,36 +46,56 @@ const (
 	// GptServiceParseCodebaseProcedure is the fully-qualified name of the GptService's ParseCodebase
 	// RPC.
 	GptServiceParseCodebaseProcedure = "/codesurgeon.GptService/ParseCodebase"
-	// GptServiceSearchForFunctionProcedure is the fully-qualified name of the GptService's
-	// SearchForFunction RPC.
-	GptServiceSearchForFunctionProcedure = "/codesurgeon.GptService/SearchForFunction"
+	// GptServiceSearchForGolangFunctionProcedure is the fully-qualified name of the GptService's
+	// SearchForGolangFunction RPC.
+	GptServiceSearchForGolangFunctionProcedure = "/codesurgeon.GptService/SearchForGolangFunction"
 	// GptServiceUpsertDocumentationToFunctionProcedure is the fully-qualified name of the GptService's
 	// UpsertDocumentationToFunction RPC.
 	GptServiceUpsertDocumentationToFunctionProcedure = "/codesurgeon.GptService/UpsertDocumentationToFunction"
 	// GptServiceUpsertCodeBlockProcedure is the fully-qualified name of the GptService's
 	// UpsertCodeBlock RPC.
 	GptServiceUpsertCodeBlockProcedure = "/codesurgeon.GptService/UpsertCodeBlock"
+	// GptServiceExecuteBashProcedure is the fully-qualified name of the GptService's ExecuteBash RPC.
+	GptServiceExecuteBashProcedure = "/codesurgeon.GptService/ExecuteBash"
+	// GptServiceExecuteGoplsImplementationsProcedure is the fully-qualified name of the GptService's
+	// ExecuteGoplsImplementations RPC.
+	GptServiceExecuteGoplsImplementationsProcedure = "/codesurgeon.GptService/ExecuteGoplsImplementations"
+	// GptServiceGitDiffProcedure is the fully-qualified name of the GptService's GitDiff RPC.
+	GptServiceGitDiffProcedure = "/codesurgeon.GptService/GitDiff"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
 	gptServiceServiceDescriptor                             = api.File_api_codesurgeon_proto.Services().ByName("GptService")
+	gptServiceSaveToKnowledgeBaseMethodDescriptor           = gptServiceServiceDescriptor.Methods().ByName("SaveToKnowledgeBase")
+	gptServiceAnswerQuestionMethodDescriptor                = gptServiceServiceDescriptor.Methods().ByName("AnswerQuestion")
 	gptServiceGetOpenAPIMethodDescriptor                    = gptServiceServiceDescriptor.Methods().ByName("GetOpenAPI")
 	gptServiceIntroductionMethodDescriptor                  = gptServiceServiceDescriptor.Methods().ByName("Introduction")
 	gptServiceParseCodebaseMethodDescriptor                 = gptServiceServiceDescriptor.Methods().ByName("ParseCodebase")
-	gptServiceSearchForFunctionMethodDescriptor             = gptServiceServiceDescriptor.Methods().ByName("SearchForFunction")
+	gptServiceSearchForGolangFunctionMethodDescriptor       = gptServiceServiceDescriptor.Methods().ByName("SearchForGolangFunction")
 	gptServiceUpsertDocumentationToFunctionMethodDescriptor = gptServiceServiceDescriptor.Methods().ByName("UpsertDocumentationToFunction")
 	gptServiceUpsertCodeBlockMethodDescriptor               = gptServiceServiceDescriptor.Methods().ByName("UpsertCodeBlock")
+	gptServiceExecuteBashMethodDescriptor                   = gptServiceServiceDescriptor.Methods().ByName("ExecuteBash")
+	gptServiceExecuteGoplsImplementationsMethodDescriptor   = gptServiceServiceDescriptor.Methods().ByName("ExecuteGoplsImplementations")
+	gptServiceGitDiffMethodDescriptor                       = gptServiceServiceDescriptor.Methods().ByName("GitDiff")
 )
 
 // GptServiceClient is a client for the codesurgeon.GptService service.
 type GptServiceClient interface {
+	SaveToKnowledgeBase(context.Context, *connect.Request[api.SaveToKnowledgeBaseRequest]) (*connect.Response[api.SaveToKnowledgeBaseResponse], error)
+	AnswerQuestion(context.Context, *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error)
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
 	Introduction(context.Context, *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error)
 	ParseCodebase(context.Context, *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error)
-	SearchForFunction(context.Context, *connect.Request[api.SearchForFunctionRequest]) (*connect.Response[api.SearchForFunctionResponse], error)
+	SearchForGolangFunction(context.Context, *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error)
 	UpsertDocumentationToFunction(context.Context, *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error)
 	UpsertCodeBlock(context.Context, *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error)
+	// New RPC for executing shell commands
+	ExecuteBash(context.Context, *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error)
+	// New RPC for executing gopls implementations command
+	ExecuteGoplsImplementations(context.Context, *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error)
+	// RPC to list modified files and return their contents
+	GitDiff(context.Context, *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error)
 }
 
 // NewGptServiceClient constructs a client for the codesurgeon.GptService service. By default, it
@@ -82,6 +108,18 @@ type GptServiceClient interface {
 func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GptServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &gptServiceClient{
+		saveToKnowledgeBase: connect.NewClient[api.SaveToKnowledgeBaseRequest, api.SaveToKnowledgeBaseResponse](
+			httpClient,
+			baseURL+GptServiceSaveToKnowledgeBaseProcedure,
+			connect.WithSchema(gptServiceSaveToKnowledgeBaseMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		answerQuestion: connect.NewClient[api.AnswerQuestionRequest, api.AnswerQuestionResponse](
+			httpClient,
+			baseURL+GptServiceAnswerQuestionProcedure,
+			connect.WithSchema(gptServiceAnswerQuestionMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getOpenAPI: connect.NewClient[api.GetOpenAPIRequest, api.GetOpenAPIResponse](
 			httpClient,
 			baseURL+GptServiceGetOpenAPIProcedure,
@@ -100,10 +138,10 @@ func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(gptServiceParseCodebaseMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		searchForFunction: connect.NewClient[api.SearchForFunctionRequest, api.SearchForFunctionResponse](
+		searchForGolangFunction: connect.NewClient[api.SearchForGolangFunctionRequest, api.SearchForGolangFunctionResponse](
 			httpClient,
-			baseURL+GptServiceSearchForFunctionProcedure,
-			connect.WithSchema(gptServiceSearchForFunctionMethodDescriptor),
+			baseURL+GptServiceSearchForGolangFunctionProcedure,
+			connect.WithSchema(gptServiceSearchForGolangFunctionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		upsertDocumentationToFunction: connect.NewClient[api.UpsertDocumentationToFunctionRequest, api.UpsertDocumentationToFunctionResponse](
@@ -118,17 +156,50 @@ func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(gptServiceUpsertCodeBlockMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		executeBash: connect.NewClient[api.ExecuteBashRequest, api.ExecuteBashResponse](
+			httpClient,
+			baseURL+GptServiceExecuteBashProcedure,
+			connect.WithSchema(gptServiceExecuteBashMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		executeGoplsImplementations: connect.NewClient[api.ExecuteGoplsImplementationsRequest, api.ExecuteGoplsImplementationsResponse](
+			httpClient,
+			baseURL+GptServiceExecuteGoplsImplementationsProcedure,
+			connect.WithSchema(gptServiceExecuteGoplsImplementationsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		gitDiff: connect.NewClient[api.GitDiffRequest, api.GitDiffResponse](
+			httpClient,
+			baseURL+GptServiceGitDiffProcedure,
+			connect.WithSchema(gptServiceGitDiffMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // gptServiceClient implements GptServiceClient.
 type gptServiceClient struct {
+	saveToKnowledgeBase           *connect.Client[api.SaveToKnowledgeBaseRequest, api.SaveToKnowledgeBaseResponse]
+	answerQuestion                *connect.Client[api.AnswerQuestionRequest, api.AnswerQuestionResponse]
 	getOpenAPI                    *connect.Client[api.GetOpenAPIRequest, api.GetOpenAPIResponse]
 	introduction                  *connect.Client[api.IntroductionRequest, api.IntroductionResponse]
 	parseCodebase                 *connect.Client[api.ParseCodebaseRequest, api.ParseCodebaseResponse]
-	searchForFunction             *connect.Client[api.SearchForFunctionRequest, api.SearchForFunctionResponse]
+	searchForGolangFunction       *connect.Client[api.SearchForGolangFunctionRequest, api.SearchForGolangFunctionResponse]
 	upsertDocumentationToFunction *connect.Client[api.UpsertDocumentationToFunctionRequest, api.UpsertDocumentationToFunctionResponse]
 	upsertCodeBlock               *connect.Client[api.UpsertCodeBlockRequest, api.UpsertCodeBlockResponse]
+	executeBash                   *connect.Client[api.ExecuteBashRequest, api.ExecuteBashResponse]
+	executeGoplsImplementations   *connect.Client[api.ExecuteGoplsImplementationsRequest, api.ExecuteGoplsImplementationsResponse]
+	gitDiff                       *connect.Client[api.GitDiffRequest, api.GitDiffResponse]
+}
+
+// SaveToKnowledgeBase calls codesurgeon.GptService.SaveToKnowledgeBase.
+func (c *gptServiceClient) SaveToKnowledgeBase(ctx context.Context, req *connect.Request[api.SaveToKnowledgeBaseRequest]) (*connect.Response[api.SaveToKnowledgeBaseResponse], error) {
+	return c.saveToKnowledgeBase.CallUnary(ctx, req)
+}
+
+// AnswerQuestion calls codesurgeon.GptService.AnswerQuestion.
+func (c *gptServiceClient) AnswerQuestion(ctx context.Context, req *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error) {
+	return c.answerQuestion.CallUnary(ctx, req)
 }
 
 // GetOpenAPI calls codesurgeon.GptService.GetOpenAPI.
@@ -146,9 +217,9 @@ func (c *gptServiceClient) ParseCodebase(ctx context.Context, req *connect.Reque
 	return c.parseCodebase.CallUnary(ctx, req)
 }
 
-// SearchForFunction calls codesurgeon.GptService.SearchForFunction.
-func (c *gptServiceClient) SearchForFunction(ctx context.Context, req *connect.Request[api.SearchForFunctionRequest]) (*connect.Response[api.SearchForFunctionResponse], error) {
-	return c.searchForFunction.CallUnary(ctx, req)
+// SearchForGolangFunction calls codesurgeon.GptService.SearchForGolangFunction.
+func (c *gptServiceClient) SearchForGolangFunction(ctx context.Context, req *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
+	return c.searchForGolangFunction.CallUnary(ctx, req)
 }
 
 // UpsertDocumentationToFunction calls codesurgeon.GptService.UpsertDocumentationToFunction.
@@ -161,14 +232,37 @@ func (c *gptServiceClient) UpsertCodeBlock(ctx context.Context, req *connect.Req
 	return c.upsertCodeBlock.CallUnary(ctx, req)
 }
 
+// ExecuteBash calls codesurgeon.GptService.ExecuteBash.
+func (c *gptServiceClient) ExecuteBash(ctx context.Context, req *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error) {
+	return c.executeBash.CallUnary(ctx, req)
+}
+
+// ExecuteGoplsImplementations calls codesurgeon.GptService.ExecuteGoplsImplementations.
+func (c *gptServiceClient) ExecuteGoplsImplementations(ctx context.Context, req *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error) {
+	return c.executeGoplsImplementations.CallUnary(ctx, req)
+}
+
+// GitDiff calls codesurgeon.GptService.GitDiff.
+func (c *gptServiceClient) GitDiff(ctx context.Context, req *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error) {
+	return c.gitDiff.CallUnary(ctx, req)
+}
+
 // GptServiceHandler is an implementation of the codesurgeon.GptService service.
 type GptServiceHandler interface {
+	SaveToKnowledgeBase(context.Context, *connect.Request[api.SaveToKnowledgeBaseRequest]) (*connect.Response[api.SaveToKnowledgeBaseResponse], error)
+	AnswerQuestion(context.Context, *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error)
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
 	Introduction(context.Context, *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error)
 	ParseCodebase(context.Context, *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error)
-	SearchForFunction(context.Context, *connect.Request[api.SearchForFunctionRequest]) (*connect.Response[api.SearchForFunctionResponse], error)
+	SearchForGolangFunction(context.Context, *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error)
 	UpsertDocumentationToFunction(context.Context, *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error)
 	UpsertCodeBlock(context.Context, *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error)
+	// New RPC for executing shell commands
+	ExecuteBash(context.Context, *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error)
+	// New RPC for executing gopls implementations command
+	ExecuteGoplsImplementations(context.Context, *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error)
+	// RPC to list modified files and return their contents
+	GitDiff(context.Context, *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error)
 }
 
 // NewGptServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -177,6 +271,18 @@ type GptServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	gptServiceSaveToKnowledgeBaseHandler := connect.NewUnaryHandler(
+		GptServiceSaveToKnowledgeBaseProcedure,
+		svc.SaveToKnowledgeBase,
+		connect.WithSchema(gptServiceSaveToKnowledgeBaseMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	gptServiceAnswerQuestionHandler := connect.NewUnaryHandler(
+		GptServiceAnswerQuestionProcedure,
+		svc.AnswerQuestion,
+		connect.WithSchema(gptServiceAnswerQuestionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	gptServiceGetOpenAPIHandler := connect.NewUnaryHandler(
 		GptServiceGetOpenAPIProcedure,
 		svc.GetOpenAPI,
@@ -195,10 +301,10 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(gptServiceParseCodebaseMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	gptServiceSearchForFunctionHandler := connect.NewUnaryHandler(
-		GptServiceSearchForFunctionProcedure,
-		svc.SearchForFunction,
-		connect.WithSchema(gptServiceSearchForFunctionMethodDescriptor),
+	gptServiceSearchForGolangFunctionHandler := connect.NewUnaryHandler(
+		GptServiceSearchForGolangFunctionProcedure,
+		svc.SearchForGolangFunction,
+		connect.WithSchema(gptServiceSearchForGolangFunctionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	gptServiceUpsertDocumentationToFunctionHandler := connect.NewUnaryHandler(
@@ -213,20 +319,48 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(gptServiceUpsertCodeBlockMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	gptServiceExecuteBashHandler := connect.NewUnaryHandler(
+		GptServiceExecuteBashProcedure,
+		svc.ExecuteBash,
+		connect.WithSchema(gptServiceExecuteBashMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	gptServiceExecuteGoplsImplementationsHandler := connect.NewUnaryHandler(
+		GptServiceExecuteGoplsImplementationsProcedure,
+		svc.ExecuteGoplsImplementations,
+		connect.WithSchema(gptServiceExecuteGoplsImplementationsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	gptServiceGitDiffHandler := connect.NewUnaryHandler(
+		GptServiceGitDiffProcedure,
+		svc.GitDiff,
+		connect.WithSchema(gptServiceGitDiffMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/codesurgeon.GptService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case GptServiceSaveToKnowledgeBaseProcedure:
+			gptServiceSaveToKnowledgeBaseHandler.ServeHTTP(w, r)
+		case GptServiceAnswerQuestionProcedure:
+			gptServiceAnswerQuestionHandler.ServeHTTP(w, r)
 		case GptServiceGetOpenAPIProcedure:
 			gptServiceGetOpenAPIHandler.ServeHTTP(w, r)
 		case GptServiceIntroductionProcedure:
 			gptServiceIntroductionHandler.ServeHTTP(w, r)
 		case GptServiceParseCodebaseProcedure:
 			gptServiceParseCodebaseHandler.ServeHTTP(w, r)
-		case GptServiceSearchForFunctionProcedure:
-			gptServiceSearchForFunctionHandler.ServeHTTP(w, r)
+		case GptServiceSearchForGolangFunctionProcedure:
+			gptServiceSearchForGolangFunctionHandler.ServeHTTP(w, r)
 		case GptServiceUpsertDocumentationToFunctionProcedure:
 			gptServiceUpsertDocumentationToFunctionHandler.ServeHTTP(w, r)
 		case GptServiceUpsertCodeBlockProcedure:
 			gptServiceUpsertCodeBlockHandler.ServeHTTP(w, r)
+		case GptServiceExecuteBashProcedure:
+			gptServiceExecuteBashHandler.ServeHTTP(w, r)
+		case GptServiceExecuteGoplsImplementationsProcedure:
+			gptServiceExecuteGoplsImplementationsHandler.ServeHTTP(w, r)
+		case GptServiceGitDiffProcedure:
+			gptServiceGitDiffHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -235,6 +369,14 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 
 // UnimplementedGptServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGptServiceHandler struct{}
+
+func (UnimplementedGptServiceHandler) SaveToKnowledgeBase(context.Context, *connect.Request[api.SaveToKnowledgeBaseRequest]) (*connect.Response[api.SaveToKnowledgeBaseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SaveToKnowledgeBase is not implemented"))
+}
+
+func (UnimplementedGptServiceHandler) AnswerQuestion(context.Context, *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.AnswerQuestion is not implemented"))
+}
 
 func (UnimplementedGptServiceHandler) GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GetOpenAPI is not implemented"))
@@ -248,8 +390,8 @@ func (UnimplementedGptServiceHandler) ParseCodebase(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ParseCodebase is not implemented"))
 }
 
-func (UnimplementedGptServiceHandler) SearchForFunction(context.Context, *connect.Request[api.SearchForFunctionRequest]) (*connect.Response[api.SearchForFunctionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SearchForFunction is not implemented"))
+func (UnimplementedGptServiceHandler) SearchForGolangFunction(context.Context, *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SearchForGolangFunction is not implemented"))
 }
 
 func (UnimplementedGptServiceHandler) UpsertDocumentationToFunction(context.Context, *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error) {
@@ -258,4 +400,16 @@ func (UnimplementedGptServiceHandler) UpsertDocumentationToFunction(context.Cont
 
 func (UnimplementedGptServiceHandler) UpsertCodeBlock(context.Context, *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.UpsertCodeBlock is not implemented"))
+}
+
+func (UnimplementedGptServiceHandler) ExecuteBash(context.Context, *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ExecuteBash is not implemented"))
+}
+
+func (UnimplementedGptServiceHandler) ExecuteGoplsImplementations(context.Context, *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ExecuteGoplsImplementations is not implemented"))
+}
+
+func (UnimplementedGptServiceHandler) GitDiff(context.Context, *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GitDiff is not implemented"))
 }

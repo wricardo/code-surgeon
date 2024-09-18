@@ -2,519 +2,42 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/Jeffail/gabs"
+	"github.com/instructor-ai/instructor-go/pkg/instructor"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/wricardo/code-surgeon/neo4j2"
 )
-
-/*api/codesurgeon.openapi.json
-{
-	"openapi": "3.0.0",
-	"info": {
-		"title": "codesurgeon",
-		"version": "1.0.0"
-	},
-	"paths": {
-		"/codesurgeon.GptService/GetOpenAPI": {
-			"post": {
-				"summary": "GetOpenAPI",
-				"operationId": "codesurgeon.GptService.GetOpenAPI",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.GetOpenAPIRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.GetOpenAPIResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/Introduction": {
-			"post": {
-				"summary": "Introduction",
-				"operationId": "codesurgeon.GptService.Introduction",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.IntroductionRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.IntroductionResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/ParseCodebase": {
-			"post": {
-				"summary": "ParseCodebase",
-				"operationId": "codesurgeon.GptService.ParseCodebase",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.ParseCodebaseRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.ParseCodebaseResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/SearchForFunction": {
-			"post": {
-				"summary": "SearchForFunction",
-				"operationId": "codesurgeon.GptService.SearchForFunction",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.SearchForFunctionRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.SearchForFunctionResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/UpsertDocumentationToFunction": {
-			"post": {
-				"summary": "UpsertDocumentationToFunction",
-				"operationId": "codesurgeon.GptService.UpsertDocumentationToFunction",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.UpsertDocumentationToFunctionRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.UpsertDocumentationToFunctionResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/UpsertCodeBlock": {
-			"post": {
-				"summary": "UpsertCodeBlock",
-				"operationId": "codesurgeon.GptService.UpsertCodeBlock",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	},
-	"components": {
-		"schemas": {
-			"codesurgeon.GetOpenAPIRequest": {
-				"type": "object",
-				"properties": {
-				}
-			},
-			"codesurgeon.GetOpenAPIResponse": {
-				"type": "object",
-				"properties": {
-					"openapi": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.IntroductionRequest": {
-				"type": "object",
-				"properties": {
-					"short": {
-						"type": "boolean"
-					}
-				}
-			},
-			"codesurgeon.IntroductionResponse": {
-				"type": "object",
-				"properties": {
-					"introduction": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.SearchForFunctionRequest": {
-				"type": "object",
-				"properties": {
-					"path": {
-						"type": "string"
-					},
-					"function_name": {
-						"type": "string"
-					},
-					"receiver": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.SearchForFunctionResponse": {
-				"type": "object",
-				"properties": {
-					"filepath": {
-						"type": "string"
-					},
-					"function_name": {
-						"type": "string"
-					},
-					"documentation": {
-						"type": "string"
-					},
-					"receiver": {
-						"type": "string"
-					},
-					"body": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.UpsertDocumentationToFunctionRequest": {
-				"type": "object",
-				"properties": {
-					"filepath": {
-						"type": "string"
-					},
-					"function_name": {
-						"type": "string"
-					},
-					"documentation": {
-						"type": "string"
-					},
-					"receiver": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.UpsertDocumentationToFunctionResponse": {
-				"type": "object",
-				"properties": {
-					"ok": {
-						"type": "boolean"
-					}
-				}
-			},
-			"codesurgeon.UpsertCodeBlockRequest": {
-				"type": "object",
-				"properties": {
-					"modification": {
-						"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockRequest.Modification"
-					}
-				}
-			},
-			"codesurgeon.UpsertCodeBlockRequest.Modification": {
-				"type": "object",
-				"properties": {
-					"filepath": {
-						"type": "string"
-					},
-					"package_name": {
-						"type": "string"
-					},
-					"code_block": {
-						"type": "string"
-					},
-					"overwrite": {
-						"type": "boolean"
-					}
-				}
-			},
-			"codesurgeon.UpsertCodeBlockResponse": {
-				"type": "object",
-				"properties": {
-					"ok": {
-						"type": "boolean"
-					}
-				}
-			},
-			"codesurgeon.ParseCodebaseRequest": {
-				"type": "object",
-				"properties": {
-					"file_or_directory": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.ParseCodebaseResponse": {
-				"type": "object",
-				"properties": {
-					"packages": {
-						"$ref": "#/components/schemas/codesurgeon.Package"
-					}
-				}
-			},
-			"codesurgeon.Package": {
-				"type": "object",
-				"properties": {
-					"package": {
-						"type": "string"
-					},
-					"imports": {
-						"type": "string"
-					},
-					"structs": {
-						"$ref": "#/components/schemas/codesurgeon.Struct"
-					},
-					"functions": {
-						"$ref": "#/components/schemas/codesurgeon.Function"
-					},
-					"variables": {
-						"$ref": "#/components/schemas/codesurgeon.Variable"
-					},
-					"constants": {
-						"$ref": "#/components/schemas/codesurgeon.Constant"
-					},
-					"interfaces": {
-						"$ref": "#/components/schemas/codesurgeon.Interface"
-					}
-				}
-			},
-			"codesurgeon.Interface": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"methods": {
-						"$ref": "#/components/schemas/codesurgeon.Method"
-					},
-					"docs": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Struct": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"fields": {
-						"$ref": "#/components/schemas/codesurgeon.Field"
-					},
-					"methods": {
-						"$ref": "#/components/schemas/codesurgeon.Method"
-					},
-					"docs": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Method": {
-				"type": "object",
-				"properties": {
-					"receiver": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"params": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					},
-					"returns": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					},
-					"docs": {
-						"type": "string"
-					},
-					"signature": {
-						"type": "string"
-					},
-					"body": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Function": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"params": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					},
-					"returns": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					},
-					"docs": {
-						"type": "string"
-					},
-					"signature": {
-						"type": "string"
-					},
-					"body": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Param": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"type": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Field": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"type": {
-						"type": "string"
-					},
-					"tag": {
-						"type": "string"
-					},
-					"private": {
-						"type": "boolean"
-					},
-					"pointer": {
-						"type": "boolean"
-					},
-					"slice": {
-						"type": "boolean"
-					},
-					"docs": {
-						"type": "string"
-					},
-					"comment": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Variable": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"type": {
-						"type": "string"
-					},
-					"docs": {
-						"type": "string"
-					}
-				}
-			},
-			"codesurgeon.Constant": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"value": {
-						"type": "string"
-					},
-					"docs": {
-						"type": "string"
-					}
-				}
-			}
-		}
-	}
-}
-*/
 
 var _ apiconnect.GptServiceHandler = (*Handler)(nil)
 
 type Handler struct {
-	url string
+	url              string
+	neo4jDriver      neo4j.DriverWithContext
+	instructorClient *instructor.InstructorOpenAI
+	openaiClient     *openai.Client
 }
 
-func NewHandler(url string) *Handler {
+func NewHandler(url string, ic *instructor.InstructorOpenAI, oc *openai.Client, driver neo4j.DriverWithContext) *Handler {
+
 	return &Handler{
-		url: url,
+		url:              url,
+		neo4jDriver:      driver,
+		instructorClient: ic,
+		openaiClient:     oc,
 	}
 }
 
-func (*Handler) SearchForFunction(ctx context.Context, req *connect.Request[api.SearchForFunctionRequest]) (*connect.Response[api.SearchForFunctionResponse], error) {
+func (*Handler) SearchForGolangFunction(ctx context.Context, req *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
 	path := req.Msg.Path
 	if path == "" {
 		path = "."
@@ -523,25 +46,74 @@ func (*Handler) SearchForFunction(ctx context.Context, req *connect.Request[api.
 	path, err := codesurgeon.FindFunction(path, req.Msg.Receiver, req.Msg.FunctionName)
 	if err != nil {
 		log.Printf("Error searching for function: %v", err)
-		return &connect.Response[api.SearchForFunctionResponse]{
-			Msg: &api.SearchForFunctionResponse{},
+		return &connect.Response[api.SearchForGolangFunctionResponse]{
+			Msg: &api.SearchForGolangFunctionResponse{},
 		}, nil
 	}
 	if path == "" {
 		log.Printf("Function not found")
-		return &connect.Response[api.SearchForFunctionResponse]{
-			Msg: &api.SearchForFunctionResponse{},
+		return &connect.Response[api.SearchForGolangFunctionResponse]{
+			Msg: &api.SearchForGolangFunctionResponse{},
 		}, nil
-
 	}
-	return &connect.Response[api.SearchForFunctionResponse]{
-		Msg: &api.SearchForFunctionResponse{
-			Filepath: path,
-		},
+
+	parsedInfo, err := codesurgeon.ParseDirectory(path)
+	if err != nil {
+		log.Printf("Error parsing directory: %v", err)
+		return &connect.Response[api.SearchForGolangFunctionResponse]{
+			Msg: &api.SearchForGolangFunctionResponse{},
+		}, nil
+	}
+	if len(parsedInfo.Packages) == 0 {
+		log.Printf("No packages found")
+		return &connect.Response[api.SearchForGolangFunctionResponse]{
+			Msg: &api.SearchForGolangFunctionResponse{},
+		}, nil
+	}
+
+	msg := &api.SearchForGolangFunctionResponse{
+		Filepath: path,
+		// Signature:     fn.Signature,
+		// Documentation: strings.Join(fn.Docs, "\n"),
+		// Body:          fn.Body,
+	}
+
+	// fmt.Printf("parsedInfo\n%s\n", spew.Sdump(parsedInfo))
+
+	for _, pkg := range parsedInfo.Packages {
+		if req.Msg.Receiver != "" {
+			for _, st := range pkg.Structs {
+				if st.Name == req.Msg.Receiver {
+					for _, f := range st.Methods {
+						if f.Name == req.Msg.FunctionName {
+							msg.Signature = f.Signature
+							msg.Documentation = strings.Join(f.Docs, "\n")
+							msg.Body = f.Body
+							break
+						}
+					}
+				}
+			}
+		} else {
+			for _, f := range pkg.Functions {
+				fmt.Println(f.Name, req.Msg.FunctionName)
+				if f.Name == req.Msg.FunctionName {
+					msg.Signature = f.Signature
+					msg.Documentation = strings.Join(f.Docs, "\n")
+					msg.Body = f.Body
+					break
+				}
+
+			}
+		}
+	}
+
+	return &connect.Response[api.SearchForGolangFunctionResponse]{
+		Msg: msg,
 	}, nil
 }
 
-func (*Handler) UpsertDocumentationToFunction(ctx context.Context, req *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error) {
+func (_ *Handler) UpsertDocumentationToFunction(ctx context.Context, req *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error) {
 	msg := req.Msg
 	ok, err := codesurgeon.UpsertDocumentationToFunction(msg.Filepath, msg.Receiver, msg.FunctionName, msg.Documentation)
 	if err != nil {
@@ -556,7 +128,6 @@ func (*Handler) UpsertDocumentationToFunction(ctx context.Context, req *connect.
 }
 
 func (*Handler) UpsertCodeBlock(ctx context.Context, req *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error) {
-	log.Printf("UpsertCodeBlock request: %v\n", req.Msg)
 	msg := req.Msg
 	changes := []codesurgeon.FileChange{}
 
@@ -583,39 +154,12 @@ func (*Handler) UpsertCodeBlock(ctx context.Context, req *connect.Request[api.Up
 			},
 		}, nil
 	}
-	log.Printf("Code block upserted successfully")
 
 	return &connect.Response[api.UpsertCodeBlockResponse]{
 		Msg: &api.UpsertCodeBlockResponse{
 			Ok: true,
 		},
 	}, nil
-}
-
-// LoggerInterceptor is a Connect RPC middleware that logs all incoming requests.
-func LoggerInterceptor() connect.UnaryInterceptorFunc {
-	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
-		return connect.UnaryFunc(func(
-			ctx context.Context,
-			req connect.AnyRequest,
-		) (connect.AnyResponse, error) {
-			if req.Spec().IsClient {
-			} else {
-				log.Printf("Incoming request: %s", req.Spec().Procedure)
-				log.Printf("Request headers: %v", req.Header())
-				log.Printf("Request message: %v", req.Any())
-			}
-			res, err := next(ctx, req)
-			if err != nil {
-				log.Printf("Error: %v", err)
-			} else {
-				log.Printf("Response: %v", res)
-			}
-			return res, err
-		})
-	}
-	return connect.UnaryInterceptorFunc(interceptor)
-
 }
 
 // ParseCodebase handles the ParseCodebase gRPC method
@@ -642,147 +186,6 @@ func (*Handler) ParseCodebase(ctx context.Context, req *connect.Request[api.Pars
 
 	// Return the response
 	return &connect.Response[api.ParseCodebaseResponse]{Msg: response}, nil
-}
-
-// Helper function to convert parsed info to proto format
-func convertParsedInfoToProto(parsedInfo *codesurgeon.ParsedInfo) []*api.Package {
-	var packages []*api.Package
-	for _, pkg := range parsedInfo.Packages {
-		packages = append(packages, &api.Package{
-			Package:    pkg.Package,
-			Imports:    pkg.Imports,
-			Structs:    convertStructsToProto(pkg.Structs),
-			Functions:  convertFunctionsToProto(pkg.Functions),
-			Variables:  convertVariablesToProto(pkg.Variables),
-			Constants:  convertConstantsToProto(pkg.Constants),
-			Interfaces: convertInterfacesToProto(pkg.Interfaces),
-		})
-	}
-	return packages
-}
-
-// Helper function to convert structs from codesurgeon to proto
-func convertStructsToProto(structs []codesurgeon.Struct) []*api.Struct {
-	var protoStructs []*api.Struct
-	for _, s := range structs {
-		protoStruct := &api.Struct{
-			Name:    s.Name,
-			Fields:  convertFieldsToProto(s.Fields),
-			Methods: convertMethodsToProto(s.Methods),
-			Docs:    s.Docs,
-		}
-		protoStructs = append(protoStructs, protoStruct)
-	}
-	return protoStructs
-}
-
-// Helper function to convert fields from codesurgeon to proto
-func convertFieldsToProto(fields []codesurgeon.Field) []*api.Field {
-	var protoFields []*api.Field
-	for _, f := range fields {
-		protoField := &api.Field{
-			Name:    f.Name,
-			Type:    f.Type,
-			Tag:     f.Tag,
-			Private: f.Private,
-			Pointer: f.Pointer,
-			Slice:   f.Slice,
-			Docs:    f.Docs,
-			Comment: f.Comment,
-		}
-		protoFields = append(protoFields, protoField)
-	}
-	return protoFields
-}
-
-// Helper function to convert methods from codesurgeon to proto
-func convertMethodsToProto(methods []codesurgeon.Method) []*api.Method {
-	var protoMethods []*api.Method
-	for _, m := range methods {
-		protoMethod := &api.Method{
-			Receiver:  m.Receiver,
-			Name:      m.Name,
-			Params:    convertParamsToProto(m.Params),
-			Returns:   convertParamsToProto(m.Returns),
-			Docs:      m.Docs,
-			Signature: m.Signature,
-			Body:      m.Body,
-		}
-		protoMethods = append(protoMethods, protoMethod)
-	}
-	return protoMethods
-}
-
-// Helper function to convert parameters from codesurgeon to proto
-func convertParamsToProto(params []codesurgeon.Param) []*api.Param {
-	var protoParams []*api.Param
-	for _, p := range params {
-		protoParam := &api.Param{
-			Name: p.Name,
-			Type: p.Type,
-		}
-		protoParams = append(protoParams, protoParam)
-	}
-	return protoParams
-}
-
-// Helper function to convert functions from codesurgeon to proto
-func convertFunctionsToProto(functions []codesurgeon.Function) []*api.Function {
-	var protoFunctions []*api.Function
-	for _, f := range functions {
-		protoFunction := &api.Function{
-			Name:      f.Name,
-			Params:    convertParamsToProto(f.Params),
-			Returns:   convertParamsToProto(f.Returns),
-			Docs:      f.Docs,
-			Signature: f.Signature,
-			Body:      f.Body,
-		}
-		protoFunctions = append(protoFunctions, protoFunction)
-	}
-	return protoFunctions
-}
-
-// Helper function to convert variables from codesurgeon to proto
-func convertVariablesToProto(variables []codesurgeon.Variable) []*api.Variable {
-	var protoVariables []*api.Variable
-	for _, v := range variables {
-		protoVariable := &api.Variable{
-			Name: v.Name,
-			Type: v.Type,
-			Docs: v.Docs,
-		}
-		protoVariables = append(protoVariables, protoVariable)
-	}
-	return protoVariables
-}
-
-// Helper function to convert constants from codesurgeon to proto
-func convertConstantsToProto(constants []codesurgeon.Constant) []*api.Constant {
-	var protoConstants []*api.Constant
-	for _, c := range constants {
-		protoConstant := &api.Constant{
-			Name:  c.Name,
-			Value: c.Value,
-			Docs:  c.Docs,
-		}
-		protoConstants = append(protoConstants, protoConstant)
-	}
-	return protoConstants
-}
-
-// Helper function to convert interfaces from codesurgeon to proto
-func convertInterfacesToProto(interfaces []codesurgeon.Interface) []*api.Interface {
-	var protoInterfaces []*api.Interface
-	for _, i := range interfaces {
-		protoInterface := &api.Interface{
-			Name:    i.Name,
-			Methods: convertMethodsToProto(i.Methods),
-			Docs:    i.Docs,
-		}
-		protoInterfaces = append(protoInterfaces, protoInterface)
-	}
-	return protoInterfaces
 }
 
 func (h *Handler) Introduction(ctx context.Context, req *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error) {
@@ -855,6 +258,7 @@ func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOp
 				} else if len(parts) > 0 {
 					operationID = parts[0]
 				}
+				operationID = strings.TrimPrefix(operationID, "GptService_")
 
 				// Update "operationId"
 				post.Set(operationID, "operationId")
@@ -867,4 +271,137 @@ func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOp
 			Openapi: parsed.String(),
 		},
 	}, nil
+}
+
+func (h *Handler) AnswerQuestion(ctx context.Context, req *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error) {
+
+	res := &api.AnswerQuestionResponse{
+		Answers: []*api.AnswerQuestionResponse_Answer{},
+	}
+	userEmbedding, err := ai.EmbedQuestion(h.openaiClient, req.Msg.Questions)
+	if err != nil {
+		return nil, err
+	}
+	if len(userEmbedding) == 0 {
+		return nil, fmt.Errorf("Failed to embed question, zero length vector returned")
+	}
+
+	topQuestionIds, err := neo4j2.VectorSearchQuestions(ctx, h.neo4jDriver, userEmbedding)
+	if err != nil {
+		return nil,
+			err
+	}
+
+	topAnswers, err := neo4j2.GetTopAnswersForQuestions(ctx, h.neo4jDriver,
+		topQuestionIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	finalAnswer, err := neo4j2.GenerateFinalAnswer(h.instructorClient, req.Msg.Questions, topAnswers)
+	if err !=
+		nil {
+		return nil, err
+	}
+	res.Answers = append(res.Answers, &api.AnswerQuestionResponse_Answer{
+		Answer:   finalAnswer,
+		Question: req.Msg.Questions,
+	})
+
+	return &connect.Response[api.AnswerQuestionResponse]{
+		Msg: res,
+	}, nil
+}
+func (h *Handler) SaveToKnowledgeBase(ctx context.
+	Context, req *connect.
+	Request[api.SaveToKnowledgeBaseRequest]) (*connect.Response[api.SaveToKnowledgeBaseResponse], error) {
+	conversationSummary := req.Msg.ConversationSummary
+	dateISO := req.Msg.DateIso
+	err := neo4j2.SaveConversationSummary(ctx, h.neo4jDriver, conversationSummary,
+
+		dateISO)
+	if err != nil {
+		log.Printf("Error saving conversation summary to database: %v",
+
+			err)
+		return &connect.Response[api.
+			SaveToKnowledgeBaseResponse]{Msg: &api.SaveToKnowledgeBaseResponse{
+			Ok: false}}, err
+	}
+	questionsAndAnswers, err := h.
+		generateQuestionsAndAnswers(ctx,
+			conversationSummary,
+		)
+	if err != nil {
+		log.
+			Printf("Error generating questions and answers from conversation summary: %v",
+
+				err)
+		return &connect.Response[api.SaveToKnowledgeBaseResponse]{Msg: &api.SaveToKnowledgeBaseResponse{Ok: false}}, err
+	}
+
+	for _, qa := range questionsAndAnswers {
+		embedding, err := ai.EmbedQuestion(h.openaiClient, qa.Question)
+		if err != nil {
+			log.Printf("Error embedding question: %v", err)
+		}
+		err = neo4j2.CreateQuestionAndAnswers(ctx,
+			h.neo4jDriver,
+			qa.Question,
+			embedding,
+			qa.Answers)
+		if err != nil {
+			log.Printf("Error saving generated question and answers to Neo4j: %v",
+
+				err)
+			return &connect.Response[api.SaveToKnowledgeBaseResponse]{Msg: &api.SaveToKnowledgeBaseResponse{Ok: false}}, err
+		}
+	}
+	return &connect.Response[api.SaveToKnowledgeBaseResponse]{Msg: &api.SaveToKnowledgeBaseResponse{Ok: true}}, nil
+}
+
+func (h *Handler) generateQuestionsAndAnswers(ctx context.Context, conversationSummary string) ([]QuestionAndAnswers, error) {
+	// Define the structure for AI output
+	type AiOutput struct {
+		QuestionsAndAnswers []QuestionAndAnswers `json:"questions_and_answers"`
+	}
+
+	// Prepare the prompt
+	prompt := "Generate questions and answers so that my bot build a solid knowledge based on the following conversation summary:\n\n" + conversationSummary
+
+	// Initialize the AI output
+	var aiOut AiOutput
+
+	// Call OpenAI API to generate questions and answers
+	_, err := h.instructorClient.CreateChatCompletion(
+		ctx,
+		openai.ChatCompletionRequest{
+			Model: openai.GPT4o, // Adjust the model as per requirements
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+		},
+		&aiOut,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to generate questions and answers: %v", err)
+	}
+
+	return aiOut.QuestionsAndAnswers, nil
+}
+
+// Helper function to parse the OpenAI response into questions and answers (if needed)
+func parseQuestionsAndAnswers(response string) []QuestionAndAnswers {
+	questionsAndAnswers := []QuestionAndAnswers{}
+	// Implement parsing logic here if needed
+	return questionsAndAnswers
+}
+
+// QuestionAndAnswers struct to hold generated questions and answers
+type QuestionAndAnswers struct {
+	Question string   `json:"question"`
+	Answers  []string `json:"answers"`
 }
