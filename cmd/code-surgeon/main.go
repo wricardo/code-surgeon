@@ -6,8 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
@@ -17,9 +20,10 @@ import (
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 	"github.com/wricardo/code-surgeon/grpc/server"
+	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
-const DEFAULT_PORT = 8002
+const DEFAULT_PORT = 8010
 
 func main() {
 
@@ -242,6 +246,182 @@ func main() {
 
 				},
 			},
+			{
+				Name:    "to-neo4j",
+				Aliases: []string{"tn"},
+				Usage:   "List all Go modules under the current folder and pretty-print them to stdout",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "path",
+						Aliases:  []string{"p"},
+						Usage:    "path to the file or directory to parse",
+						Value:    "./.",
+						Required: false,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					ctx := cCtx.Context
+
+					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+					if err != nil {
+						log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+					} else {
+						defer closeFn()
+					}
+
+					// Execute the command to list Go modules in JSON format
+					cmd := exec.Command("go", "list", "-json", cCtx.String("path"))
+					output, err := cmd.Output()
+					if err != nil {
+						return fmt.Errorf("failed to execute go list command: %w", err)
+					}
+
+					// fmt.Println(string(output))
+
+					// Parse the JSON output and pretty-print
+					decoder := json.NewDecoder(strings.NewReader(string(output)))
+
+					for decoder.More() {
+						fmt.Println("decoder.More()")
+						var module codesurgeon.GoList
+						if err := decoder.Decode(&module); err != nil {
+							log.Printf("failed to decode module: %v", err)
+							continue
+						}
+
+						info, err := codesurgeon.ParseDirectory(module.Dir)
+						if err != nil {
+							log.Println("Error parsing file", module.Dir, err)
+							continue
+						}
+
+						fmt.Println("len functions", len(info.Packages[0].Functions))
+						for k, function := range info.Packages[0].Functions {
+							funcFilePath, err := codesurgeon.FindFunction(module.Dir, "", function.Name)
+							if err != nil {
+								log.Println("Error finding function file", function, err)
+							} else {
+								log.Println("funcFilePath", funcFilePath)
+							}
+							err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, "", function.Name, strings.Join(function.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
+							if err != nil {
+								log.Println("Error upserting function", function, err)
+								return err
+							}
+							log.Println("function", k, function.Name)
+						}
+						for k, struct_ := range info.Packages[0].Structs {
+							for k2, method := range struct_.Methods {
+								fmt.Printf("method\n%s", spew.Sdump(method)) // TODO: wallace debug
+								funcFilePath, err := codesurgeon.FindFunction(module.Dir, struct_.Name, method.Name)
+								if err != nil {
+									log.Println("Error finding function file", method.Name, err)
+								} else {
+									log.Println("funcFilePath", funcFilePath)
+								}
+								err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, struct_.Name, method.Name, strings.Join(method.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
+								if err != nil {
+									log.Println("Error upserting function", method, err)
+									return err
+								}
+								log.Println("method", k, k2, method.Name)
+							}
+						}
+
+						log.Printf("Parsed %s\n", module.Dir)
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "clear-neo4j",
+				Usage: "clear all nodes and relationships in neo4j",
+				Action: func(cCtx *cli.Context) error {
+					ctx := cCtx.Context
+					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+					if err != nil {
+						log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+					} else {
+						defer closeFn()
+					}
+
+					err = neo4j2.ClearAll(ctx, driver)
+					if err != nil {
+						return err
+					}
+					return nil
+				},
+			},
+
+			// {
+			// 	Name:  "add-metadata-to-neo4j",
+			// 	Usage: "",
+			// 	Flags: []cli.Flag{
+			// 		&cli.StringFlag{
+			// 			Name:     "path",
+			// 			Aliases:  []string{"p"},
+			// 			Usage:    "path of folder to add metadata to neo4j. All other folders will be ignored.",
+			// 			Required: false,
+			// 			Value:    "",
+			// 		},
+			// 	},
+			// 	Action: func(cCtx *cli.Context) error {
+			// 		ctx := cCtx.Context
+			// 		neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+			// 		neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+			// 		neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+
+			// 		driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+			// 		if err != nil {
+			// 			log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+			// 		} else {
+			// 			defer closeFn()
+			// 		}
+
+			// 		files, err := neo4j2.ListFileFromFunctions(ctx, driver)
+			// 		if err != nil {
+			// 			return err
+			// 		}
+			// 		fmt.Printf("files\n%s", spew.Sdump(files)) // TODO: wallace debug
+
+			// 		for _, file := range files {
+			// 			if strings.Contains(file, "@") {
+			// 				log.Printf("Skipping file %s\n", file)
+			// 				continue
+			// 			}
+
+			// 			if cCtx.String("path") != "" && !strings.HasPrefix(file, cCtx.String("path")) {
+			// 				log.Printf("Skipping file %s\n", file)
+			// 				continue
+			// 			}
+
+			// 			info, err := codesurgeon.ParseDirectory(file)
+			// 			if err != nil {
+			// 				log.Println("Error parsing file", file, err)
+			// 				continue
+			// 			}
+
+			// 			for _, function := range info.Packages[0].Functions {
+			// 				// UpsertFunctionInfo
+			// 				err := neo4j2.UpsertFunctionInfo(ctx, driver, file, "", function.Name, strings.Join(function.Docs, "\n"), info.Packages[0].Package)
+			// 				if err != nil {
+			// 					log.Println("Error upserting function", function, err)
+			// 					// return err
+			// 				}
+			// 			}
+			// 		}
+
+			// 		return nil
+
+			// 	},
+			// },
 		},
 	}
 

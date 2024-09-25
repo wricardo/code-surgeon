@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -12,10 +13,11 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/sashabaranov/go-openai"
+	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 	"github.com/wricardo/code-surgeon/grpc"
+	"github.com/wricardo/code-surgeon/neo4j2"
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
 	"golang.org/x/net/http2"
@@ -62,22 +64,28 @@ func Start(
 		instructor.WithMaxRetries(3),
 	)
 
-	driver, err := neo4j.NewDriverWithContext(
-		neo4jDbUri,
-		neo4j.BasicAuth(neo4jDbUser, neo4jDbPassword, ""))
-	if err == nil && driver != nil {
-		defer driver.Close(ctx)
-
-		err = driver.VerifyConnectivity(ctx)
-		if err != nil {
-			log.Println("Error connecting to Neo4j (proceeding anyway):", err)
-		}
+	driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+	if err != nil {
+		log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+	} else {
+		defer closeFn()
 	}
 
 	// graceful shutdown
 	rulesServer := grpc.NewHandler(url, instructorClient, oaiClient, driver)
 
 	mux := http.NewServeMux()
+
+	// add static file route
+
+	fs.WalkDir(codesurgeon.STATICFS, ".", func(path string, d fs.DirEntry, err error) error {
+		fmt.Println("aaaaaaaaaaaaaaaaaaa", path)
+		return nil
+	})
+
+	mux.Handle("/api/", http.StripPrefix("/api/",
+		http.FileServerFS(codesurgeon.STATICFS),
+	))
 
 	path, handler := apiconnect.NewGptServiceHandler(rulesServer, connect.WithInterceptors(grpc.LoggerInterceptor()))
 	mux.Handle(path, handler)

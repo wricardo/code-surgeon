@@ -13,6 +13,9 @@ service GptService {
   // New RPC for executing shell commands
   rpc ExecuteBash(ExecuteBashRequest) returns (ExecuteBashResponse);
 
+  rpc GetNeo4jSchema(GetNeo4jSchemaRequest) returns (GetNeo4jSchemaResponse);
+  rpc QueryNeo4j(QueryNeo4jRequest) returns (QueryNeo4jResponse);
+
   rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
   rpc SearchForGolangFunction(SearchForGolangFunctionRequest) returns (SearchForGolangFunctionResponse);
   rpc UpsertDocumentationToFunction(UpsertDocumentationToFunctionRequest) returns (UpsertDocumentationToFunctionResponse);
@@ -22,8 +25,11 @@ service GptService {
   // RPC to list modified files and return their contents
   rpc GitDiff(GitDiffRequest) returns (GitDiffResponse);
 
-  rpc SaveToKnowledgeBase(SaveToKnowledgeBaseRequest) returns (SaveToKnowledgeBaseResponse);
+  rpc PageQuestions(PageQuestionsRequest) returns (PageQuestionsResponse);
   rpc AnswerQuestion(AnswerQuestionRequest) returns (AnswerQuestionResponse);
+  rpc SaveQuestionAndAnswer(SaveQuestionAndAnswerRequest) returns (SaveQuestionAndAnswerResponse);
+
+  rpc SaveConversationSummary(SaveConversationSummaryRequest) returns (SaveConversationSummaryResponse);
 }
 
 message ExecuteGoplsImplementationsRequest {
@@ -212,24 +218,26 @@ message Constant {
 // Request message for AnswerQuestion
 message AnswerQuestionRequest {
   string questions = 1;
+  bool use_ai = 2;
 }
 
+message Answer {
+  string answer = 1;
+  string question = 2;
+}
 
 // Response message for AnswerQuestion
 message AnswerQuestionResponse {
-  message Answer {
-    string answer = 1;
-    string question = 2;
-  }
   repeated Answer answers = 1;
+  repeated Question similar_questions = 2;
 }
 
-message SaveToKnowledgeBaseRequest {
+message SaveConversationSummaryRequest {
   string conversation_summary = 1;
   string date_iso = 2;
 }
 
-message SaveToKnowledgeBaseResponse {
+message SaveConversationSummaryResponse {
   bool ok = 1;
 }
 
@@ -246,4 +254,72 @@ message GitDiffResponse {
 message FileContent {
   string filename = 1;   // Name of the file
   string content = 2;    // Content of the file
+}
+
+message GetNeo4jSchemaRequest {
+}
+
+// GetNeo4jSchemaResponse is the top-level response message that contains the entire schema.
+message GetNeo4jSchemaResponse {
+    Schema schema = 1;
+}
+
+// Schema represents the entire database schema.
+message Schema {
+    repeated LabelSchema labels = 1;
+    repeated RelationshipSchema relationships = 2;
+
+}
+
+message RelationshipSchema {
+    string relationship = 1;
+    string from_label = 2;
+    string to_label = 3;
+    //repeated PropertySchema properties = 4;
+}
+
+// LabelSchema represents the schema for a single label in the database.
+message LabelSchema {
+    string label = 1;
+    repeated PropertySchema properties = 2;
+}
+
+// PropertySchema represents the schema details for a single property.
+message PropertySchema {
+    string property = 1;
+    string type = 2;
+    bool is_indexed = 3;
+    bool unique_constraint = 4;
+    bool existence_constraint = 5;
+}
+
+message QueryNeo4jRequest {
+  string cypher = 1;
+}
+
+message QueryNeo4jResponse {
+  string output = 1;
+}
+
+
+message SaveQuestionAndAnswerRequest {
+  repeated Answer question_and_answer = 1;
+}
+
+message SaveQuestionAndAnswerResponse {
+}
+
+message PageQuestionsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message PageQuestionsResponse {
+  repeated Question questions= 1;
+}
+
+message Question {
+  string id = 1;
+  string text = 2;
+  string created_at = 3;
 }

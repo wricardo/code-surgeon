@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -19,6 +20,8 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 )
+
+var STATICFS, _ = fs.Sub(FS, "api")
 
 type (
 	FileChange struct {
@@ -421,4 +424,27 @@ func writeFile(filePath, content string) error {
 	}
 
 	return nil
+}
+
+type GoList struct {
+	Dir         string       `json:"Dir"`
+	ImportPath  string       `json:"ImportPath"`
+	Name        string       `json:"Name"`
+	Target      string       `json:"Target"`
+	Root        string       `json:"Root"`
+	Module      GoListModule `json:"Module"`
+	Match       []string     `json:"Match"`
+	Stale       bool         `json:"Stale"`
+	StaleReason string       `json:"StaleReason"`
+	GoFiles     []string     `json:"GoFiles"`
+	Imports     []string     `json:"Imports"`
+	Deps        []string     `json:"Deps"`
+}
+
+type GoListModule struct {
+	Path      string `json:"Path"`
+	Main      bool   `json:"Main"`
+	Dir       string `json:"Dir"`
+	GoMod     string `json:"GoMod"`
+	GoVersion string `json:"GoVersion"`
 }

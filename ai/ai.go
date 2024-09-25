@@ -5,16 +5,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html/template"
 	"log"
 	"os"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/Jeffail/gabs"
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
+	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
 func GetGPTInstructions(openapi string) (string, error) {
@@ -320,4 +321,68 @@ func EmbedQuestion(client *openai.Client, question string) ([]float32, error) {
 		return nil, errors.New("no embedding found in response")
 	}
 	return resp.Data[0].Embedding, nil
+}
+
+func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, questionsAnswers []neo4j2.QuestionAnswer) (string, error) {
+	// Create a struct to capture the AI's response
+	type AiOutput struct {
+		FinalAnswer string `json:"final_answer" jsonschema:"title=final_answer,description=the final answer to the user's question.`
+	}
+
+	// Context for the OpenAI API call
+	ctx := context.Background()
+
+	// reverse the order of the questionsAnswers
+	for i, j := 0, len(questionsAnswers)-1; i < j; i, j = i+1, j-1 {
+		questionsAnswers[i], questionsAnswers[j] = questionsAnswers[j], questionsAnswers[i]
+	}
+
+	// Construct the messages for the chat completion
+	messages := []openai.ChatCompletionMessage{
+		{
+			Role:    "system",
+			Content: "You are a helpful assistant which can answer questions based on previous knowledge and more importantly recent questions and answers given. Answer to the best of your ability but stay close to the facts seen on recent questions and answers. You must answer in json format with the key being 'final_answer'.",
+		},
+		{
+			Role: "user",
+			Content: Render(`
+			Recent questions and answers:
+			{{range .questionsAnswers}}
+			<section>
+			Q:{{.Question}}
+			A:{{.Answer}}
+			</section>
+			{{end}}
+			Now, answer the following question:
+			{{.question}}
+			`, map[string]interface{}{"questionsAnswers": questionsAnswers, "question": question}),
+		},
+	}
+
+	fmt.Printf("============\n%s\n------------\n", messages[1].Content)
+
+	// Create an instance of AiOutput to capture the response
+	var aiOut AiOutput
+
+	// Create the request for the OpenAI Chat API
+	res, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model:     openai.GPT4o,
+		Messages:  messages,
+		MaxTokens: 1000,
+	}, &aiOut) // Pass the aiOut variable to capture the response
+
+	// Handle any errors from the API request
+	if err != nil {
+		return "", fmt.Errorf("Failed to generate answer: %v", err)
+	}
+
+	fmt.Println()
+	fmt.Printf("%s\n============\n", res.Choices[0].Message.Content)
+
+	// Check if the response is empty and return it
+	if aiOut.FinalAnswer == "" {
+		return "", nil
+	}
+
+	return aiOut.FinalAnswer, nil
 }
