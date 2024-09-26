@@ -14,23 +14,37 @@ import (
 	"time"
 )
 
-var sessionKeywords = map[string][]string{
-	"exit":     {"exit", "quit", "bye"},
-	"code":     {"code", "coding", "program", "develop"},
-	"add_test": {"test", "testing", "unit test", "write test"},
+type Command string
+
+var NOOP Command = "noop"
+var QUIT Command = "quit"
+var MODE_QUIT Command = "mode_quit"
+var MODE_START Command = "mode_start"
+
+type Mode string
+
+var EXIT Mode = "exit"
+var CODE Mode = "code"
+var ADD_TEST Mode = "add_test"
+
+// Keywords for detecting different modes
+var modeKeywords = map[Mode][]string{
+	// QUIT:     {"exit", "quit", "bye"},
+	CODE:     {"code", "coding", "program", "develop"},
+	ADD_TEST: {"test", "testing", "unit test", "write test"},
 }
 
 // ChatService is an interface for chat operations
 type ChatService interface {
-	StartSession(sessionName string) error
-	HandleUserMessage(userInput string) (string, error)
+	StartMode(modeName Mode) (string, Command, error)
+	HandleUserMessage(userInput string) (string, Command, error)
 	GetHistory() []Message
 }
 
-// Session is an interface for different types of sessions
-type Session interface {
-	Start()
-	HandleResponse(userInput string)
+// ModeHandler is an interface for different types of modes
+type ModeHandler interface {
+	Start() (string, error)
+	HandleResponse(userInput string) (string, Command, error)
 }
 
 // Message represents a single chat message
@@ -41,9 +55,9 @@ type Message struct {
 
 // Chat handles the chat functionality
 type Chat struct {
-	mutex          sync.Mutex
-	history        []Message
-	currentSession Session
+	mutex       sync.Mutex
+	history     []Message
+	currentMode ModeHandler
 }
 
 // NewChat creates a new Chat instance
@@ -80,12 +94,12 @@ func (c *Chat) PrintHistory() {
 	}
 }
 
-func (c *Chat) DetectSession(userInput string) (string, bool) {
+func (c *Chat) DetectMode(userInput string) (Mode, bool) {
 	userInputLower := strings.ToLower(userInput)
-	for sessionName, keywords := range sessionKeywords {
+	for modeName, keywords := range modeKeywords {
 		for _, keyword := range keywords {
 			if strings.Contains(userInputLower, keyword) {
-				return sessionName, true
+				return modeName, true
 			}
 		}
 	}
@@ -135,128 +149,43 @@ func runCLI(chat *Chat) {
 			break
 		}
 
-		if chat.currentSession != nil {
-			chat.currentSession.HandleResponse(userInput)
-			continue
+		response, command, err := chat.HandleUserMessage(userInput)
+		if err != nil {
+			fmt.Println("Error:", err)
+		} else if response != "" {
+			fmt.Println(response)
 		}
-
-		if strings.HasPrefix(userInput, "/") {
-			handleCommand(userInput, chat)
+		log.Println("Command:", command)
+		switch command {
+		case QUIT:
+			return
+		case NOOP:
 			continue
-		}
-
-		if sessionName, detected := chat.DetectSession(userInput); detected {
-			promptSessionStart(sessionName, chat, reader)
+		case MODE_QUIT:
 			continue
+		case "":
+			continue
+		default:
+			fmt.Printf("Command not recognized: %s\n", command)
 		}
-
-		chat.AddMessage("You", userInput)
-		aiResponse := chat.GetAIResponse(userInput)
-		fmt.Println("AI: " + aiResponse)
-		chat.AddMessage("AI", aiResponse)
 	}
 }
 
-/*
-// Main function
-func main() {
-	// Setup signal handling for graceful exit
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-signalChan
-		fmt.Println("\nBye")
-		os.Exit(0)
-	}()
-
-	reader := bufio.NewReader(os.Stdin)
-	chat := NewChat()
-
-	fmt.Println("ChatCLI - Type your message and press Enter. Type /help for commands.")
-	for {
-		fmt.Print("You: ")
-		userInput, _ := reader.ReadString('\n')
-		userInput = strings.TrimSpace(userInput)
-
-		if userInput == "/exit" {
-			fmt.Println("Bye")
-			break
-		}
-
-		if chat.currentSession != nil {
-			chat.currentSession.HandleResponse(userInput)
-			continue
-		}
-
-		if strings.HasPrefix(userInput, "/") {
-			handleCommand(userInput, chat)
-			continue
-		}
-
-		if sessionName, detected := chat.DetectSession(userInput); detected {
-			promptSessionStart(sessionName, chat, reader)
-			continue
-		}
-
-		chat.AddMessage("You", userInput)
-		aiResponse := chat.GetAIResponse(userInput)
-		fmt.Println("AI: " + aiResponse)
-		chat.AddMessage("AI", aiResponse)
-	}
-}
-*/
-
-func promptSessionStart(sessionName string, chat *Chat, reader *bufio.Reader) {
-	fmt.Printf("AI: It sounds like you might want to start a '/%s' session. Would you like to do that? (yes/no)\n", sessionName)
-	fmt.Print("You: ")
-	confirmation, _ := reader.ReadString('\n')
-	confirmation = strings.TrimSpace(strings.ToLower(confirmation))
-	if confirmation == "yes" || confirmation == "y" {
-		switch sessionName {
-		case "code":
-			chat.currentSession = NewCodeSession(chat)
-			chat.currentSession.Start()
-		case "add_test":
-			chat.currentSession = NewAddTestSession(chat)
-			chat.currentSession.Start()
-		case "exit":
-			fmt.Println("Bye")
-			os.Exit(0)
-		}
-	} else {
-		fmt.Println("AI: Alright, let's continue our chat.")
-	}
-}
-
-func handleCommand(command string, chat *Chat) {
-	switch command {
-	case "/help":
-		displayHelp()
-	case "/code":
-		chat.currentSession = NewCodeSession(chat)
-		chat.currentSession.Start()
-	case "/add_test":
-		chat.currentSession = NewAddTestSession(chat)
-		chat.currentSession.Start()
-	default:
-		fmt.Println("Unknown command. Type /help for available commands.")
-	}
-}
 func displayHelp() {
 	fmt.Println("Available commands: /help, /exit, /code, /add_test")
 }
 
-type CodeSession struct {
-	chat          *Chat
-	sessionData   map[string]string
-	questions     []string
-	questionIndex int
+type CodeMode struct {
+	chat              *Chat
+	questionAnswerMap map[string]string
+	questions         []string
+	questionIndex     int
 }
 
-func NewCodeSession(chat *Chat) *CodeSession {
-	return &CodeSession{
-		chat:        chat,
-		sessionData: make(map[string]string),
+func NewCodeMode(chat *Chat) *CodeMode {
+	return &CodeMode{
+		chat:              chat,
+		questionAnswerMap: make(map[string]string),
 		questions: []string{
 			"What programming language would you like to use?",
 			"What is the primary purpose of the code? (e.g., web server, data processing)",
@@ -267,71 +196,66 @@ func NewCodeSession(chat *Chat) *CodeSession {
 	}
 }
 
-func (cs *CodeSession) Start() {
-	fmt.Println("AI: Starting code session. I will ask you some questions to generate code.")
-	cs.AskNextQuestion()
+func (cs *CodeMode) Start() (string, error) {
+	message := "AI: Starting code mode. I will ask you some questions to generate code."
+	question, _ := cs.AskNextQuestion()
+	return message + "\n" + question, nil
 }
 
-func (cs *CodeSession) HandleResponse(userInput string) {
+func (cs *CodeMode) HandleResponse(userInput string) (string, Command, error) {
 	trimmedInput := strings.TrimSpace(userInput)
 	if trimmedInput == "" {
-		fmt.Println("AI: Input cannot be empty. Please provide a valid response.")
-		cs.AskNextQuestion()
-		return
+		question, _ := cs.AskNextQuestion()
+		return "AI: Input cannot be empty. Please provide a valid response.\n" + question, NOOP, nil
 	}
 
-	cs.sessionData[cs.questions[cs.questionIndex]] = userInput
+	cs.questionAnswerMap[cs.questions[cs.questionIndex]] = userInput
 	cs.questionIndex++
 	if cs.questionIndex < len(cs.questions) {
-		cs.AskNextQuestion()
+		question, _ := cs.AskNextQuestion()
+		return question, NOOP, nil
 	} else {
-		cs.GenerateCode()
-		cs.chat.currentSession = nil // End the session
+		response, _ := cs.GenerateCode()
+		return response, MODE_QUIT, nil
 	}
 }
 
-func (cs *CodeSession) AskNextQuestion() {
+func (cs *CodeMode) AskNextQuestion() (string, error) {
 	if cs.questionIndex >= len(cs.questions) {
-		cs.GenerateCode()
-		cs.chat.currentSession = nil // End the session
-		return
+		response, _ := cs.GenerateCode()
+		cs.chat.currentMode = nil // End the mode
+		return response, nil
 	}
-	question := cs.questions[cs.questionIndex]
-	fmt.Println("AI: " + question)
+	question := "AI: " + cs.questions[cs.questionIndex]
+	return question, nil
 }
 
-func (cs *CodeSession) GenerateCode() {
-	fmt.Println("AI: Thank you for the information. Generating code...")
-	// Simulate processing delay
-	time.Sleep(2 * time.Second)
+func (cs *CodeMode) GenerateCode() (string, error) {
+	language := cs.questionAnswerMap["What programming language would you like to use?"]
+	purpose := cs.questionAnswerMap["What is the primary purpose of the code? (e.g., web server, data processing)"]
+	libraries := cs.questionAnswerMap["Do you have any specific libraries or frameworks in mind?"]
+	features := cs.questionAnswerMap["Are there any specific features or functionalities you want to include?"]
 
-	// Simple code generation logic based on user input
-	language := cs.sessionData["What programming language would you like to use?"]
-	purpose := cs.sessionData["What is the primary purpose of the code? (e.g., web server, data processing)"]
-	libraries := cs.sessionData["Do you have any specific libraries or frameworks in mind?"]
-	features := cs.sessionData["Are there any specific features or functionalities you want to include?"]
+	codeSnippet := fmt.Sprintf(
+		"// Generated Code\n// Language: %s\n// Purpose: %s\n// Libraries/Frameworks: %s\n// Features: %s\n\nfunc main() {\n\t// TODO: Implement the %s\n}",
+		language, purpose, libraries, features, purpose,
+	)
 
-	codeSnippet := fmt.Sprintf("// Generated Code\n// Language: %s\n// Purpose: %s\n// Libraries/Frameworks: %s\n// Features: %s\n\nfunc main() {\n\t// TODO: Implement the %s\n}", language, purpose, libraries, features, purpose)
-
-	fmt.Println("AI: Here is your generated code:")
-	fmt.Println(codeSnippet)
-
-	// Add the code snippet to chat history
 	cs.chat.AddMessage("AI", codeSnippet)
-	fmt.Println("Exited code session.")
+	return "AI: Thank you for the information. Generating code...\nAI: Here is your generated code:\n" + codeSnippet + "\nExited code mode.", nil
 }
 
-type AddTestSession struct {
-	chat          *Chat
-	sessionData   map[string]string
-	questions     []string
-	questionIndex int
+type AddTestMode struct {
+	chat              *Chat
+	questionAnswerMap map[string]string
+	questions         []string
+	questionIndex     int
 }
 
-func NewAddTestSession(chat *Chat) *AddTestSession {
-	return &AddTestSession{
-		chat:        chat,
-		sessionData: make(map[string]string),
+func NewAddTestMode(chat *Chat) *AddTestMode {
+	return &AddTestMode{
+		chat:              chat,
+		questionAnswerMap: make(map[string]string),
 		questions: []string{
 			"Which function would you like to test?",
 			"In which file is this function located?",
@@ -342,67 +266,82 @@ func NewAddTestSession(chat *Chat) *AddTestSession {
 	}
 }
 
-func (ats *AddTestSession) Start() {
-	fmt.Println("AI: Starting add test session. I will ask you some questions to generate a test function.")
-	ats.AskNextQuestion()
+func (ats *AddTestMode) Start() (string, error) {
+	message := "AI: Starting add test mode. I will ask you some questions to generate a test function."
+	question, _ := ats.AskNextQuestion()
+	return message + "\n" + question, nil
 }
 
-func (ats *AddTestSession) HandleResponse(userInput string) {
-	ats.sessionData[ats.questions[ats.questionIndex]] = userInput
+func (ats *AddTestMode) HandleResponse(userInput string) (string, Command, error) {
+	ats.questionAnswerMap[ats.questions[ats.questionIndex]] = userInput
 	ats.questionIndex++
 	if ats.questionIndex < len(ats.questions) {
-		ats.AskNextQuestion()
+		question, _ := ats.AskNextQuestion()
+		return question, NOOP, nil
 	} else {
-		ats.GenerateTestCode()
-		ats.chat.currentSession = nil // End the session
+		response, _ := ats.GenerateTestCode()
+		ats.chat.currentMode = nil // End the mode
+		return response, MODE_QUIT, nil
 	}
 }
 
-func (ats *AddTestSession) AskNextQuestion() {
+func (ats *AddTestMode) AskNextQuestion() (string, error) {
 	if ats.questionIndex >= len(ats.questions) {
-		ats.GenerateTestCode()
-		ats.chat.currentSession = nil // End the session
-		return
+		response, _ := ats.GenerateTestCode()
+		ats.chat.currentMode = nil // End the mode
+		return response, nil
 	}
-	question := ats.questions[ats.questionIndex]
-	fmt.Println("AI: " + question)
+	question := "AI: " + ats.questions[ats.questionIndex]
+	return question, nil
 }
 
-func (ats *AddTestSession) GenerateTestCode() {
-	fmt.Println("AI: Generating test code based on your inputs...")
-	fmt.Println("AI: Here is the generated test code XYZ.")
+func (ats *AddTestMode) GenerateTestCode() (string, error) {
+	// Generate test code based on user inputs
+	testCode := "<<GENERATED TEST CODE>>"
+	ats.chat.AddMessage("AI", testCode)
+	return "AI: Generating test code based on your inputs...\n" + testCode, nil
 }
 
-func (c *Chat) StartSession(sessionName string) error {
-	switch sessionName {
-	case "code":
-		c.currentSession = NewCodeSession(c)
-	case "add_test":
-		c.currentSession = NewAddTestSession(c)
+func (c *Chat) StartMode(modeName Mode) (string, Command, error) {
+	var mode ModeHandler
+	switch modeName {
+	case CODE:
+		mode = NewCodeMode(c)
+	case ADD_TEST:
+		mode = NewAddTestMode(c)
+	case EXIT:
+		c.currentMode = nil
+		return "AI: Exiting current mode.", QUIT, nil
 	default:
-		return fmt.Errorf("unknown session: %s", sessionName)
+		return "", NOOP, fmt.Errorf("unknown mode: %s", modeName)
 	}
-	c.currentSession.Start()
-	return nil
+	c.currentMode = mode
+	response, err := mode.Start()
+	return response, MODE_START, err
 }
 
-func (c *Chat) HandleUserMessage(userInput string) (string, error) {
-	if c.currentSession != nil {
-		c.currentSession.HandleResponse(userInput)
-		return "", nil
+func (c *Chat) HandleUserMessage(userInput string) (string, Command, error) {
+	if c.currentMode != nil {
+		response, command, err := c.currentMode.HandleResponse(userInput)
+		if command == MODE_QUIT {
+			c.currentMode = nil
+		}
+		return response, command, err
 	}
 
-	if sessionName, detected := c.DetectSession(userInput); detected {
-		c.StartSession(sessionName)
-		return fmt.Sprintf("AI: Started %s session.", sessionName), nil
+	if modeName, detected := c.DetectMode(userInput); detected {
+		response, command, err := c.StartMode(modeName)
+		if err != nil {
+			return "", command, err
+		}
+		return response, command, nil
 	}
 
 	c.AddMessage("You", userInput)
 	aiResponse := c.GetAIResponse(userInput)
 	c.AddMessage("AI", aiResponse)
-	return aiResponse, nil
+	return aiResponse, NOOP, nil
 }
-
 func (c *Chat) GetHistory() []Message {
 	return c.history
 }
@@ -417,7 +356,6 @@ func NewHTTPServer(chatService ChatService) *HTTPServer {
 }
 
 func (s *HTTPServer) Start() {
-	http.HandleFunc("/start-session", s.handleStartSession)
 	http.HandleFunc("/post-message", s.handlePostMessage)
 	http.HandleFunc("/get-history", s.handleGetHistory)
 
@@ -425,19 +363,11 @@ func (s *HTTPServer) Start() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func (s *HTTPServer) handleStartSession(w http.ResponseWriter, r *http.Request) {
-	sessionName := r.URL.Query().Get("session")
-	if sessionName == "" {
-		http.Error(w, "Missing session name", http.StatusBadRequest)
-		return
+func (s *HTTPServer) ShutdownServer() {
+	fmt.Println("Shutting down server...")
+	if err := syscall.Kill(syscall.Getpid(), syscall.SIGKILL); err != nil {
+		fmt.Println("Error shutting down server:", err)
 	}
-
-	if err := s.chatService.StartSession(sessionName); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write([]byte(fmt.Sprintf("Started session: %s", sessionName)))
 }
 
 func (s *HTTPServer) handlePostMessage(w http.ResponseWriter, r *http.Request) {
@@ -449,15 +379,37 @@ func (s *HTTPServer) handlePostMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := s.chatService.HandleUserMessage(request.Message)
+	response, command, err := s.chatService.HandleUserMessage(request.Message)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"response": response,
-	})
+	switch command {
+	case QUIT:
+		w.Write([]byte("Exited mode."))
+		go func() { time.Sleep(time.Millisecond * 100); s.ShutdownServer() }()
+	case NOOP:
+		// nothing
+	case MODE_QUIT:
+		// nothing
+	case "":
+		// nothing
+	default:
+		fmt.Printf("Command not recognized: %s\n", command)
+	}
+
+	res := struct {
+		Response string  `json:"response"`
+		Command  *string `json:"command,omitempty"`
+	}{
+		Response: response,
+	}
+	if command != NOOP {
+		tmp := string(command)
+		res.Command = &tmp
+	}
+	json.NewEncoder(w).Encode(res)
 }
 
 func (s *HTTPServer) handleGetHistory(w http.ResponseWriter, r *http.Request) {
