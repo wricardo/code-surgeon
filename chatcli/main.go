@@ -12,7 +12,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -27,19 +30,25 @@ var QUIT Command = "quit"
 var MODE_QUIT Command = "mode_quit"
 var MODE_START Command = "mode_start"
 
-type Mode string
+type TMode string
 
-var EXIT Mode = "exit"
-var CODE Mode = "code"
-var ADD_TEST Mode = "add_test"
+var EXIT TMode = "exit"
+var CODE TMode = "code"
+var ADD_TEST TMode = "add_test"
 
 // Keywords for detecting different modes
-var modeKeywords = map[string]Mode{
+var modeKeywords = map[string]TMode{
 	"exit":     EXIT,
 	"quit":     EXIT,
 	"bye":      EXIT,
 	"code":     CODE,
 	"add_test": ADD_TEST,
+}
+
+type Mode interface {
+	Start() (string, error)
+	HandleResponse(input string) (string, Command, error)
+	Stop() error
 }
 
 // IChat is an interface for chat operations
@@ -67,14 +76,17 @@ type Chat struct {
 	history     []Message
 	currentMode ModeHandler
 	aiClient    AIClient
+
+	modeManager *ModeManager
 }
 
 // NewChat creates a new Chat instance
-func NewChat() *Chat {
+func NewChat(aiClient AIClient) *Chat {
 	return &Chat{
-		aiClient: &MyMockAiClient{},
-		mutex:    sync.Mutex{},
-		history:  []Message{},
+		aiClient:    aiClient,
+		mutex:       sync.Mutex{},
+		history:     []Message{},
+		modeManager: &ModeManager{},
 	}
 }
 
@@ -109,7 +121,7 @@ func (c *Chat) PrintHistory() {
 }
 
 // DetectMode detects the Mode based on user input, if any
-func (c *Chat) DetectMode(userMessage string) (Mode, bool) {
+func (c *Chat) DetectMode(userMessage string) (TMode, bool) {
 	userInputLower := strings.ToLower(strings.TrimSpace(userMessage))
 	if mode, exists := modeKeywords[userInputLower]; exists {
 		return mode, true
@@ -117,51 +129,45 @@ func (c *Chat) DetectMode(userMessage string) (Mode, bool) {
 	return "", false
 }
 
-// StartMode puts the chat in a mode based on the Mode name
-func (c *Chat) StartMode(modeName Mode) (string, Command, error) {
-	var mode ModeHandler
-	switch modeName {
-	case CODE:
-		mode = NewCodeMode(c)
-	case ADD_TEST:
-		mode = NewAddTestMode(c)
-	case EXIT:
-		c.currentMode = nil
-		return "bye", QUIT, nil
-	default:
-		return "", NOOP, fmt.Errorf("unknown mode: %s", modeName)
-	}
-	c.currentMode = mode
-	response, err := mode.Start()
-	return response, MODE_START, err
-}
-
-// HandleUserMessage handles the user input and returns the AI response
 func (c *Chat) HandleUserMessage(userMessage string) (string, Command, error) {
-	c.AddMessage(SenderYou, userMessage)
+	c.AddMessage("You", userMessage)
 
-	// if in a mode(code/test/etc), handle the response in the mode
-	if c.currentMode != nil {
-		response, command, err := c.currentMode.HandleResponse(userMessage)
-		if command == MODE_QUIT {
-			c.currentMode = nil
-		}
-		c.AddMessage(SenderAI, response)
+	// If in a mode, delegate input handling to the mode manager
+	if c.modeManager.currentMode != nil {
+		response, command, err := c.modeManager.HandleInput(userMessage)
+		c.AddMessage("AI", response)
 		return response, command, err
 	}
 
+	// Detect and start new modes using modeManager
 	if modeName, detected := c.DetectMode(userMessage); detected {
-		response, command, err := c.StartMode(modeName)
+		mode, err := c.CreateMode(modeName)
 		if err != nil {
-			return "", command, err
+			return "", NOOP, err
 		}
-		c.AddMessage(SenderAI, response)
-		return response, command, nil
+		response, err := c.modeManager.StartMode(mode)
+		if err != nil {
+			return "", NOOP, err
+		}
+		c.AddMessage("AI", response)
+		return response, MODE_START, nil
 	}
 
+	// Regular AI response
 	aiResponse := c.GetAIResponse(userMessage)
-	c.AddMessage(SenderAI, aiResponse)
+	c.AddMessage("AI", aiResponse)
 	return aiResponse, NOOP, nil
+}
+
+func (c *Chat) CreateMode(modeName TMode) (Mode, error) {
+	switch modeName {
+	case CODE:
+		return NewCodeMode(c), nil
+	case ADD_TEST:
+		return NewAddTestMode(c), nil
+	default:
+		return nil, fmt.Errorf("unknown mode: %s", modeName)
+	}
 }
 
 // GetHistory returns the chat history
@@ -184,36 +190,6 @@ func runCLI(chat *Chat, shutdownChan chan struct{}) {
 		fmt.Print("You: ")
 		userMessage, _ := reader.ReadString('\n')
 		userMessage = strings.TrimSpace(userMessage)
-
-		if strings.HasPrefix(userMessage, "/") {
-			switch userMessage {
-			case "/exit":
-				fmt.Println("Bye")
-				break
-			case "/help":
-				displayHelp()
-				continue
-			case "/code":
-				response, _, err := chat.StartMode(CODE)
-				if err != nil {
-					fmt.Println("Error:", err)
-				} else {
-					fmt.Println(response)
-				}
-				continue
-			case "/add_test":
-				response, _, err := chat.StartMode(ADD_TEST)
-				if err != nil {
-					fmt.Println("Error:", err)
-				} else {
-					fmt.Println(response)
-				}
-				continue
-			default:
-				fmt.Println("Unknown command:", userMessage)
-				continue
-			}
-		}
 
 		response, command, err := chat.HandleUserMessage(userMessage)
 		if err != nil {
@@ -303,6 +279,10 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 	return "AI: Thank you for the information. Generating code...\n\n" + codeSnippet, nil
 }
 
+func (cs *CodeMode) Stop() error {
+	return nil
+}
+
 type AddTestMode struct {
 	questionAnswerMap map[string]string
 	questions         []string
@@ -353,6 +333,10 @@ func (ats *AddTestMode) GenerateTestCode() (string, error) {
 	// Generate test code based on user inputs
 	testCode := "<<GENERATED TEST CODE>>"
 	return "AI: Generating test code based on your inputs...\n" + testCode, nil
+}
+
+func (ats *AddTestMode) Stop() error {
+	return nil
 }
 
 type HttpChat struct {
@@ -448,7 +432,7 @@ func main() {
 	shutdownChan := make(chan struct{})
 
 	// Instantiate chat service
-	chat := NewChat()
+	chat := NewChat(&MyMockAiClient{})
 
 	go func() {
 		// Decide to run CLI or HTTP server based on flag or environment
@@ -476,4 +460,112 @@ type MyMockAiClient struct{}
 
 func (c *MyMockAiClient) GetResponse(prompt string) (string, error) {
 	return "AI: This is a mock response.", nil
+}
+
+// ModeManager manages the different modes in the chat
+type ModeManager struct {
+	currentMode Mode
+	mutex       sync.Mutex
+}
+
+// StartMode starts a new mode
+func (mm *ModeManager) StartMode(mode Mode) (string, error) {
+	mm.mutex.Lock()
+	defer mm.mutex.Unlock()
+
+	if mm.currentMode != nil {
+		if err := mm.currentMode.Stop(); err != nil {
+			return "", err
+		}
+	}
+	mm.currentMode = mode
+	return mode.Start()
+}
+
+// HandleInput handles the user input based on the current mode
+func (mm *ModeManager) HandleInput(input string) (string, Command, error) {
+	mm.mutex.Lock()
+	defer mm.mutex.Unlock()
+
+	if mm.currentMode != nil {
+		response, command, err := mm.currentMode.HandleResponse(input)
+		if command == MODE_QUIT {
+			if err := mm.currentMode.Stop(); err != nil {
+				return "", NOOP, err
+			}
+			mm.currentMode = nil
+		}
+		return response, command, err
+	}
+	return "", NOOP, fmt.Errorf("no mode is currently active")
+}
+
+// StopMode stops the current mode
+func (mm *ModeManager) StopMode() error {
+	mm.mutex.Lock()
+	defer mm.mutex.Unlock()
+
+	if mm.currentMode != nil {
+		if err := mm.currentMode.Stop(); err != nil {
+			return err
+		}
+		mm.currentMode = nil
+	}
+	return nil
+}
+
+// MockAIClient is a mock implementation of the AIClient interface
+type MockAIClient struct {
+	Responses map[string]string
+}
+
+// GetResponse returns a mock response based on the prompt
+func (client *MockAIClient) GetResponse(prompt string) (string, error) {
+	if response, ok := client.Responses[prompt]; ok {
+		return response, nil
+	}
+	return "Default mock response", nil
+}
+
+// TESTS
+// TESTS
+// TESTS
+
+func TestEverything(t *testing.T) {
+	t.Run("TestChat_HandleUserMessage", TestChat_HandleUserMessage)
+	t.Run("TestChat_DetectMode", TestChat_DetectMode)
+}
+
+func TestChat_HandleUserMessage(t *testing.T) {
+	mockAIClient := &MockAIClient{
+		Responses: map[string]string{
+			"hello": "Hi there!",
+		},
+	}
+	chat := NewChat(mockAIClient)
+
+	response, command, err := chat.HandleUserMessage("hello")
+	require.NoError(t, err)
+	require.Equal(t, "Hi there!", response)
+	require.Equal(t, NOOP, command)
+}
+
+func TestChat_DetectMode(t *testing.T) {
+	chat := NewChat(&MyMockAiClient{})
+
+	mode, detected := chat.DetectMode("exit")
+	require.True(t, detected)
+	require.Equal(t, EXIT, mode)
+
+	mode, detected = chat.DetectMode("code")
+	require.True(t, detected)
+	require.Equal(t, CODE, mode)
+
+	mode, detected = chat.DetectMode("add_test")
+	require.True(t, detected)
+	require.Equal(t, ADD_TEST, mode)
+
+	mode, detected = chat.DetectMode("invalid")
+	require.False(t, detected)
+	require.Equal(t, TMode(""), mode)
 }
