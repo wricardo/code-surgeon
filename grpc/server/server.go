@@ -12,9 +12,8 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
-	"github.com/instructor-ai/instructor-go/pkg/instructor"
-	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
+	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 	"github.com/wricardo/code-surgeon/grpc"
 	"github.com/wricardo/code-surgeon/neo4j2"
@@ -28,7 +27,6 @@ func Start(
 	port int,
 	useNgrok bool,
 	ngrokDomain string,
-	openaiApiKey string,
 	neo4jDbUri string,
 	neo4jDbUser string,
 	neo4jDbPassword string,
@@ -55,14 +53,7 @@ func Start(
 		url = ln.URL()
 	}
 
-	oaiClient := openai.NewClient(openaiApiKey)
-
-	// Create an OpenAI instructorClient using the instructor package
-	instructorClient := instructor.FromOpenAI(
-		oaiClient,
-		instructor.WithMode(instructor.ModeJSON),
-		instructor.WithMaxRetries(3),
-	)
+	instructorClient := ai.GetInstructor()
 
 	driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 	if err != nil {
@@ -72,7 +63,7 @@ func Start(
 	}
 
 	// graceful shutdown
-	rulesServer := grpc.NewHandler(url, instructorClient, oaiClient, driver)
+	rulesServer := grpc.NewHandler(url, instructorClient, instructorClient.Client, driver)
 
 	mux := http.NewServeMux()
 

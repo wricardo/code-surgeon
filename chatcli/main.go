@@ -18,6 +18,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/require"
+	"github.com/wricardo/code-surgeon/ai"
 )
 
 const (
@@ -96,22 +97,7 @@ type Chat struct {
 
 // NewChat creates a new Chat instance
 func NewChat(aiClient AIClient) *Chat {
-	var myEnv map[string]string
-	myEnv, err := godotenv.Read()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
-	if !ok {
-		panic("OPENAI_API_KEY not found in .env")
-	}
-	oaiClient := openai.NewClient(openaiApiKey)
-	instructorClient := instructor.FromOpenAI(
-		oaiClient,
-		instructor.WithMode(instructor.ModeJSON),
-		instructor.WithMaxRetries(3),
-	)
+	instructorClient := ai.GetInstructor()
 	return &Chat{
 		aiClient:    aiClient,
 		mutex:       sync.Mutex{},
@@ -439,16 +425,7 @@ func NewGptAiClient() *GptAiClient {
 		log.Fatal("Error loading .env file")
 	}
 
-	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
-	if !ok {
-		panic("OPENAI_API_KEY not found in .env")
-	}
-	oaiClient := openai.NewClient(openaiApiKey)
-	instructorClient := instructor.FromOpenAI(
-		oaiClient,
-		instructor.WithMode(instructor.ModeJSON),
-		instructor.WithMaxRetries(3),
-	)
+	instructorClient := ai.GetInstructor()
 
 	return &GptAiClient{
 		instructor: instructorClient,

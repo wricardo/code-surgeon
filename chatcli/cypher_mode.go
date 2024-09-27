@@ -11,6 +11,7 @@ import (
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
+	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 )
@@ -38,16 +39,7 @@ func (m *CypherMode) HandleResponse(userMessage string) (string, Command, error)
 		log.Fatal("Error loading .env file")
 	}
 
-	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
-	if !ok {
-		return "", NOOP, fmt.Errorf("OPENAI_API_KEY not found in .env")
-	}
-	oaiClient := openai.NewClient(openaiApiKey)
-	instructorClient := instructor.FromOpenAI(
-		oaiClient,
-		instructor.WithMode(instructor.ModeJSON),
-		instructor.WithMaxRetries(3),
-	)
+	instructorClient := ai.GetInstructor()
 
 	cypher, followUp, err := GenerateCypher(instructorClient, m.chat.GetConversationSummary(), m.chat.GetHistory(), userMessage)
 	if err != nil {

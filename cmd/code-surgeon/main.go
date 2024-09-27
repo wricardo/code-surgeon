@@ -11,9 +11,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/joho/godotenv"
-	"github.com/sashabaranov/go-openai"
 	"github.com/urfave/cli/v2"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
@@ -98,16 +96,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
-					if !ok {
-						return fmt.Errorf("OPENAI_API_KEY env var is required")
-					}
-					oaiClient := openai.NewClient(openaiApiKey)
-					instructorClient := instructor.FromOpenAI(
-						oaiClient,
-						instructor.WithMode(instructor.ModeJSON),
-						instructor.WithMaxRetries(3),
-					)
+					instructorClient := ai.GetInstructor()
 
 					req := ai.GenerateDocumentationRequest{
 						Path:              cCtx.String("path"),
@@ -150,17 +139,13 @@ func main() {
 					if cCtx.Bool("use-ngrok") && cCtx.String("ngrok-domain") == "" {
 						return fmt.Errorf("ngrok domain is required when using ngrok")
 					}
-					openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
-					if !ok {
-						return fmt.Errorf("OPENAI_API_KEY env var is required")
-					}
 
 					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
 					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
 					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
 					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
 
-					return server.Start(cCtx.Int("port"), useNgrok, ngrokDomain, openaiApiKey, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+					return server.Start(cCtx.Int("port"), useNgrok, ngrokDomain, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 
 				},
 			},

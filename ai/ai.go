@@ -422,7 +422,7 @@ func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, q
 	return aiOut.FinalAnswer, nil
 }
 
-func GetInstructor() {
+func GetInstructor() *instructor.InstructorOpenAI {
 	var myEnv map[string]string
 	myEnv, err := godotenv.Read()
 	if err != nil {
@@ -431,7 +431,7 @@ func GetInstructor() {
 
 	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
 	if !ok {
-		return "", NOOP, fmt.Errorf("OPENAI_API_KEY not found in .env")
+		panic("OPENAI_API_KEY not found in .env")
 	}
 	oaiClient := openai.NewClient(openaiApiKey)
 	instructorClient := instructor.FromOpenAI(
@@ -439,4 +439,5 @@ func GetInstructor() {
 		instructor.WithMode(instructor.ModeJSON),
 		instructor.WithMaxRetries(3),
 	)
+	return instructorClient
 }
