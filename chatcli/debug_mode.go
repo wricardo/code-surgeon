@@ -11,18 +11,19 @@ func NewDebugMode(chat *Chat) *DebugMode {
 }
 
 func (m *DebugMode) Start() (string, Command, error) {
-	return "you can ask for: summary, history", MODE_START, nil
+	return "you can ask for: summary, history", SILENT, nil
 }
 
 func (m *DebugMode) HandleResponse(userMessage string) (string, Command, error) {
 	if userMessage == "summary" {
-		return m.chat.GetConversationSummary(), NOOP, nil
+		return m.chat.GetConversationSummary(), SILENT, nil
 	}
 
 	if userMessage == "history" {
-		return m.chat.SprintHistory(), NOOP, nil
+		return m.chat.SprintHistory(), SILENT, nil
 	}
-	return "exiting debug mode", MODE_QUIT, nil
+
+	return "invalid command. Available commands: summary, history", SILENT, nil
 }
 
 func (m *DebugMode) Stop() error {

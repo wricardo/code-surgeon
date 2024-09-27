@@ -44,6 +44,8 @@ func runCLI(chat *Chat, shutdownChan chan struct{}) {
 			continue
 		case MODE_START:
 			continue
+		case SILENT:
+			continue
 		case "":
 			continue
 		default:

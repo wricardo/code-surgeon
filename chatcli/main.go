@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
-	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/require"
 	"github.com/wricardo/code-surgeon/ai"
@@ -41,6 +40,7 @@ var CODE TMode = "code"
 var ADD_TEST TMode = "add_test"
 var QUESTION_ANSWER TMode = "question_answer"
 var CYPHER TMode = "cypher"
+var TEACHER TMode = "teacher"
 var DEBUG TMode = "debug"
 var HELP TMode = "help"
 
@@ -57,6 +57,7 @@ var modeKeywords = map[string]TMode{
 	"neo4j":    CYPHER,
 	"debug":    DEBUG,
 	"help":     HELP,
+	"teacher":  TEACHER,
 }
 
 type Mode interface {
@@ -112,6 +113,49 @@ func (c *Chat) GetModeText() string {
 		return fmt.Sprintf("%T", c.modeManager.currentMode)
 	}
 	return ""
+}
+
+func (c *Chat) Chat(aiOut interface{}, msgs []openai.ChatCompletionMessage) error {
+
+	ctx := context.Background()
+	history := c.GetHistory()
+	summary := c.GetConversationSummary()
+
+	gptMessages := make([]openai.ChatCompletionMessage, 0, len(history)+2)
+	// add history, last 10 messages
+	from := len(history) - 10
+	if from < 0 {
+		from = 0
+	}
+	history = history[from:]
+	for _, msg := range history {
+		role := openai.ChatMessageRoleUser
+		if msg.Sender == SenderAI {
+			role = openai.ChatMessageRoleAssistant
+		}
+		gptMessages = append(gptMessages, openai.ChatCompletionMessage{
+			Role:    role,
+			Content: msg.Content,
+		})
+	}
+	gptMessages = append(gptMessages, openai.ChatCompletionMessage{
+		Role:    "user",
+		Content: "information for context: " + summary,
+	})
+
+	gptMessages = append(gptMessages, msgs...)
+
+	_, err := c.instructor.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model:     openai.GPT4o,
+		Messages:  gptMessages,
+		MaxTokens: 1000,
+	}, aiOut)
+
+	if err != nil {
+		return fmt.Errorf("Failed to generate cypher query: %v", err)
+	}
+
+	return nil
 }
 
 // addMessage adds a message to the chat history
@@ -261,6 +305,8 @@ func (c *Chat) CreateMode(modeName TMode) (Mode, error) {
 		return NewQuestionAnswerMode(c), nil
 	case CYPHER:
 		return NewCypherMode(c), nil
+	case TEACHER:
+		return NewTeacherMode(c), nil
 	case DEBUG:
 		return NewDebugMode(c), nil
 	case HELP:
@@ -419,11 +465,6 @@ type GptAiClient struct {
 }
 
 func NewGptAiClient() *GptAiClient {
-	var myEnv map[string]string
-	myEnv, err := godotenv.Read()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
 
 	instructorClient := ai.GetInstructor()
 
