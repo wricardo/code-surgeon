@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/instructor-ai/instructor-go/pkg/instructor"
+	"github.com/joho/godotenv"
+	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,12 +31,17 @@ var NOOP Command = "noop"
 var QUIT Command = "quit"
 var MODE_QUIT Command = "mode_quit"
 var MODE_START Command = "mode_start"
+var SILENT Command = "silent" // this will not save to history
 
 type TMode string
 
 var EXIT TMode = "exit"
 var CODE TMode = "code"
 var ADD_TEST TMode = "add_test"
+var QUESTION_ANSWER TMode = "question_answer"
+var CYPHER TMode = "cypher"
+var DEBUG TMode = "debug"
+var HELP TMode = "help"
 
 // Keywords for detecting different modes
 var modeKeywords = map[string]TMode{
@@ -43,10 +50,16 @@ var modeKeywords = map[string]TMode{
 	"bye":      EXIT,
 	"code":     CODE,
 	"add_test": ADD_TEST,
+	"qa":       QUESTION_ANSWER,
+	"question": QUESTION_ANSWER,
+	"cypher":   CYPHER,
+	"neo4j":    CYPHER,
+	"debug":    DEBUG,
+	"help":     HELP,
 }
 
 type Mode interface {
-	Start() (string, error)
+	Start() (string, Command, error)
 	HandleResponse(input string) (string, Command, error)
 	Stop() error
 }
@@ -72,26 +85,51 @@ type Message struct {
 
 // Chat handles the chat functionality
 type Chat struct {
-	mutex       sync.Mutex
-	history     []Message
-	currentMode ModeHandler
-	aiClient    AIClient
+	mutex               sync.Mutex
+	history             []Message
+	aiClient            AIClient
+	conversationSummary string
+	instructor          *instructor.InstructorOpenAI
 
 	modeManager *ModeManager
 }
 
 // NewChat creates a new Chat instance
 func NewChat(aiClient AIClient) *Chat {
+	var myEnv map[string]string
+	myEnv, err := godotenv.Read()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
+	if !ok {
+		panic("OPENAI_API_KEY not found in .env")
+	}
+	oaiClient := openai.NewClient(openaiApiKey)
+	instructorClient := instructor.FromOpenAI(
+		oaiClient,
+		instructor.WithMode(instructor.ModeJSON),
+		instructor.WithMaxRetries(3),
+	)
 	return &Chat{
 		aiClient:    aiClient,
 		mutex:       sync.Mutex{},
 		history:     []Message{},
 		modeManager: &ModeManager{},
+		instructor:  instructorClient,
 	}
 }
 
-// AddMessage adds a message to the chat history
-func (c *Chat) AddMessage(sender, content string) {
+func (c *Chat) GetModeText() string {
+	if c.modeManager.currentMode != nil {
+		return fmt.Sprintf("%T", c.modeManager.currentMode)
+	}
+	return ""
+}
+
+// addMessage adds a message to the chat history
+func (c *Chat) addMessage(sender, content string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -99,25 +137,82 @@ func (c *Chat) AddMessage(sender, content string) {
 	c.history = append(c.history, msg)
 }
 
+func (c *Chat) generateConversationSummary() {
+	latestMessages := ""
+	for _, msg := range c.GetHistory() {
+		latestMessages += fmt.Sprintf("%s: %s\n", msg.Sender, msg.Content)
+	}
+
+	type AiOutput struct {
+		Summary string `json:"summary" jsonschema:"title=summary,description=the summary of the conversation."`
+	}
+	ctx := context.Background()
+
+	var aiOut AiOutput
+	prompt := fmt.Sprintf(`
+	Conversation Summary:
+	%s
+	Converation Context:
+	%s
+	Latest Messages:
+	%s
+	Given a conversation summary, conversation context, and the latest messages since last summary, generate a summary of the conversation.
+	`, c.GetConversationSummary(), "", latestMessages)
+	_, err := c.instructor.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model: openai.GPT4o,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    "user",
+				Content: prompt,
+			},
+		},
+		MaxTokens: 1000,
+	}, &aiOut)
+	log.Printf("Summary Prompt: %s", prompt)
+
+	if err != nil {
+		log.Printf("Failed to generate conversation summary: %v", err)
+		return
+	}
+
+	c.mutex.Lock()
+	c.conversationSummary = aiOut.Summary
+	defer c.mutex.Unlock()
+}
+
 // GetAIResponse calls the OpenAI API to get a response based on user input
 func (c *Chat) GetAIResponse(userMessage string) string {
 
-	response, err := c.aiClient.GetResponse(userMessage)
+	prompt := fmt.Sprintf(`
+	Conversation Summary:
+	%s
+	Given the user message: 
+	%s
+	Generate a response.`, c.GetConversationSummary(), userMessage)
+	response, err := c.aiClient.GetResponse(prompt)
+	log.Printf("GetAIResponse Prompt: %s", prompt)
 	if err != nil {
-		return "AI: Sorry, I couldn't process that."
+		return "Sorry, I couldn't process that."
 	}
 	return response
 }
 
 // PrintHistory prints the entire chat history
 func (c *Chat) PrintHistory() {
+	fmt.Println(c.SprintHistory())
+}
+
+func (c *Chat) SprintHistory() string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	fmt.Printf("=== Chat History ===\n")
+	// use string builder
+	history := ""
+	history += "=== Chat History ===\n"
 	for _, msg := range c.history {
-		fmt.Printf("%s: %s\n", msg.Sender, msg.Content)
+		history += fmt.Sprintf("%s: %s\n", msg.Sender, msg.Content)
 	}
-	fmt.Printf("====================\n")
+	history += fmt.Sprintf("====================\n")
+	return history
 }
 
 // DetectMode detects the Mode based on user input, if any
@@ -130,12 +225,19 @@ func (c *Chat) DetectMode(userMessage string) (TMode, bool) {
 }
 
 func (c *Chat) HandleUserMessage(userMessage string) (string, Command, error) {
-	c.AddMessage("You", userMessage)
+	c.generateConversationSummary()
 
 	// If in a mode, delegate input handling to the mode manager
 	if c.modeManager.currentMode != nil {
+		if userMessage == "/exit" || userMessage == "/quit" || userMessage == "/bye" || userMessage == "exit" || userMessage == "quit" || userMessage == "bye" {
+			c.modeManager.StopMode()
+			return "Exited mode.", MODE_QUIT, nil
+		}
 		response, command, err := c.modeManager.HandleInput(userMessage)
-		c.AddMessage("AI", response)
+		if command != SILENT {
+			c.addMessage("You", userMessage)
+			c.addMessage("AI", response)
+		}
 		return response, command, err
 	}
 
@@ -145,17 +247,21 @@ func (c *Chat) HandleUserMessage(userMessage string) (string, Command, error) {
 		if err != nil {
 			return "", NOOP, err
 		}
-		response, err := c.modeManager.StartMode(mode)
+		response, command, err := c.modeManager.StartMode(mode)
 		if err != nil {
 			return "", NOOP, err
 		}
-		c.AddMessage("AI", response)
-		return response, MODE_START, nil
+		if command != SILENT {
+			c.addMessage("You", userMessage)
+			c.addMessage("AI", response)
+		}
+		return response, command, nil
 	}
+	c.addMessage("You", userMessage)
 
 	// Regular AI response
 	aiResponse := c.GetAIResponse(userMessage)
-	c.AddMessage("AI", aiResponse)
+	c.addMessage("AI", aiResponse)
 	return aiResponse, NOOP, nil
 }
 
@@ -165,6 +271,16 @@ func (c *Chat) CreateMode(modeName TMode) (Mode, error) {
 		return NewCodeMode(c), nil
 	case ADD_TEST:
 		return NewAddTestMode(c), nil
+	case QUESTION_ANSWER:
+		return NewQuestionAnswerMode(c), nil
+	case CYPHER:
+		return NewCypherMode(c), nil
+	case DEBUG:
+		return NewDebugMode(c), nil
+	case HELP:
+		return NewHelpMode(c), nil
+	case EXIT:
+		return nil, fmt.Errorf("exit forced error")
 	default:
 		return nil, fmt.Errorf("unknown mode: %s", modeName)
 	}
@@ -172,171 +288,15 @@ func (c *Chat) CreateMode(modeName TMode) (Mode, error) {
 
 // GetHistory returns the chat history
 func (c *Chat) GetHistory() []Message {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	return c.history
 }
 
-func runCLI(chat *Chat, shutdownChan chan struct{}) {
-	defer chat.PrintHistory()
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("ChatCLI - Type your message and press Enter. Type /help for commands.")
-	for {
-		select {
-		case <-shutdownChan:
-			return
-		default:
-		}
-
-		fmt.Print("You: ")
-		userMessage, _ := reader.ReadString('\n')
-		userMessage = strings.TrimSpace(userMessage)
-
-		response, command, err := chat.HandleUserMessage(userMessage)
-		if err != nil {
-			fmt.Println("Error:", err)
-		} else if response != "" {
-			fmt.Println(response)
-		}
-		switch command {
-		case QUIT:
-			return
-		case NOOP:
-			continue
-		case MODE_QUIT:
-			continue
-		case MODE_START:
-			continue
-		case "":
-			continue
-		default:
-			fmt.Printf("Command not recognized: %s\n", command)
-		}
-	}
-}
-
-func displayHelp() {
-	fmt.Println("Available commands: /help, /exit, /code, /add_test")
-}
-
-type CodeMode struct {
-	questionAnswerMap map[string]string
-	questions         []string
-	questionIndex     int
-}
-
-func NewCodeMode(chat *Chat) *CodeMode {
-	return &CodeMode{
-		// chat:              chat,
-		questionAnswerMap: make(map[string]string),
-		questions: []string{
-			"What kind of api would you like to build?",
-			"What's the file name for the main.go file?",
-		},
-		questionIndex: 0,
-	}
-}
-
-func (cs *CodeMode) Start() (string, error) {
-	question, _, _ := cs.AskNextQuestion()
-	return "AI: Starting code mode. I will ask you some questions to generate code.\n" + question, nil
-}
-
-func (cs *CodeMode) HandleResponse(userMessage string) (string, Command, error) {
-	trimmedInput := strings.TrimSpace(userMessage)
-	if trimmedInput == "" {
-		question, command, _ := cs.AskNextQuestion()
-		return "AI: Input cannot be empty. Please provide a valid response.\n" + question, command, nil
-	}
-
-	cs.questionAnswerMap[cs.questions[cs.questionIndex]] = userMessage
-	cs.questionIndex++
-	if cs.questionIndex < len(cs.questions) {
-		question, command, _ := cs.AskNextQuestion()
-		return question, command, nil
-	} else {
-		response, _ := cs.GenerateCode()
-		return response, MODE_QUIT, nil
-	}
-}
-
-func (cs *CodeMode) AskNextQuestion() (string, Command, error) {
-	if cs.questionIndex >= len(cs.questions) {
-		response, _ := cs.GenerateCode()
-		return response, MODE_QUIT, nil
-	}
-	question := "AI: " + cs.questions[cs.questionIndex]
-	return question, NOOP, nil
-}
-
-func (cs *CodeMode) GenerateCode() (string, error) {
-	codeSnippet := ""
-	codeSnippet += fmt.Sprintf("// generated based on these questions:\n")
-	for _, q := range cs.questions {
-		codeSnippet += fmt.Sprintf("// %s: %s\n", q, cs.questionAnswerMap[q])
-	}
-	codeSnippet += "<<GENERATED CODE>>"
-
-	return "AI: Thank you for the information. Generating code...\n\n" + codeSnippet, nil
-}
-
-func (cs *CodeMode) Stop() error {
-	return nil
-}
-
-type AddTestMode struct {
-	questionAnswerMap map[string]string
-	questions         []string
-	questionIndex     int
-}
-
-func NewAddTestMode(chat *Chat) *AddTestMode {
-	return &AddTestMode{
-		questionAnswerMap: make(map[string]string),
-		questions: []string{
-			"Which function would you like to test?",
-			"In which file is this function located?",
-			"Where should the test file be saved?",
-			"Are there any specific edge cases you want to cover?",
-		},
-		questionIndex: 0,
-	}
-}
-
-func (ats *AddTestMode) Start() (string, error) {
-	message := "AI: Starting add test mode. I will ask you some questions to generate a test function."
-	question, _ := ats.AskNextQuestion()
-	return message + "\n" + question, nil
-}
-
-func (ats *AddTestMode) HandleResponse(userMessage string) (string, Command, error) {
-	ats.questionAnswerMap[ats.questions[ats.questionIndex]] = userMessage
-	ats.questionIndex++
-	if ats.questionIndex < len(ats.questions) {
-		question, _ := ats.AskNextQuestion()
-		return question, NOOP, nil
-	} else {
-		response, _ := ats.GenerateTestCode()
-		return response, MODE_QUIT, nil
-	}
-}
-
-func (ats *AddTestMode) AskNextQuestion() (string, error) {
-	if ats.questionIndex >= len(ats.questions) {
-		response, _ := ats.GenerateTestCode()
-		return response, nil
-	}
-	question := "AI: " + ats.questions[ats.questionIndex]
-	return question, nil
-}
-
-func (ats *AddTestMode) GenerateTestCode() (string, error) {
-	// Generate test code based on user inputs
-	testCode := "<<GENERATED TEST CODE>>"
-	return "AI: Generating test code based on your inputs...\n" + testCode, nil
-}
-
-func (ats *AddTestMode) Stop() error {
-	return nil
+func (c *Chat) GetConversationSummary() string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.conversationSummary
 }
 
 type HttpChat struct {
@@ -425,14 +385,28 @@ func (s *HttpChat) handleGetHistory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(history)
 }
 
+func initLogger() *os.File {
+	logFile, err := os.OpenFile("chatapp.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
+	}
+	log.SetOutput(logFile)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	return logFile
+}
+
 func main() {
+	// Initialize logger
+	logFile := initLogger()
+	defer logFile.Close()
+
 	// Setup signal handling for graceful exit
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	shutdownChan := make(chan struct{})
 
 	// Instantiate chat service
-	chat := NewChat(&MyMockAiClient{})
+	chat := NewChat(NewGptAiClient())
 
 	go func() {
 		// Decide to run CLI or HTTP server based on flag or environment
@@ -440,6 +414,8 @@ func main() {
 			// Start HTTP Server
 			httpServer := NewHTTPServer(chat, shutdownChan)
 			httpServer.Start()
+		} else if len(os.Args) > 1 && os.Args[1] == "bubble_tea" {
+			mainBubbleTea(chat, shutdownChan)
 		} else {
 			// Start CLI
 			runCLI(chat, shutdownChan)
@@ -452,6 +428,61 @@ func main() {
 	fmt.Println("\nBye")
 }
 
+type GptAiClient struct {
+	instructor *instructor.InstructorOpenAI
+}
+
+func NewGptAiClient() *GptAiClient {
+	var myEnv map[string]string
+	myEnv, err := godotenv.Read()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
+	if !ok {
+		panic("OPENAI_API_KEY not found in .env")
+	}
+	oaiClient := openai.NewClient(openaiApiKey)
+	instructorClient := instructor.FromOpenAI(
+		oaiClient,
+		instructor.WithMode(instructor.ModeJSON),
+		instructor.WithMaxRetries(3),
+	)
+
+	return &GptAiClient{
+		instructor: instructorClient,
+	}
+}
+
+func (c *GptAiClient) GetResponse(prompt string) (string, error) {
+	ctx := context.Background()
+	type AiOutput struct {
+		Response string `json:"response" jsonschema:"title=response,description=your response to user message."`
+	}
+	var aiOut AiOutput
+	if c.instructor == nil {
+		return "", fmt.Errorf("instructor client is nil")
+	}
+
+	_, err := c.instructor.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model: openai.GPT4o,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    "user",
+				Content: prompt + ". You must output your response in a json object with a response key.",
+			},
+		},
+		MaxTokens: 1000,
+	}, &aiOut)
+
+	if err != nil {
+		return "", err
+	}
+
+	return aiOut.Response, nil
+}
+
 type AIClient interface {
 	GetResponse(prompt string) (string, error)
 }
@@ -459,7 +490,7 @@ type AIClient interface {
 type MyMockAiClient struct{}
 
 func (c *MyMockAiClient) GetResponse(prompt string) (string, error) {
-	return "AI: This is a mock response.", nil
+	return "This is a mock response \n with new line.", nil
 }
 
 // ModeManager manages the different modes in the chat
@@ -469,17 +500,25 @@ type ModeManager struct {
 }
 
 // StartMode starts a new mode
-func (mm *ModeManager) StartMode(mode Mode) (string, error) {
+func (mm *ModeManager) StartMode(mode Mode) (string, Command, error) {
 	mm.mutex.Lock()
 	defer mm.mutex.Unlock()
 
 	if mm.currentMode != nil {
 		if err := mm.currentMode.Stop(); err != nil {
-			return "", err
+			return "", NOOP, err
 		}
 	}
 	mm.currentMode = mode
-	return mode.Start()
+	res, command, err := mode.Start()
+	if command == MODE_QUIT {
+		if err := mm.currentMode.Stop(); err != nil {
+			return "", NOOP, err
+		}
+		mm.currentMode = nil
+	}
+	return res, command, err
+
 }
 
 // HandleInput handles the user input based on the current mode

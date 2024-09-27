@@ -13,6 +13,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 	"github.com/instructor-ai/instructor-go/pkg/instructor"
+	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/neo4j2"
@@ -323,6 +324,40 @@ func EmbedQuestion(client *openai.Client, question string) ([]float32, error) {
 	return resp.Data[0].Embedding, nil
 }
 
+func GenerateCypher(client *instructor.InstructorOpenAI, ask string) (string, error) {
+	type AiOutput struct {
+		Cypher string `json:"cypher" jsonschema:"title=cypher,description=the cypher query to be executed on the neo4j database."`
+	}
+
+	ctx := context.Background()
+	var aiOut AiOutput
+
+	_, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model: openai.GPT4o,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    "system",
+				Content: "You are a helpful assistant which can generate cypher queries based on the user's request. You must answer in json format with the key being 'cypher'.",
+			},
+			{
+				Role:    "user",
+				Content: ask,
+			},
+		},
+		MaxTokens: 1000,
+	}, &aiOut)
+
+	if err != nil {
+		return "", fmt.Errorf("Failed to generate cypher query: %v", err)
+	}
+
+	if aiOut.Cypher == "" {
+		return "", nil
+	}
+
+	return aiOut.Cypher, nil
+}
+
 func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, questionsAnswers []neo4j2.QuestionAnswer) (string, error) {
 	// Create a struct to capture the AI's response
 	type AiOutput struct {
@@ -385,4 +420,23 @@ func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, q
 	}
 
 	return aiOut.FinalAnswer, nil
+}
+
+func GetInstructor() {
+	var myEnv map[string]string
+	myEnv, err := godotenv.Read()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	openaiApiKey, ok := myEnv["OPENAI_API_KEY"]
+	if !ok {
+		return "", NOOP, fmt.Errorf("OPENAI_API_KEY not found in .env")
+	}
+	oaiClient := openai.NewClient(openaiApiKey)
+	instructorClient := instructor.FromOpenAI(
+		oaiClient,
+		instructor.WithMode(instructor.ModeJSON),
+		instructor.WithMaxRetries(3),
+	)
 }
