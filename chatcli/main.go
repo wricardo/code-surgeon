@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -671,6 +672,7 @@ func (s *HttpChat) handleGetHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	hello()
 	// Initialize logger
 	log2.Configure()
 
