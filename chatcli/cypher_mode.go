@@ -21,11 +21,16 @@ func NewCypherMode(chat *Chat) *CypherMode {
 	}
 }
 
-func (m *CypherMode) Start() (string, Command, error) {
-	return "What's the cypher you'd like to run?", MODE_START, nil
+func (m *CypherMode) Start() (Message, Command, error) {
+	return TextMessage("What's the cypher you'd like to run?"), MODE_START, nil
 }
 
-func (m *CypherMode) HandleResponse(userMessage string) (string, Command, error) {
+func (m *CypherMode) HandleIntent(msg Message) (Message, Command, error) {
+	return m.HandleResponse(msg)
+}
+
+func (m *CypherMode) HandleResponse(msg Message) (Message, Command, error) {
+	userMessage := msg.Text
 	type AiOutput struct {
 		Cypher   string `json:"cypher" jsonschema:"title=cypher,description=the cypher query to be executed on the neo4j database."`
 		Question string `json:"question" jsonschema:"title=questtion,description=the question to be asked to the user."`
@@ -36,8 +41,12 @@ func (m *CypherMode) HandleResponse(userMessage string) (string, Command, error)
 	var aiOut AiOutput
 	err := m.chat.Chat(&aiOut, []openai.ChatCompletionMessage{
 		{
-			Role:    "system",
-			Content: "You are a helpful assistant which can generate cypher queries based on the user's request. You must answer in json format with the key being 'cypher'. If you are not asked to create a cypher or you need more information from the user in order to generate a cypher, you can ask a question to the user, use the key question. Output either a cypher or a question, not both. A question should be asked if you need more information to generate a cypher.",
+			Role: "system",
+			Content: `You are a helpful assistant which can generate cypher queries based on the user's request. 
+			You must answer in json.
+			If the user is asking for a cypher query, you must provide the cypher query.
+			Ask clarifying questions if needed, let's talk through what the user wants to query.
+			`,
 		},
 
 		{
@@ -46,7 +55,7 @@ func (m *CypherMode) HandleResponse(userMessage string) (string, Command, error)
 		},
 	})
 	if err != nil {
-		return "", NOOP, err
+		return Message{}, NOOP, err
 	}
 
 	followUp := aiOut.Question
@@ -59,13 +68,13 @@ func (m *CypherMode) HandleResponse(userMessage string) (string, Command, error)
 			},
 		})
 		if err != nil {
-			return "oops. We got an error from neo4j: " + err.Error(), NOOP, nil
+			return TextMessage("oops. We got an error from neo4j: " + err.Error()), NOOP, nil
 		}
 		log.Println(res.Msg.Output)
-		return cypher + "\n" + res.Msg.Output, NOOP, nil
+		return TextMessage(cypher + "\n" + res.Msg.Output), NOOP, nil
 	}
 
-	return followUp, NOOP, nil
+	return TextMessage(followUp), NOOP, nil
 }
 
 func (m *CypherMode) Stop() error {

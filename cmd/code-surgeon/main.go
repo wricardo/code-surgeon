@@ -35,7 +35,7 @@ func main() {
 		Name:  "code-surgeon",
 		Usage: "A CLI tool to help you manage your codebase",
 		Action: func(*cli.Context) error {
-			fmt.Println("checkout --help for more information.")
+			fmt.Println("--help for more information.")
 			return nil
 		},
 		Commands: []*cli.Command{

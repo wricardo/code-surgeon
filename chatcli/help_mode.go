@@ -12,16 +12,20 @@ func NewHelpMode(chat *Chat) *HelpMode {
 	}
 }
 
-func (m *HelpMode) Start() (string, Command, error) {
+func (m *HelpMode) HandleIntent(msg Message) (Message, Command, error) {
+	return m.HandleResponse(msg)
+}
+
+func (m *HelpMode) Start() (Message, Command, error) {
 	commands := []string{"help", "exit"}
 	for command := range modeKeywords {
 		commands = append(commands, command)
 	}
-	return "You can ask any question or run these commands: " + strings.Join(commands, ", "), MODE_QUIT, nil
+	return TextMessage("You can ask any question or run these commands: " + strings.Join(commands, ", ")), MODE_QUIT, nil
 }
 
-func (m *HelpMode) HandleResponse(userMessage string) (string, Command, error) {
-	return "", MODE_QUIT, nil
+func (m *HelpMode) HandleResponse(userMessage Message) (Message, Command, error) {
+	return Message{}, MODE_QUIT, nil
 }
 
 func (m *HelpMode) Stop() error {

@@ -10,20 +10,25 @@ func NewDebugMode(chat *Chat) *DebugMode {
 	}
 }
 
-func (m *DebugMode) Start() (string, Command, error) {
-	return "you can ask for: summary, history", SILENT, nil
+func (m *DebugMode) HandleIntent(msg Message) (Message, Command, error) {
+	return m.HandleResponse(msg)
 }
 
-func (m *DebugMode) HandleResponse(userMessage string) (string, Command, error) {
+func (m *DebugMode) Start() (Message, Command, error) {
+	return TextMessage("you can ask for: summary, history"), SILENT, nil
+}
+
+func (m *DebugMode) HandleResponse(msg Message) (Message, Command, error) {
+	userMessage := msg.Text
 	if userMessage == "summary" {
-		return m.chat.GetConversationSummary(), SILENT, nil
+		return TextMessage(m.chat.GetConversationSummary()), SILENT, nil
 	}
 
 	if userMessage == "history" {
-		return m.chat.SprintHistory(), SILENT, nil
+		return TextMessage(m.chat.SprintHistory()), SILENT, nil
 	}
 
-	return "invalid command. Available commands: summary, history", SILENT, nil
+	return TextMessage("invalid command. Available commands: summary, history"), SILENT, nil
 }
 
 func (m *DebugMode) Stop() error {

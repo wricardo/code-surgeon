@@ -19,11 +19,18 @@ func NewQuestionAnswerMode(chat *Chat) *QuestionAnswerMode {
 	}
 }
 
-func (ats *QuestionAnswerMode) Start() (string, Command, error) {
-	return "Ask away!", MODE_START, nil
+func (ats *QuestionAnswerMode) Start() (Message, Command, error) {
+	return TextMessage("Ask away!"), MODE_START, nil
 }
 
-func (ats *QuestionAnswerMode) HandleResponse(userMessage string) (string, Command, error) {
+func (m *QuestionAnswerMode) HandleIntent(msg Message) (Message, Command, error) {
+	// Refactored to use Message type for input and output
+	return m.HandleResponse(msg)
+}
+
+func (m *QuestionAnswerMode) HandleResponse(msg Message) (Message, Command, error) {
+	// Refactored to use Message type for input and output
+	userMessage := msg.Text
 	client := apiconnect.NewGptServiceClient(http.DefaultClient, "http://localhost:8010")
 	ctx := context.Background()
 	res, err := client.AnswerQuestion(ctx, &connect.Request[api.AnswerQuestionRequest]{
@@ -33,14 +40,14 @@ func (ats *QuestionAnswerMode) HandleResponse(userMessage string) (string, Comma
 		},
 	})
 	if err != nil {
-		return "", NOOP, err
+		return Message{}, NOOP, err
 	}
 
-	var response string
+	var responseText string
 	for _, v := range res.Msg.Answers {
-		response += v.Answer + "\n"
+		responseText += v.Answer + "\n"
 	}
-	return response, NOOP, nil
+	return TextMessage(responseText), NOOP, nil
 }
 
 func (ats *QuestionAnswerMode) Stop() error {

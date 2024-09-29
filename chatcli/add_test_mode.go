@@ -19,21 +19,26 @@ func NewAddTestMode(chat *Chat) *AddTestMode {
 	}
 }
 
-func (ats *AddTestMode) Start() (string, Command, error) {
-	message := "Starting add test mode. I will ask you some questions to generate a test function."
-	question, _ := ats.AskNextQuestion()
-	return message + "\n" + question, MODE_START, nil
+func (m *AddTestMode) HandleIntent(userMessage Message) (Message, Command, error) {
+	return m.HandleResponse(userMessage)
 }
 
-func (ats *AddTestMode) HandleResponse(userMessage string) (string, Command, error) {
+func (ats *AddTestMode) Start() (Message, Command, error) {
+	message := "Starting add test mode. I will ask you some questions to generate a test function."
+	question, _ := ats.AskNextQuestion()
+	return TextMessage(message + "\n" + question), MODE_START, nil
+}
+
+func (ats *AddTestMode) HandleResponse(msg Message) (Message, Command, error) {
+	userMessage := msg.Text
 	ats.questionAnswerMap[ats.questions[ats.questionIndex]] = userMessage
 	ats.questionIndex++
 	if ats.questionIndex < len(ats.questions) {
 		question, _ := ats.AskNextQuestion()
-		return question, NOOP, nil
+		return TextMessage(question), NOOP, nil
 	} else {
 		response, _ := ats.GenerateTestCode()
-		return response, MODE_QUIT, nil
+		return TextMessage(response), MODE_QUIT, nil
 	}
 }
 

@@ -22,8 +22,12 @@ func NewTeacherMode(chat *Chat) *TeacherMode {
 	}
 }
 
-func (ats *TeacherMode) Start() (string, Command, error) {
-	return "Teach me by discussing topics. I'll keep track of the information and construct an Q&A for further reference.", MODE_START, nil
+func (m *TeacherMode) HandleIntent(msg Message) (Message, Command, error) {
+	return m.HandleResponse(msg)
+}
+
+func (ats *TeacherMode) Start() (Message, Command, error) {
+	return TextMessage("Teach me by discussing topics. I'll keep track of the information and construct a Q&A for further reference."), MODE_START, nil
 }
 
 type QuestionAnswer struct {
@@ -31,7 +35,8 @@ type QuestionAnswer struct {
 	Answer   string `json:"answer" jsonschema:"title=answer,description=the answer."`
 }
 
-func (ats *TeacherMode) HandleResponse(userMessage string) (string, Command, error) {
+func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
+	userMessage := msg.Text
 
 	type AiOutput struct {
 		Response        string           `json:"response" jsonschema:"title=response,description=the assistant's response to the user."`
@@ -54,7 +59,7 @@ func (ats *TeacherMode) HandleResponse(userMessage string) (string, Command, err
 		},
 	})
 	if err != nil {
-		return "", NOOP, err
+		return Message{}, NOOP, err
 	}
 	for _, qa := range aiOut.QuestionAnswers {
 		if ats.alreadySeen[qa.Question] {
@@ -76,7 +81,7 @@ func (ats *TeacherMode) HandleResponse(userMessage string) (string, Command, err
 		})
 	}
 
-	return aiOut.Response, NOOP, nil
+	return TextMessage(aiOut.Response), NOOP, nil
 }
 
 func (ats *TeacherMode) Stop() error {
