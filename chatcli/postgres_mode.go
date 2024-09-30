@@ -118,6 +118,9 @@ func NewPostgresMode(chat *Chat) *PostgresMode {
 }
 
 func (pm *PostgresMode) Start() (Message, Command, error) {
+	if !pm.form.IsFilled() {
+		return Message{Form: pm.form.MakeFormMessage()}, MODE_START, nil
+	}
 	return Message{}, MODE_START, nil
 }
 
@@ -134,15 +137,6 @@ func (pm *PostgresMode) HandleResponse(msg Message) (Message, Command, error) {
 			}
 		}
 		if !pm.form.IsFilled() {
-			qas := []QuestionAnswer{}
-			for _, q := range pm.form.Questions {
-				if !pm.form.IsQuestionFilled(q) {
-					qas = append(qas, QuestionAnswer{
-						Question: q.Question,
-						Answer:   "",
-					})
-				}
-			}
 			return Message{Form: pm.form.MakeFormMessage()}, NOOP, nil
 		}
 	}
@@ -161,7 +155,12 @@ func (pm *PostgresMode) HandleResponse(msg Message) (Message, Command, error) {
 	}
 
 	if msg.Text == "" {
-		return TextMessage("Please provide a query."), NOOP, nil
+		tables, err := pm.retrieveTables()
+		if err != nil {
+			return TextMessage("Failed to retrieve tables: " + err.Error()), NOOP, nil
+		}
+
+		return TextMessage("Please provide a query.\nTables in the database:\n" + tables), NOOP, nil
 	}
 
 	// Ask the user for a query
@@ -208,6 +207,24 @@ func (pm *PostgresMode) connectToDatabase() error {
 
 	pm.db = db
 	return nil
+}
+
+func (pm *PostgresMode) retrieveTables() (string, error) {
+	rows, err := pm.db.Query("SELECT table_name FROM information_schema.columns WHERE table_schema = 'public' group by table_schema, table_name")
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var schema string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			return "", err
+		}
+		schema += fmt.Sprintf("%s\n", tableName)
+	}
+	return schema, nil
 }
 
 func (pm *PostgresMode) retrieveSchema() (string, error) {
