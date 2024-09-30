@@ -82,7 +82,7 @@ func (cs *CodeMode) HandleResponse(msg Message) (Message, Command, error) {
 	return TextMessage(aiOut.Response), NOOP, nil
 }
 
-func (cs *CodeMode) HandleForm(form Form) (Message, Command, error) {
+func (cs *CodeMode) HandleForm(form FormMessage) (Message, Command, error) {
 	for _, qa := range form.Questions {
 		cs.questionAnswerMap[qa.Question] = qa.Answer
 	}
@@ -152,4 +152,7 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 
 func (cs *CodeMode) Stop() error {
 	return nil
+}
+func init() {
+	RegisterMode(CODE, NewCodeMode)
 }

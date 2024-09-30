@@ -80,3 +80,6 @@ func (m *CypherMode) HandleResponse(msg Message) (Message, Command, error) {
 func (m *CypherMode) Stop() error {
 	return nil
 }
+func init() {
+	RegisterMode(CYPHER, NewCypherMode)
+}

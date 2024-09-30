@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 
-	"connectrpc.com/connect"
-	"github.com/wricardo/code-surgeon/api"
-	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/sashabaranov/go-openai"
+	"github.com/wricardo/code-surgeon/ai"
+	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
 type QuestionAnswerMode struct {
@@ -29,27 +29,66 @@ func (m *QuestionAnswerMode) HandleIntent(msg Message) (Message, Command, error)
 }
 
 func (m *QuestionAnswerMode) HandleResponse(msg Message) (Message, Command, error) {
-	// Refactored to use Message type for input and output
 	userMessage := msg.Text
-	client := apiconnect.NewGptServiceClient(http.DefaultClient, "http://localhost:8010")
-	ctx := context.Background()
-	res, err := client.AnswerQuestion(ctx, &connect.Request[api.AnswerQuestionRequest]{
-		Msg: &api.AnswerQuestionRequest{
-			Questions: userMessage,
-			UseAi:     true,
+
+	userEmbedding, err := ai.EmbedQuestion(m.chat.instructor.Client, msg.Text)
+	if err != nil {
+		return Message{}, NOOP, err
+	}
+	if len(userEmbedding) == 0 {
+		return Message{}, NOOP, fmt.Errorf("embedding is empty") // TODO: should return an error message instead of an error
+	}
+
+	// search for similar questions in neo4j
+	similarQuestions, err := neo4j2.VectorSearchQuestions(context.Background(), *m.chat.driver, userEmbedding, 3)
+	if err != nil {
+		return Message{}, NOOP, err
+	}
+
+	// Fetch top answers for similar questions
+	topQuestionIds := make([]string, len(similarQuestions))
+	for i, question := range similarQuestions {
+		topQuestionIds[i] = question.ID
+	}
+
+	topAnswers, err := neo4j2.GetTopAnswersForQuestions(context.Background(), *m.chat.driver, topQuestionIds)
+	if err != nil {
+		return Message{}, NOOP, err
+	}
+
+	// Generate final answer using AI
+	type FinalAnswerOutput struct {
+		FinalAnswer string `json:"final_answer" jsonschema:"title=final_answer,description=the final answer to the user's question."`
+	}
+
+	var finalAnswerOut FinalAnswerOutput
+	err = m.chat.Chat(&finalAnswerOut, []openai.ChatCompletionMessage{
+		{
+			Role:    "system",
+			Content: "You are a helpful assistant that can generate a final answer based on similar questions and answers.",
+		},
+		{
+			Role:    "user",
+			Content: fmt.Sprintf("User question: %s\nSimilar questions and answers: %v", userMessage, topAnswers),
 		},
 	})
 	if err != nil {
 		return Message{}, NOOP, err
 	}
 
-	var responseText string
-	for _, v := range res.Msg.Answers {
-		responseText += v.Answer + "\n"
+	// Construct response text
+	responseText := "Similar Questions:\n"
+	for _, ta := range topAnswers {
+		responseText += fmt.Sprintf("Q:%s\nA:%s\n", ta.Question, ta.Answer)
 	}
+	responseText += "\nFinal Answer:\n" + finalAnswerOut.FinalAnswer
+
 	return TextMessage(responseText), NOOP, nil
 }
 
 func (ats *QuestionAnswerMode) Stop() error {
 	return nil
+}
+func init() {
+	RegisterMode(QUESTION_ANSWER, NewQuestionAnswerMode)
 }

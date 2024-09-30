@@ -509,6 +509,7 @@ func VectorSearchQuestions(ctx context.Context, driver neo4j.DriverWithContext, 
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
 	var questions []Question
+	mapSeen := make(map[string]bool)
 	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
 		result, err := tx.Run(ctx,
 			"MATCH (q:Question) "+
@@ -524,6 +525,10 @@ func VectorSearchQuestions(ctx context.Context, driver neo4j.DriverWithContext, 
 		}
 		for result.Next(ctx) {
 			record := result.Record()
+			if _, seen := mapSeen[toString(record.Values[1])]; seen {
+				continue
+			}
+			mapSeen[toString(record.Values[1])] = true
 			questions = append(questions, Question{
 				ID:         toString(record.Values[0]),
 				Text:       toString(record.Values[1]),

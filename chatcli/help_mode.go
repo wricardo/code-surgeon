@@ -31,3 +31,6 @@ func (m *HelpMode) HandleResponse(userMessage Message) (Message, Command, error)
 func (m *HelpMode) Stop() error {
 	return nil
 }
+func init() {
+	RegisterMode(HELP, NewHelpMode)
+}

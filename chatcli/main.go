@@ -32,6 +32,7 @@ var INTENT_DATA string = `
 g: "exit" i: "exit"
 g: "write some code" i: "code"
 g: "i want to write some code" i: "code"
+g: "I want to query neo4j" i: "cypher"
 g: "what can you do" i: "help"
 g: "ask a question" i: "question_answer"
 g: "add a question and answer to knowledge base" i: "question_answer"
@@ -60,30 +61,7 @@ var CYPHER TMode = "cypher"
 var TEACHER TMode = "teacher"
 var DEBUG TMode = "debug"
 var HELP TMode = "help"
-
-func ModeFromString(mode string) TMode {
-	switch mode {
-	case "exit":
-		return EXIT
-	case "code":
-		return CODE
-	case "add_test":
-		return ADD_TEST
-	case "question_answer":
-		return QUESTION_ANSWER
-	case "cypher":
-		return CYPHER
-	case "teacher":
-		return TEACHER
-	case "debug":
-		return DEBUG
-	case "help":
-		return HELP
-	default:
-		log.Printf("WARN: Unknown mode in ModeFromString: %s", mode)
-		return ""
-	}
-}
+var POSTGRES TMode = "postgres"
 
 // Keywords for detecting different modes
 var modeKeywords = map[string]TMode{
@@ -98,7 +76,26 @@ var modeKeywords = map[string]TMode{
 	"/neo4j":    CYPHER,
 	"/debug":    DEBUG,
 	"/help":     HELP,
+	"/pg":       POSTGRES,
 	"/teacher":  TEACHER,
+}
+
+func ModeFromString(mode string) TMode {
+	mode = "/" + mode
+	if m, ok := modeKeywords[mode]; ok {
+		return m
+	}
+	return ""
+}
+
+var modeRegistry = make(map[TMode]func(*Chat) Mode)
+
+// RegisterMode registers a mode constructor in the registry
+func RegisterMode[T Mode](name TMode, constructor func(*Chat) T) {
+	// Explicitly convert the constructor to func(*Chat) Mode
+	modeRegistry[name] = func(chat *Chat) Mode {
+		return constructor(chat) // Cast to Mode
+	}
 }
 
 // Mode is a chatbot specialized for a particular task, like coding or answering questions or playing a game o top of your data
@@ -109,13 +106,13 @@ type Mode interface {
 	Stop() error
 }
 
-// Form represents the form for the user to fill
-type Form struct {
+// FormMessage represents the form for the user to fill
+type FormMessage struct {
 	Questions []QuestionAnswer
 }
 
-func NewForm(questions []QuestionAnswer) *Form {
-	return &Form{
+func NewForm(questions []QuestionAnswer) *FormMessage {
+	return &FormMessage{
 		Questions: questions,
 	}
 }
@@ -123,7 +120,7 @@ func NewForm(questions []QuestionAnswer) *Form {
 // Message represents a message either from User to Ai or Ai to User
 type Message struct {
 	Text string
-	Form *Form
+	Form *FormMessage
 }
 
 func (m Message) String() string {
@@ -531,26 +528,10 @@ func (c *Chat) HandleIntent(intent Intent) (TMode, error) {
 }
 
 func (c *Chat) CreateMode(modeName TMode) (Mode, error) {
-	switch modeName {
-	case CODE:
-		return NewCodeMode(c), nil
-	case ADD_TEST:
-		return NewAddTestMode(c), nil
-	case QUESTION_ANSWER:
-		return NewQuestionAnswerMode(c), nil
-	case CYPHER:
-		return NewCypherMode(c), nil
-	case TEACHER:
-		return NewTeacherMode(c), nil
-	case DEBUG:
-		return NewDebugMode(c), nil
-	case HELP:
-		return NewHelpMode(c), nil
-	case EXIT:
-		return nil, fmt.Errorf("exit forced error")
-	default:
-		return nil, fmt.Errorf("unknown mode: %s", modeName)
+	if constructor, exists := modeRegistry[modeName]; exists {
+		return constructor(c), nil
 	}
+	return nil, fmt.Errorf("unknown mode: %s", modeName)
 }
 
 // GetHistory returns the chat history
@@ -608,8 +589,8 @@ func (s *HttpChat) ShutdownServer() {
 func (s *HttpChat) handlePostMessage(w http.ResponseWriter, r *http.Request) {
 	// Updated request structure to accept a Message
 	var request struct {
-		Text string `json:"text"`
-		Form *Form  `json:"form,omitempty"`
+		Text string       `json:"text"`
+		Form *FormMessage `json:"form,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -644,9 +625,9 @@ func (s *HttpChat) handlePostMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := struct {
-		Command *string `json:"command,omitempty"`
-		Text    string  `json:"Text,omitempty"`
-		Form    *Form   `json:"form,omitempty"` // Add form to the response
+		Command *string      `json:"command,omitempty"`
+		Text    string       `json:"Text,omitempty"`
+		Form    *FormMessage `json:"form,omitempty"` // Add form to the response
 	}{
 		Text: response.Text,
 	}
@@ -1047,30 +1028,34 @@ func (cli *CliChat) handleForm(msg Message) (responseMsg Message, responseCmd Co
 			Msg("CliChat.handleForm completed.")
 	}()
 
-	// Iterate over the questions in the form and collect responses
+	// Create a slice of inputs to collect responses
+	var fields []huh.Field
+
+	// Iterate over the questions in the form and add them to the group
 	for k, qa := range msg.Form.Questions {
-		var response string
 		// Create a new input for each question
 		input := huh.NewInput().
 			Title(qa.Question).
-			Value(&response)
+			Value(&msg.Form.Questions[k].Answer)
 
-		// // If there's a validation function in the question, add it
-		// if qa.ValidateFunc != nil {
-		// 	input.Validate(qa.ValidateFunc)
-		// }
+		// Add the input field to the list of fields
+		fields = append(fields, input)
 
-		// Run the input to get the response
-		err := input.Run()
-		if err != nil {
-			return Message{}, NOOP, err // Return error if input fails
-		}
-
-		msg.Form.Questions[k].Answer = response
 	}
 
+	// Create a form group with all questions
+	form := huh.NewForm(
+		huh.NewGroup(fields...),
+	)
+
+	// Run the form group to get all responses
+	err = form.Run()
+	if err != nil {
+		return Message{}, NOOP, err // Return error if form fails
+	}
+
+	log.Debug().Any("msg", msg).Msg("CliChat.handleForm afterrun.")
 	return Message{
 		Form: msg.Form,
 	}, NOOP, nil
-
 }

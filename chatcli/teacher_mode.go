@@ -87,3 +87,6 @@ func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
 func (ats *TeacherMode) Stop() error {
 	return nil
 }
+func init() {
+	RegisterMode(TEACHER, NewTeacherMode)
+}
