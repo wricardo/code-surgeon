@@ -5,9 +5,12 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
+	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
 type TeacherMode struct {
@@ -85,6 +88,27 @@ func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
 }
 
 func (ats *TeacherMode) Stop() error {
+	return nil
+}
+
+func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []QuestionAnswer) error {
+	for _, qa := range qaPairs {
+		question := qa.Question
+		answer := qa.Answer
+
+		embedding, err := ai.EmbedQuestion(t.chat.instructor.Client, question)
+		if err != nil {
+			log.Printf("Error embedding question: %v", err)
+			continue
+		}
+
+		err = neo4j2.CreateQuestionAndAnswers(ctx, *t.chat.driver, question, embedding, []string{answer})
+		if err != nil {
+			log.Printf("Error saving question and answer to database: %v", err)
+			return err
+		}
+	}
+
 	return nil
 }
 func init() {

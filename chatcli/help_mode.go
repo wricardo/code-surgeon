@@ -17,7 +17,7 @@ func (m *HelpMode) HandleIntent(msg Message) (Message, Command, error) {
 }
 
 func (m *HelpMode) Start() (Message, Command, error) {
-	commands := []string{"help", "exit"}
+	commands := []string{"/help", "/exit"}
 	for command := range modeKeywords {
 		commands = append(commands, command)
 	}

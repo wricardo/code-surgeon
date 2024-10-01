@@ -65,19 +65,20 @@ var POSTGRES TMode = "postgres"
 
 // Keywords for detecting different modes
 var modeKeywords = map[string]TMode{
-	"/exit":     EXIT,
-	"/quit":     EXIT,
-	"/bye":      EXIT,
-	"/code":     CODE,
-	"/add_test": ADD_TEST,
-	"/qa":       QUESTION_ANSWER,
-	"/question": QUESTION_ANSWER,
-	"/cypher":   CYPHER,
-	"/neo4j":    CYPHER,
-	"/debug":    DEBUG,
-	"/help":     HELP,
-	"/pg":       POSTGRES,
-	"/teacher":  TEACHER,
+	"/exit":  EXIT,
+	"/quit":  EXIT,
+	"/bye":   EXIT,
+	"/debug": DEBUG,
+	"/help":  HELP,
+
+	// "/code":     CODE,
+	// "/add_test": ADD_TEST,
+	// "/qa":       QUESTION_ANSWER,
+	// "/question": QUESTION_ANSWER,
+	// "/cypher":   CYPHER,
+	// "/neo4j":    CYPHER,
+	// "/pg":       POSTGRES,
+	// "/teacher":  TEACHER,
 }
 
 func ModeFromString(mode string) TMode {
@@ -95,6 +96,9 @@ func RegisterMode[T Mode](name TMode, constructor func(*Chat) T) {
 	// Explicitly convert the constructor to func(*Chat) Mode
 	modeRegistry[name] = func(chat *Chat) Mode {
 		return constructor(chat) // Cast to Mode
+	}
+	if _, ok := modeKeywords[string(name)]; !ok {
+		modeKeywords["/"+string(name)] = name
 	}
 }
 

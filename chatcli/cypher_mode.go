@@ -19,8 +19,6 @@ func NewCypherMode(chat *Chat) *CypherMode {
 }
 
 func (m *CypherMode) Start() (Message, Command, error) {
-	// CALL db.labels() YIELD label RETURN label;
-	// [["Function"],["ConversationSummary"],["Question"],["Answer"],["Package"],["Repository"]]
 	result, err := neo4j2.QueryNeo4J(context.Background(), *m.chat.driver, "CALL db.labels() YIELD label RETURN label", nil)
 	if err != nil {
 		return TextMessage("oops. We got an error from neo4j: " + err.Error()), NOOP, nil
