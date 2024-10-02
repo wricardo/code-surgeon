@@ -736,6 +736,16 @@ func main() {
 		} else {
 			// Start CLI
 			cliChat := NewCliChat(chat)
+			stateFile := "cli_chat_state.json"
+			if err := cliChat.LoadState(stateFile); err != nil {
+				log.Warn().Msgf("No previous CLI chat state found: %v", err)
+			}
+			defer func() {
+				stateFile := "cli_chat_state.json"
+				if err := cliChat.SaveState(stateFile); err != nil {
+					log.Error().Msgf("Failed to save CLI chat state: %v", err)
+				}
+			}()
 			cliChat.Start(shutdownChan)
 			os.Exit(0)
 		}
@@ -985,6 +995,20 @@ func toFloat64(v interface{}) float64 {
 type CliChat struct {
 	chat IChat
 	mux  sync.Mutex
+}
+
+// SaveState saves the chat state to a file
+func (cli *CliChat) SaveState(filename string) error {
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+	return cli.chat.SaveState(filename)
+}
+
+// LoadState loads the chat state from a file
+func (cli *CliChat) LoadState(filename string) error {
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+	return cli.chat.LoadState(filename)
 }
 
 func NewCliChat(chat *Chat) *CliChat {
