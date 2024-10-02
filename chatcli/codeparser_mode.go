@@ -131,7 +131,8 @@ func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
 		output = formatOnlyNames(*parsedInfo)
 	case "full definition":
 		output = formatFullDefinition(*parsedInfo)
-	default:
+	case "docs":
+		output = formatDocs(*parsedInfo)
 		return Message{Text: "Invalid output format selected."}, NOOP, nil
 	}
 	if err != nil {
@@ -259,6 +260,47 @@ func formatFullDefinition(parsedInfo codesurgeon.ParsedInfo) string {
 	return strings.Join(result, "\n")
 }
 
-func init() {
+func formatDocs(parsedInfo codesurgeon.ParsedInfo) string {
+	var result []string
+
+	for _, pkg := range parsedInfo.Packages {
+		result = append(result, fmt.Sprintf("Package: %s", pkg.Package))
+
+		for _, strct := range pkg.Structs {
+			result = append(result, fmt.Sprintf("Struct: %s", strct.Name))
+			for _, doc := range strct.Docs {
+				result = append(result, fmt.Sprintf("  Doc: %s", doc))
+			}
+			for _, method := range strct.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Signature))
+				for _, doc := range method.Docs {
+					result = append(result, fmt.Sprintf("    Doc: %s", doc))
+				}
+			}
+		}
+
+		for _, iface := range pkg.Interfaces {
+			result = append(result, fmt.Sprintf("Interface: %s", iface.Name))
+			for _, doc := range iface.Docs {
+				result = append(result, fmt.Sprintf("  Doc: %s", doc))
+			}
+			for _, method := range iface.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Signature))
+				for _, doc := range method.Docs {
+					result = append(result, fmt.Sprintf("    Doc: %s", doc))
+				}
+			}
+		}
+
+		for _, function := range pkg.Functions {
+			result = append(result, fmt.Sprintf("Function: %s", function.Signature))
+			for _, doc := range function.Docs {
+				result = append(result, fmt.Sprintf("  Doc: %s", doc))
+			}
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
 	RegisterMode("codeparser", NewParseMode)
 }
