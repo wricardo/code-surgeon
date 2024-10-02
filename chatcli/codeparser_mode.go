@@ -302,5 +302,4 @@ func formatDocs(parsedInfo codesurgeon.ParsedInfo) string {
 
 	return strings.Join(result, "\n")
 }
-	RegisterMode("codeparser", NewParseMode)
-}
+RegisterMode("codeparser", NewParseMode)
