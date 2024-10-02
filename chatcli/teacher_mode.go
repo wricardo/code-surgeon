@@ -13,6 +13,12 @@ import (
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
+var TEACHER TMode = "teacher"
+
+func init() {
+	RegisterMode(TEACHER, NewTeacherMode)
+}
+
 type TeacherMode struct {
 	chat        *Chat
 	alreadySeen map[string]bool
@@ -110,7 +116,4 @@ func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []Quest
 	}
 
 	return nil
-}
-func init() {
-	RegisterMode(TEACHER, NewTeacherMode)
 }

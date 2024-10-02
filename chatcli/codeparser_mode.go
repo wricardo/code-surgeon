@@ -7,6 +7,10 @@ import (
 	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
+func init() {
+	RegisterMode("codeparser", NewParseMode)
+}
+
 type ParseMode struct {
 	chat *Chat
 }
@@ -19,7 +23,7 @@ func (m *ParseMode) Start() (Message, Command, error) {
 	// Display a form to the user to get the directory or file path
 	form := NewForm([]QuestionAnswer{
 		{Question: "Enter the directory or file path to parse:", Answer: ""},
-		{Question: "Select output format (only signatures, only names, full definition):", Answer: ""},
+		{Question: "Select output format (only signatures, only names, full definition, docs):", Answer: ""},
 	})
 	return Message{Form: form}, NOOP, nil
 }
@@ -133,7 +137,8 @@ func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
 		output = formatFullDefinition(*parsedInfo)
 	case "docs":
 		output = formatDocs(*parsedInfo)
-		return Message{Text: "Invalid output format selected."}, NOOP, nil
+	default:
+		output = "Invalid output format"
 	}
 	if err != nil {
 		return Message{Text: fmt.Sprintf("Error parsing: %v", err)}, NOOP, nil
@@ -302,4 +307,3 @@ func formatDocs(parsedInfo codesurgeon.ParsedInfo) string {
 
 	return strings.Join(result, "\n")
 }
-RegisterMode("codeparser", NewParseMode)

@@ -2,12 +2,12 @@ package main
 
 import (
 	"html/template"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 type Message struct {
-	Author string
+	Author  string
 	Content string
 }
 

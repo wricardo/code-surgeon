@@ -34,6 +34,9 @@ func (m *DebugMode) HandleResponse(msg Message) (Message, Command, error) {
 func (m *DebugMode) Stop() error {
 	return nil
 }
+
+var DEBUG TMode = "debug"
+
 func init() {
 	RegisterMode(DEBUG, NewDebugMode)
 }

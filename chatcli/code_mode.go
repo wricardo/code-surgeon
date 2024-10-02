@@ -9,6 +9,12 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
+var CODE TMode = "code"
+
+func init() {
+	RegisterMode(CODE, NewCodeMode)
+}
+
 type CodeMode struct {
 	chat *Chat
 	form *PoopForm
@@ -93,7 +99,7 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 	// Call the aider function to generate the code
 	aiderOut, err := Aider(cs.filename(), aiOut.Instructions)
 	if err != nil {
-		return "", err
+		return "aider error: " + err.Error(), nil
 	}
 
 	return "Instructions: " + aiOut.Instructions + "\n\nAider output:\n" + aiderOut, nil
@@ -102,14 +108,11 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 func (cs *CodeMode) Stop() error {
 	return nil
 }
-func init() {
-	RegisterMode(CODE, NewCodeMode)
-}
 
 // Aider function to execute a CLI command
 func Aider(file string, message string) (string, error) {
 	// Construct the command with the necessary arguments
-	cmd := exec.Command("aider", "--yes", "--read", "CONVENTIONS.md", "--auto-commits", "false", "--gitignore", "--show-diff", "--message", message, "--file", file, "--auto-test", "true", "--test-cmd", "echo 'No tests, ok'")
+	cmd := exec.Command("aider", "--yes", "--read", "CONVENTIONS.md", "--auto-commits", "false", "--gitignore", "--show-diff", "--message", message, "--file", file, "--auto-test", "--test-cmd", "echo 'No tests, ok'")
 
 	// Run the command and capture the output
 	output, err := cmd.CombinedOutput()

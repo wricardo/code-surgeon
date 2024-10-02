@@ -54,31 +54,15 @@ var SILENT Command = "silent" // this will not save to history
 type TMode string
 
 var EXIT TMode = "exit"
-var CODE TMode = "code"
-var ADD_TEST TMode = "add_test"
-var QUESTION_ANSWER TMode = "question_answer"
-var CYPHER TMode = "cypher"
-var TEACHER TMode = "teacher"
-var DEBUG TMode = "debug"
-var HELP TMode = "help"
-var POSTGRES TMode = "postgres"
 
 // Keywords for detecting different modes
+// modes are added here by init() functions in the mode files using the function RegisterMode
 var modeKeywords = map[string]TMode{
 	"/exit":  EXIT,
 	"/quit":  EXIT,
 	"/bye":   EXIT,
 	"/debug": DEBUG,
 	"/help":  HELP,
-
-	// "/code":     CODE,
-	// "/add_test": ADD_TEST,
-	// "/qa":       QUESTION_ANSWER,
-	// "/question": QUESTION_ANSWER,
-	// "/cypher":   CYPHER,
-	// "/neo4j":    CYPHER,
-	// "/pg":       POSTGRES,
-	// "/teacher":  TEACHER,
 }
 
 func ModeFromString(mode string) TMode {
@@ -899,10 +883,6 @@ func TestChat_DetectMode(t *testing.T) {
 	mode, detected = chat.DetectMode(TextMessage("code"))
 	require.True(t, detected)
 	require.Equal(t, CODE, mode)
-
-	mode, detected = chat.DetectMode(TextMessage("add_test"))
-	require.True(t, detected)
-	require.Equal(t, ADD_TEST, mode)
 
 	mode, detected = chat.DetectMode(TextMessage("invalid"))
 	require.False(t, detected)

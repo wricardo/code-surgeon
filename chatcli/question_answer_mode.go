@@ -9,6 +9,12 @@ import (
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
+var QUESTION_ANSWER TMode = "question_answer"
+
+func init() {
+	RegisterMode(QUESTION_ANSWER, NewQuestionAnswerMode)
+}
+
 type QuestionAnswerMode struct {
 	chat *Chat
 }
@@ -88,7 +94,4 @@ func (m *QuestionAnswerMode) HandleResponse(msg Message) (Message, Command, erro
 
 func (ats *QuestionAnswerMode) Stop() error {
 	return nil
-}
-func init() {
-	RegisterMode(QUESTION_ANSWER, NewQuestionAnswerMode)
 }

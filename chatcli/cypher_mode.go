@@ -90,5 +90,5 @@ func (m *CypherMode) Stop() error {
 	return nil
 }
 func init() {
-	RegisterMode(CYPHER, NewCypherMode)
+	RegisterMode("cypher", NewCypherMode)
 }
