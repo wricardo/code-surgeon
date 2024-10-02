@@ -18,6 +18,7 @@ func (m *ParseMode) Start() (Message, Command, error) {
 	// Display a form to the user to get the directory or file path
 	form := NewForm([]QuestionAnswer{
 		{Question: "Enter the directory or file path to parse:", Answer: ""},
+		{Question: "Select output format (only signatures, only names, full definition):", Answer: ""},
 	})
 	return Message{Form: form}, NOOP, nil
 }
@@ -32,7 +33,20 @@ func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
 	}
 
 	fileOrDirectory := input.Form.Questions[0].Answer
-	parsedInfo, err := codesurgeon.ParseDirectory(fileOrDirectory)
+	outputFormat := input.Form.Questions[1].Answer
+	var parsedInfo interface{}
+	var err error
+
+	switch outputFormat {
+	case "only signatures":
+		parsedInfo, err = codesurgeon.ParseSignatures(fileOrDirectory)
+	case "only names":
+		parsedInfo, err = codesurgeon.ParseNames(fileOrDirectory)
+	case "full definition":
+		parsedInfo, err = codesurgeon.ParseDirectory(fileOrDirectory)
+	default:
+		return Message{Text: "Invalid output format selected."}, NOOP, nil
+	}
 	if err != nil {
 		return Message{Text: fmt.Sprintf("Error parsing: %v", err)}, NOOP, nil
 	}
