@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"io/ioutil"
 	"github.com/rs/zerolog/log"
 
 	"github.com/charmbracelet/huh"
@@ -63,6 +64,49 @@ var modeKeywords = map[string]TMode{
 	"/bye":   EXIT,
 	"/debug": DEBUG,
 	"/help":  HELP,
+}
+
+type ChatState struct {
+	History             []MessagePayload `json:"history"`
+	ConversationSummary string           `json:"conversation_summary"`
+}
+
+// SaveState saves the chat state to a file
+func (c *Chat) SaveState(filename string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	state := ChatState{
+		History:             c.history,
+		ConversationSummary: c.conversationSummary,
+	}
+
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(filename, data, 0644)
+}
+
+// LoadState loads the chat state from a file
+func (c *Chat) LoadState(filename string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	var state ChatState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return err
+	}
+
+	c.history = state.History
+	c.conversationSummary = state.ConversationSummary
+	return nil
 }
 
 func ModeFromString(mode string) TMode {
@@ -550,7 +594,19 @@ func (s *HttpChat) Start() {
 	http.HandleFunc("/post-message", s.handlePostMessage)
 	http.HandleFunc("/get-history", s.handleGetHistory)
 
+	// Load chat state if exists
+	stateFile := "chat_state.json"
+	if err := chat.LoadState(stateFile); err != nil {
+		log.Warn().Msgf("No previous chat state found: %v", err)
+	}
+
 	go func() {
+		defer func() {
+			// Save chat state on shutdown
+			if err := chat.SaveState(stateFile); err != nil {
+				log.Error().Msgf("Failed to save chat state: %v", err)
+			}
+		}()
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Msgf("ListenAndServe(): %s", err)
 		}
@@ -664,6 +720,7 @@ func main() {
 	defer closeFn()
 
 	apiClient := NewGptAiClient()
+	
 	// Instantiate chat service
 	chat := NewChat(apiClient, &driver)
 
