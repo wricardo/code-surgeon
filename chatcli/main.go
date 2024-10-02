@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"io/ioutil"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/charmbracelet/huh"
@@ -177,6 +178,8 @@ type IChat interface {
 	HandleUserMessage(msg Message) (Message, Command, error)
 	GetHistory() []MessagePayload
 	PrintHistory()
+	SaveState(filename string) error
+	LoadState(filename string) error
 
 	// TODO: Remove this from the interface
 	GetModeText() string
@@ -596,14 +599,14 @@ func (s *HttpChat) Start() {
 
 	// Load chat state if exists
 	stateFile := "chat_state.json"
-	if err := chat.LoadState(stateFile); err != nil {
+	if err := s.chat.LoadState(stateFile); err != nil {
 		log.Warn().Msgf("No previous chat state found: %v", err)
 	}
 
 	go func() {
 		defer func() {
 			// Save chat state on shutdown
-			if err := chat.SaveState(stateFile); err != nil {
+			if err := s.chat.SaveState(stateFile); err != nil {
 				log.Error().Msgf("Failed to save chat state: %v", err)
 			}
 		}()
@@ -720,7 +723,7 @@ func main() {
 	defer closeFn()
 
 	apiClient := NewGptAiClient()
-	
+
 	// Instantiate chat service
 	chat := NewChat(apiClient, &driver)
 
