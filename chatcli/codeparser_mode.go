@@ -125,11 +125,19 @@ func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
 	output := ""
 	switch outputFormat {
 	case "only signatures":
-		// TODO: only print the signatures
+		signatures, err := codesurgeon.ParseSignatures(fileOrDirectory)
+		if err != nil {
+			return Message{Text: fmt.Sprintf("Error parsing signatures: %v", err)}, NOOP, nil
+		}
+		output = fmt.Sprintf("Signatures: %v", signatures)
 	case "only names":
-		// TODO: only print the names
+		names, err := codesurgeon.ParseNames(fileOrDirectory)
+		if err != nil {
+			return Message{Text: fmt.Sprintf("Error parsing names: %v", err)}, NOOP, nil
+		}
+		output = fmt.Sprintf("Names: %v", names)
 	case "full definition":
-		// TODO	:
+		output = fmt.Sprintf("Full Definition: %v", parsedInfo)
 	default:
 		return Message{Text: "Invalid output format selected."}, NOOP, nil
 	}
