@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	codesurgeon "github.com/wricardo/code-surgeon"
 )
@@ -125,19 +126,11 @@ func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
 	output := ""
 	switch outputFormat {
 	case "only signatures":
-		signatures, err := codesurgeon.ParseSignatures(fileOrDirectory)
-		if err != nil {
-			return Message{Text: fmt.Sprintf("Error parsing signatures: %v", err)}, NOOP, nil
-		}
-		output = fmt.Sprintf("Signatures: %v", signatures)
+		output = formatOnlySignatures(*parsedInfo)
 	case "only names":
-		names, err := codesurgeon.ParseNames(fileOrDirectory)
-		if err != nil {
-			return Message{Text: fmt.Sprintf("Error parsing names: %v", err)}, NOOP, nil
-		}
-		output = fmt.Sprintf("Names: %v", names)
+		output = formatOnlyNames(*parsedInfo)
 	case "full definition":
-		output = fmt.Sprintf("Full Definition: %v", parsedInfo)
+		output = formatFullDefinition(*parsedInfo)
 	default:
 		return Message{Text: "Invalid output format selected."}, NOOP, nil
 	}
@@ -151,6 +144,119 @@ func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
 
 func (m *ParseMode) Stop() error {
 	return nil
+}
+
+func formatOnlySignatures(parsedInfo codesurgeon.ParsedInfo) string {
+	var result []string
+
+	for _, pkg := range parsedInfo.Packages {
+		result = append(result, fmt.Sprintf("Package: %s", pkg.Package))
+
+		for _, strct := range pkg.Structs {
+			result = append(result, fmt.Sprintf("Struct: %s", strct.Name))
+			for _, method := range strct.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Signature))
+			}
+		}
+
+		for _, iface := range pkg.Interfaces {
+			result = append(result, fmt.Sprintf("Interface: %s", iface.Name))
+			for _, method := range iface.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Signature))
+			}
+		}
+
+		for _, function := range pkg.Functions {
+			result = append(result, fmt.Sprintf("Function: %s", function.Signature))
+		}
+
+		for _, variable := range pkg.Variables {
+			result = append(result, fmt.Sprintf("Variable: %s %s", variable.Name, variable.Type))
+		}
+
+		for _, constant := range pkg.Constants {
+			result = append(result, fmt.Sprintf("Constant: %s = %s", constant.Name, constant.Value))
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
+func formatOnlyNames(parsedInfo codesurgeon.ParsedInfo) string {
+	var result []string
+
+	for _, pkg := range parsedInfo.Packages {
+		result = append(result, fmt.Sprintf("Package: %s", pkg.Package))
+
+		for _, strct := range pkg.Structs {
+			result = append(result, fmt.Sprintf("Struct: %s", strct.Name))
+			for _, method := range strct.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Name))
+			}
+		}
+
+		for _, iface := range pkg.Interfaces {
+			result = append(result, fmt.Sprintf("Interface: %s", iface.Name))
+			for _, method := range iface.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Name))
+			}
+		}
+
+		for _, function := range pkg.Functions {
+			result = append(result, fmt.Sprintf("Function: %s", function.Name))
+		}
+
+		for _, variable := range pkg.Variables {
+			result = append(result, fmt.Sprintf("Variable: %s", variable.Name))
+		}
+
+		for _, constant := range pkg.Constants {
+			result = append(result, fmt.Sprintf("Constant: %s", constant.Name))
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
+func formatFullDefinition(parsedInfo codesurgeon.ParsedInfo) string {
+	var result []string
+
+	for _, pkg := range parsedInfo.Packages {
+		result = append(result, fmt.Sprintf("Package: %s", pkg.Package))
+
+		for _, strct := range pkg.Structs {
+			result = append(result, fmt.Sprintf("Struct: %s", strct.Name))
+			for _, field := range strct.Fields {
+				result = append(result, fmt.Sprintf("  Field: %s %s", field.Name, field.Type))
+			}
+			for _, method := range strct.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Signature))
+				result = append(result, fmt.Sprintf("    Body: %s", method.Body))
+			}
+		}
+
+		for _, iface := range pkg.Interfaces {
+			result = append(result, fmt.Sprintf("Interface: %s", iface.Name))
+			for _, method := range iface.Methods {
+				result = append(result, fmt.Sprintf("  Method: %s", method.Signature))
+			}
+		}
+
+		for _, function := range pkg.Functions {
+			result = append(result, fmt.Sprintf("Function: %s", function.Signature))
+			result = append(result, fmt.Sprintf("  Body: %s", function.Body))
+		}
+
+		for _, variable := range pkg.Variables {
+			result = append(result, fmt.Sprintf("Variable: %s %s", variable.Name, variable.Type))
+		}
+
+		for _, constant := range pkg.Constants {
+			result = append(result, fmt.Sprintf("Constant: %s = %s", constant.Name, constant.Value))
+		}
+	}
+
+	return strings.Join(result, "\n")
 }
 
 func init() {
