@@ -976,6 +976,9 @@ func (cli *CliChat) Start(shutdownChan chan struct{}) {
 		log2.Debugf("CLI waiting for user input")
 		userMessage, _ := reader.ReadString('\n')
 		userMessage = strings.TrimSpace(userMessage)
+		if userMessage == "" {
+			continue
+		}
 		incomingMessage = TextMessage(userMessage)
 
 		// TODO - fix this, 5 is justt arbitrary

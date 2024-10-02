@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/rs/zerolog/log"
 
@@ -11,17 +12,19 @@ import (
 type CodeMode struct {
 	chat *Chat
 	form *PoopForm
+
+	ask      StringPromise
+	filename StringPromise
 }
 
 func NewCodeMode(chat *Chat) *CodeMode {
 	codeForm := NewPoopForm()
 
-	codeForm.AddQuestion("What kind of code you want me to write?", true, fnValidateNotEmpty, "")
-	codeForm.AddQuestion("What's the file name for the main.go file?", true, fnValidateNotEmpty, "")
-
 	return &CodeMode{
-		chat: chat,
-		form: codeForm,
+		chat:     chat,
+		form:     codeForm,
+		ask:      codeForm.AddQuestion("What kind of code you want me to write?", true, fnValidateNotEmpty, ""),
+		filename: codeForm.AddQuestion("What's the filename for the existing/new code?", true, fnValidateNotEmpty, ""),
 	}
 }
 
@@ -58,10 +61,7 @@ func (cs *CodeMode) HandleIntent(msg Message) (Message, Command, error) {
 
 func (cs *CodeMode) GenerateCode() (string, error) {
 	// Construct the prompt for the engineer
-	prompt := "Please engineer the following code based on the provided answers."
-	for _, q := range cs.form.Questions {
-		prompt += fmt.Sprintf("\n%s: %s", q.Question, q.Answer)
-	}
+	prompt := "Please write a concise instruction for a developer to implement whatever the user is asking. You are not going to write the code, just write the requirement and/or instruction. Output the instruction in a json format, with only one key."
 
 	// Construct the chat messages for the Chat method
 	chatMessages := []openai.ChatCompletionMessage{
@@ -69,10 +69,14 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 			Role:    "system",
 			Content: prompt,
 		},
+		{
+			Role:    "user",
+			Content: cs.ask(),
+		},
 	}
 
 	type AiOutput struct {
-		Message string `json:"message" jsonschema:"title=message,description=the message from the AI model."`
+		Instructions string `json:"instructions" jsonschema:"title=instructions,description=the instructions."`
 	}
 
 	// Call the Chat method with the constructed messages
@@ -82,11 +86,17 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 		return "", err
 	}
 
-	if aiOut.Message == "" {
-		return "No code was generated. Please try again.", nil
+	if aiOut.Instructions == "" {
+		return "No instructions was generated. Please try again.", nil
 	}
 
-	return aiOut.Message, nil
+	// Call the aider function to generate the code
+	aiderOut, err := Aider(cs.filename(), aiOut.Instructions)
+	if err != nil {
+		return "", err
+	}
+
+	return "Instructions: " + aiOut.Instructions + "\n\nAider output:\n" + aiderOut, nil
 }
 
 func (cs *CodeMode) Stop() error {
@@ -94,4 +104,18 @@ func (cs *CodeMode) Stop() error {
 }
 func init() {
 	RegisterMode(CODE, NewCodeMode)
+}
+
+// Aider function to execute a CLI command
+func Aider(file string, message string) (string, error) {
+	// Construct the command with the necessary arguments
+	cmd := exec.Command("aider", "--yes", "--read", "CONVENTIONS.md", "--auto-commits", "false", "--gitignore", "--show-diff", "--message", message, "--file", file, "--auto-test", "true", "--test-cmd", "echo 'No tests, ok'")
+
+	// Run the command and capture the output
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute aider command: %w\nOutput: %s", err, string(output))
+	}
+
+	return string(output), nil
 }
