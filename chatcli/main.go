@@ -74,6 +74,7 @@ type ChatState struct {
 
 // SaveState saves the chat state to a file
 func (c *Chat) SaveState(filename string) error {
+	log.Debug().Str("filename", filename).Msg("SaveState")
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -92,10 +93,12 @@ func (c *Chat) SaveState(filename string) error {
 
 // LoadState loads the chat state from a file
 func (c *Chat) LoadState(filename string) error {
+	log.Debug().Str("filename", filename).Msg("LOAAADD")
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	data, err := ioutil.ReadFile(filename)
+	log.Debug().Str("filename", filename).Msg("LoadState")
 	if err != nil {
 		return err
 	}
@@ -107,6 +110,7 @@ func (c *Chat) LoadState(filename string) error {
 
 	c.history = state.History
 	c.conversationSummary = state.ConversationSummary
+	log.Debug().Str("history", fmt.Sprintf("%v", c.history)).Str("conversationSummary", c.conversationSummary).Msg("LoadState")
 	return nil
 }
 
@@ -214,7 +218,7 @@ type Chat struct {
 func (c *Chat) checkIfExit(msg Message) (bool, Message) {
 	userMessage := strings.TrimSpace(msg.Text)
 	if userMessage == "/exit" || userMessage == "/quit" || userMessage == "/bye" || userMessage == "/stop" {
-		return true, TextMessage("Exited mode.")
+		return true, TextMessage("Exited.")
 	}
 	return false, TextMessage("")
 }
@@ -389,7 +393,7 @@ func (c *Chat) generateConversationSummary() {
 		return
 	}
 	latestMessages := ""
-	for _, mp := range c.GetHistory() {
+	for _, mp := range c.GetLastNMessages(4) {
 		latestMessages += fmt.Sprintf("%s: %s\n", mp.Sender, mp.Message.String())
 	}
 
@@ -435,8 +439,10 @@ func (c *Chat) getAIResponse(msg Message) Message {
 	userMessage := strings.TrimSpace(msg.Text)
 	prompt := fmt.Sprintf(`
 Given the user message: 
+{{{
 %s
-Generate a response. You must output your response in a JSON object with a "response" key.`,
+}}}
+Be a helpful assistant and respond to the users resquest if it's a request. If the user is asking something that's not public knowledge that an llm has access to or the chat history, the use should use the /question_answer mode.  You must output your response in a JSON object with a "response" key.`,
 		userMessage)
 
 	type AiOutput struct {
@@ -576,6 +582,15 @@ func (c *Chat) GetHistory() []MessagePayload {
 	return c.history
 }
 
+func (c *Chat) GetLastNMessages(n int) []MessagePayload {
+	history := c.GetHistory()
+	from := len(history) - 10
+	if from < 0 {
+		from = 0
+	}
+	return history[from:]
+}
+
 func (c *Chat) GetConversationSummary() string {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -608,6 +623,8 @@ func (s *HttpChat) Start() {
 			// Save chat state on shutdown
 			if err := s.chat.SaveState(stateFile); err != nil {
 				log.Error().Msgf("Failed to save chat state: %v", err)
+			} else {
+				log.Info().Msg("Saved chat state")
 			}
 		}()
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -727,9 +744,12 @@ func main() {
 	// Instantiate chat service
 	chat := NewChat(apiClient, &driver)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		// Decide to run CLI or HTTP server based on flag or environment
 		if len(os.Args) > 1 && os.Args[1] == "http" {
+			defer wg.Done()
 			// Start HTTP Server
 			httpServer := NewHTTPServer(chat, shutdownChan)
 			httpServer.Start()
@@ -741,18 +761,21 @@ func main() {
 				log.Warn().Msgf("No previous CLI chat state found: %v", err)
 			}
 			defer func() {
-				stateFile := "cli_chat_state.json"
+				defer wg.Done()
 				if err := cliChat.SaveState(stateFile); err != nil {
 					log.Error().Msgf("Failed to save CLI chat state: %v", err)
+				} else {
+					fmt.Println("\nBye saved", err)
 				}
 			}()
 			cliChat.Start(shutdownChan)
-			os.Exit(0)
+			return
 		}
 	}()
-
 	<-signalChan
 	close(shutdownChan)
+	fmt.Println("\nshutting down")
+	wg.Wait()
 	fmt.Println("\nBye")
 }
 
@@ -1001,7 +1024,13 @@ type CliChat struct {
 func (cli *CliChat) SaveState(filename string) error {
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
-	return cli.chat.SaveState(filename)
+	err := cli.chat.SaveState(filename)
+	if err != nil {
+		log.Error().Msgf("Failed to save chat state: %v", err)
+	} else {
+		log.Info().Msg("Saved chat state")
+	}
+	return err
 }
 
 // LoadState loads the chat state from a file

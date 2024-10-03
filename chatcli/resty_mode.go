@@ -1,37 +1,100 @@
-package chatcli
+package main
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/go-resty/resty/v2"
+	"github.com/sashabaranov/go-openai"
 )
 
 type RestyMode struct {
 	client *resty.Client
+	chat   *Chat
+	form   *PoopForm
+	ask    StringPromise
 }
 
-func (rm *RestyMode) Start() (Message, error) {
+func NewRestyMode(chat *Chat) Mode {
+	restyForm := NewPoopForm()
+
+	return &RestyMode{
+		ask:    restyForm.AddQuestion("What HTTP request would you like to make?", true, fnValidateNotEmpty, ""),
+		form:   restyForm,
+		client: resty.New(),
+		chat:   chat,
+	}
+}
+func init() {
+	RegisterMode("resty", NewRestyMode)
+}
+
+func (rm *RestyMode) Start() (Message, Command, error) {
 	rm.client = resty.New()
-	return TextMessage("Welcome to RestyMode! You can make HTTP requests by specifying the method and URL."), nil
+	return Message{Form: rm.form.MakeFormMessage()}, MODE_START, nil
 }
 
 func (rm *RestyMode) HandleIntent(msg Message) (Message, Command, error) {
-	// Example: Parse user input to determine HTTP method and URL
-	// This is a simplified example and should be expanded to handle more cases
-	var method, url string
-	fmt.Sscanf(msg.Text, "%s %s", &method, &url)
+	return rm.HandleResponse(msg)
+}
 
-	var resp *resty.Response
-	var err error
-
-	switch method {
-	case "GET":
-		resp, err = rm.client.R().Get(url)
-	case "POST":
-		resp, err = rm.client.R().Post(url)
-	default:
-		return TextMessage("Unsupported HTTP method. Please use GET or POST."), NOOP, nil
+func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
+	if msg.Form != nil || !rm.form.IsFilled() {
+		if msg.Form != nil {
+			for _, qa := range msg.Form.Questions {
+				rm.form.Answer(qa.Question, qa.Answer)
+			}
+		}
+		if !rm.form.IsFilled() {
+			return Message{Form: rm.form.MakeFormMessage()}, NOOP, nil
+		}
 	}
 
+	// Process the user's request through chat.Chat(...)
+	type AiOutput struct {
+		Method  string            `json:"method" jsonschema:"title=method,description=the HTTP method to use"`
+		URL     string            `json:"url" jsonschema:"title=url,description=the URL to request"`
+		Headers map[string]string `json:"headers" jsonschema:"title=headers,description=the headers to include in the request"`
+		Body    string            `json:"body" jsonschema:"title=body,description=the body to include in the request, usually json"`
+	}
+
+	var aiOut AiOutput
+	err := rm.chat.Chat(&aiOut, []openai.ChatCompletionMessage{
+		{
+			Role:    "system",
+			Content: "Determine the HTTP method, URL, headers, json body post from the user's request.",
+		},
+		{
+			Role:    "user",
+			Content: rm.ask(),
+		},
+	})
+	if err != nil {
+		return TextMessage(fmt.Sprintf("Error processing request: %v", err)), NOOP, nil
+	}
+
+	// Prepare the HTTP request using Resty
+	request := rm.client.R()
+
+	// Set headers if provided
+	if len(aiOut.Headers) > 0 {
+		request.SetHeaders(aiOut.Headers)
+	}
+
+	// Set body if provided and method supports a body
+	methodsWithBody := map[string]bool{
+		"POST":   true,
+		"PUT":    true,
+		"PATCH":  true,
+		"DELETE": true, // DELETE can have a body, though it's not common
+	}
+	method := strings.ToUpper(aiOut.Method)
+	if aiOut.Body != "" && methodsWithBody[method] {
+		request.SetBody(aiOut.Body)
+	}
+
+	// Execute the HTTP request using the specified method and URL
+	resp, err := request.Execute(method, aiOut.URL)
 	if err != nil {
 		return TextMessage(fmt.Sprintf("Error making request: %v", err)), NOOP, nil
 	}
@@ -39,16 +102,7 @@ func (rm *RestyMode) HandleIntent(msg Message) (Message, Command, error) {
 	return TextMessage(fmt.Sprintf("Response: %s", resp.String())), NOOP, nil
 }
 
-func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
-	// Handle any follow-up user inputs if needed
-	return Message{}, NOOP, nil
-}
-
 func (rm *RestyMode) Stop() error {
 	// Clean up resources if necessary
 	return nil
-}
-
-func init() {
-	RegisterMode("resty", &RestyMode{})
 }
