@@ -13,6 +13,11 @@ import (
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
+type ResponseWithQA struct {
+    Response        string           `json:"response"`
+    QuestionAnswers []QuestionAnswer `json:"question_answers"`
+}
+
 var TEACHER TMode = "teacher"
 
 func init() {
@@ -90,7 +95,12 @@ func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
 		})
 	}
 
-	return TextMessage(aiOut.Response), NOOP, nil
+	responseWithQA := ResponseWithQA{
+		Response:        aiOut.Response,
+		QuestionAnswers: aiOut.QuestionAnswers,
+	}
+
+	return Message{Text: responseWithQA}, NOOP, nil
 }
 
 func (ats *TeacherMode) Stop() error {
