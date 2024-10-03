@@ -375,21 +375,42 @@ func CreateQuestionAndAnswers(ctx context.Context, driver neo4j.DriverWithContex
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
 	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		questionResult, err := tx.Run(ctx, "CREATE (q:Question {id: $id, text: $text, embedding: $embedding, created_at: datetime($createdAt)}) RETURN q.id", map[string]interface{}{
-			"text":      questionText,
-			"id":        uuid.New().String(),
-			"embedding": questionEmbedding,
-			"createdAt": time.Now().Format(time.RFC3339),
+		var questionId string
+
+		// Step 1: Attempt to match an existing Question node
+		existingQuestionResult, err := tx.Run(ctx, "MATCH (q:Question {text: $text}) RETURN q.id", map[string]interface{}{
+			"text": questionText,
 		})
 		if err != nil {
 			return nil, err
 		}
-		var questionId string
-		if questionResult.Next(ctx) {
-			questionId = questionResult.Record().Values[0].(string)
+
+		// Step 2: Use the existing Question node if found
+		if existingQuestionResult.Next(ctx) {
+			questionId = existingQuestionResult.Record().Values[0].(string)
+		} else {
+			// Step 3: Create a new Question node if none is found
+			newQuestionResult, err := tx.Run(ctx, "CREATE (q:Question {id: $id, text: $text, embedding: $embedding, created_at: datetime($createdAt)}) RETURN q.id", map[string]interface{}{
+				"text":      questionText,
+				"id":        uuid.New().String(),
+				"embedding": questionEmbedding,
+				"createdAt": time.Now().Format(time.RFC3339),
+			})
+			if err != nil {
+				return nil, err
+			}
+			if newQuestionResult.Next(ctx) {
+				questionId = newQuestionResult.Record().Values[0].(string)
+			}
 		}
+
+		// Step 4: Create Answer nodes and relationships
 		for _, answerText := range answers {
-			answerResult, err := tx.Run(ctx, "CREATE (a:Answer {id: $id, text: $text, created_at: datetime($createdAt) }) RETURN a.id", map[string]interface{}{"text": answerText, "id": uuid.New().String(), "createdAt": time.Now().Format(time.RFC3339)})
+			answerResult, err := tx.Run(ctx, "CREATE (a:Answer {id: $id, text: $text, created_at: datetime($createdAt) }) RETURN a.id", map[string]interface{}{
+				"text":      answerText,
+				"id":        uuid.New().String(),
+				"createdAt": time.Now().Format(time.RFC3339),
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -397,12 +418,15 @@ func CreateQuestionAndAnswers(ctx context.Context, driver neo4j.DriverWithContex
 			if answerResult.Next(ctx) {
 				answerId = answerResult.Record().Values[0].(string)
 			}
-			_, err = tx.Run(ctx, "MATCH (q:Question {id: $questionId}), (a:Answer {id: $answerId}) CREATE (q)-[:ANSWERED_BY]->(a)", map[string]interface{}{"questionId": questionId, "answerId": answerId})
+			_, err = tx.Run(ctx, "MATCH (q:Question {id: $questionId}), (a:Answer {id: $answerId}) CREATE (q)-[:ANSWERED_BY]->(a)", map[string]interface{}{
+				"questionId": questionId,
+				"answerId":   answerId,
+			})
 			if err != nil {
 				return nil, err
 			}
 		}
-		log.Printf("Created question with ID: %s", questionId)
+		log.Printf("Processed question with ID: %s", questionId)
 		return nil, nil
 	})
 	return err
