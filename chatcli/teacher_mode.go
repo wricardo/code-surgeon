@@ -14,8 +14,8 @@ import (
 )
 
 type ResponseWithQA struct {
-    Response        string           `json:"response"`
-    QuestionAnswers []QuestionAnswer `json:"question_answers"`
+	Response        string           `json:"response"`
+	QuestionAnswers []QuestionAnswer `json:"question_answers"`
 }
 
 var TEACHER TMode = "teacher"
@@ -95,12 +95,17 @@ func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
 		})
 	}
 
-	responseWithQA := ResponseWithQA{
-		Response:        aiOut.Response,
-		QuestionAnswers: aiOut.QuestionAnswers,
+	response := Message{Text: ""}
+	if len(aiOut.QuestionAnswers) > 0 {
+		response.Text += "Knowledge saved:\n"
+		for _, qa := range aiOut.QuestionAnswers {
+			response.Text += qa.Question + "\n" + qa.Answer + "\n"
+		}
+		response.Text += "I've stored these in my question answer database.\n\n"
 	}
+	response.Text += aiOut.Response
 
-	return Message{Text: responseWithQA}, NOOP, nil
+	return response, NOOP, nil
 }
 
 func (ats *TeacherMode) Stop() error {

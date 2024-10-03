@@ -75,6 +75,7 @@ func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
 
 	// Prepare the HTTP request using Resty
 	request := rm.client.R()
+	request = request.SetDebug(true)
 
 	// Set headers if provided
 	if len(aiOut.Headers) > 0 {
