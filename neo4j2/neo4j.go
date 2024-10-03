@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/google/uuid"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -401,6 +402,7 @@ func CreateQuestionAndAnswers(ctx context.Context, driver neo4j.DriverWithContex
 				return nil, err
 			}
 		}
+		log.Printf("Created question with ID: %s", questionId)
 		return nil, nil
 	})
 	return err
@@ -649,11 +651,11 @@ func Connect(ctx context.Context, uri, user, password string) (neo4j.DriverWithC
 
 		err = driver.VerifyConnectivity(ctx)
 		if err != nil {
-			log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+			log.Print("Error connecting to Neo4j (proceeding anyway):", err)
 			return nil, nil, err
 		}
 	} else {
-		log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+		log.Print("Error connecting to Neo4j (proceeding anyway):", err)
 		return nil, nil, err
 	}
 
