@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
 	"github.com/davecgh/go-spew/spew"
@@ -17,19 +23,34 @@ import (
 	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/wricardo/code-surgeon/chatcli"
 	"github.com/wricardo/code-surgeon/grpc/server"
+	"github.com/wricardo/code-surgeon/log2"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
 const DEFAULT_PORT = 8010
 
 func main() {
+	// Initialize logger
+	log2.Configure()
 
 	var myEnv map[string]string
 	myEnv, err := godotenv.Read()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal().Msg("Error loading .env file")
 	}
+	neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+	neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+	neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+	ctx := context.Background()
+	driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+	if err != nil {
+		log.Fatal().Msgf("Failed to connect to Neo4j: %v", err)
+	}
+	defer closeFn()
+
+	instructorClient := ai.GetInstructor()
 
 	app := &cli.App{
 		Name:  "code-surgeon",
@@ -39,6 +60,141 @@ func main() {
 			return nil
 		},
 		Commands: []*cli.Command{
+			{
+				Name: "message",
+
+				Action: func(cCtx *cli.Context) error {
+					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
+					if !useNgrok {
+						ngrokDomain = "http://localhost:8010"
+					}
+
+					// Setup signal handling for graceful exit
+					signalChan := make(chan os.Signal, 1)
+					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+					// connect to the grpc server
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, "https://"+ngrokDomain) // replace with actual server URL
+
+					message := &api.Message{
+						Text: "",
+					}
+					// populate text with all of stdin
+					stdinBytes, err := ioutil.ReadAll(os.Stdin)
+					if err != nil {
+						fmt.Println("Error reading stdin:", err)
+						return err
+					}
+					message.Text = string(stdinBytes)
+					if err != nil {
+						return fmt.Errorf("Error reading stdin: %w", err)
+					}
+
+					sendMsgReq := &api.SendMessageRequest{Message: message}
+
+					response, err := client.SendMessage(ctx, connect.NewRequest(sendMsgReq))
+					if err != nil {
+						fmt.Println("Error sending message:", err)
+						return err
+					}
+					if response.Msg != nil {
+						fmt.Println(response.Msg.Message.ChatString())
+					}
+					return nil
+				},
+			},
+			{
+				Name: "chat",
+				Action: func(cCtx *cli.Context) error {
+					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
+					if !useNgrok {
+						ngrokDomain = "http://localhost:8010"
+					}
+
+					// Setup signal handling for graceful exit
+					signalChan := make(chan os.Signal, 1)
+					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+					shutdownChan := make(chan struct{})
+
+					// Instantiate chat service
+					chat := chatcli.GLOBAL_CHAT
+
+					var wg sync.WaitGroup
+					wg.Add(1)
+					go func() {
+						// Start CLI
+						cliChat := chatcli.NewCliChat("http://"+ngrokDomain, chat)
+						defer wg.Done()
+						cliChat.Start(shutdownChan)
+						return
+					}()
+					<-signalChan
+					close(shutdownChan)
+					fmt.Println("\nshutting down")
+					wg.Wait()
+					fmt.Println("\nBye")
+					return nil
+				},
+			},
+			{
+				Name:  "server",
+				Usage: "Run the gpt service server",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:     "port",
+						Aliases:  []string{"p"},
+						Usage:    "port number",
+						Required: false,
+						Value:    DEFAULT_PORT,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+
+					chatcli.GLOBAL_CHAT = chatcli.NewChat(&driver, instructorClient)
+					if err := chatcli.GLOBAL_CHAT.LoadState("chat_state.json"); err != nil {
+						log.Warn().Msgf("No previous chat state found: %v", err)
+					}
+					defer func() {
+						if err := chatcli.GLOBAL_CHAT.SaveState("chat_state.json"); err != nil {
+							log.Error().Msgf("Failed to save CLI chat state: %v", err)
+						} else {
+							fmt.Println("\nBye saved", err)
+						}
+					}()
+
+					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
+					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+
+					return server.Start(cCtx.Int("port"), useNgrok, ngrokDomain, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+
+				},
+			},
+			{
+				Name:  "openapi-json",
+				Usage: "Generate open api json",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "url",
+						Aliases:  []string{"u"},
+						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
+						Required: false,
+						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("orl"))
+					ctx := cCtx.Context
+					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
+					if err != nil {
+						return err
+					}
+					fmt.Println(openAPI.Msg.Openapi)
+					return nil
+
+				},
+			},
 			{
 				Name:    "parse",
 				Aliases: []string{"p"},
@@ -57,7 +213,7 @@ func main() {
 
 					parsed, err := codesurgeon.ParseDirectoryWithFilter(path, nil)
 					if err != nil {
-						log.Fatal(err)
+						log.Fatal().Err(err).Msg("Failed to parse directory")
 					}
 					encoded, _ := json.Marshal(parsed)
 					fmt.Println(string(encoded))
@@ -117,91 +273,35 @@ func main() {
 
 				},
 			},
-			{
-				Name:  "server",
-				Usage: "Run the gpt service server",
-				Flags: []cli.Flag{
-					&cli.IntFlag{
-						Name:     "port",
-						Aliases:  []string{"p"},
-						Usage:    "port number",
-						Required: false,
-						Value:    DEFAULT_PORT,
-					},
-					&cli.StringFlag{
-						Name:     "ngrok-domain",
-						Aliases:  []string{"d"},
-						Usage:    "ngrok domain like: something-else-inherently.ngrok-free.app",
-						Required: false,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.Bool("use-ngrok") && cCtx.String("ngrok-domain") == "" {
-						return fmt.Errorf("ngrok domain is required when using ngrok")
-					}
+			// {
+			// 	Name:  "instructions",
+			// 	Usage: "get instructions to be used in custom chatgpt",
+			// 	Flags: []cli.Flag{
+			// 		&cli.StringFlag{
+			// 			Name:     "url",
+			// 			Aliases:  []string{"u"},
+			// 			Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
+			// 			Required: false,
+			// 			Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+			// 		},
+			// 	},
+			// 	Action: func(cCtx *cli.Context) error {
+			// 		client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
+			// 		ctx := cCtx.Context
+			// 		openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
+			// 		if err != nil {
+			// 			return err
+			// 		}
+			// 		rendered, err := ai.GetGPTInstructions(openAPI.Msg.Openapi)
+			// 		if err != nil {
+			// 			log.Println("Error getting prompt", err)
+			// 			return err
+			// 		}
+			// 		fmt.Println(rendered)
+			// 		return nil
 
-					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
-					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
-
-					return server.Start(cCtx.Int("port"), useNgrok, ngrokDomain, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
-
-				},
-			},
-			{
-				Name:  "openapi-json",
-				Usage: "Generate open api json",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "url",
-						Aliases:  []string{"u"},
-						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
-						Required: false,
-						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
-					ctx := cCtx.Context
-					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
-					if err != nil {
-						return err
-					}
-					fmt.Println(openAPI.Msg.Openapi)
-					return nil
-
-				},
-			},
-			{
-				Name:  "instructions",
-				Usage: "get instructions to be used in custom chatgpt",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "url",
-						Aliases:  []string{"u"},
-						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
-						Required: false,
-						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
-					ctx := cCtx.Context
-					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
-					if err != nil {
-						return err
-					}
-					rendered, err := ai.GetGPTInstructions(openAPI.Msg.Openapi)
-					if err != nil {
-						log.Println("Error getting prompt", err)
-						return err
-					}
-					fmt.Println(rendered)
-					return nil
-
-				},
-			},
+			// 	},
+			// },
 			{
 				Name:  "introduction",
 				Usage: "introductions that are displayed to the user when he asks for it, this is used to give context to the llm.",
@@ -223,7 +323,7 @@ func main() {
 					}
 					rendered, err := ai.GetGPTIntroduction(openAPI.Msg.Openapi)
 					if err != nil {
-						log.Println("Error getting prompt", err)
+						log.Info().Err(err).Msg("Error getting prompt")
 						return err
 					}
 					fmt.Println(rendered)
@@ -252,7 +352,7 @@ func main() {
 					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
 					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 					if err != nil {
-						log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
 					} else {
 						defer closeFn()
 					}
@@ -279,7 +379,7 @@ func main() {
 
 						info, err := codesurgeon.ParseDirectory(module.Dir)
 						if err != nil {
-							log.Println("Error parsing file", module.Dir, err)
+							log.Info().Err(err).Msgf("Error parsing file %s", module.Dir)
 							continue
 						}
 
@@ -287,32 +387,32 @@ func main() {
 						for k, function := range info.Packages[0].Functions {
 							funcFilePath, err := codesurgeon.FindFunction(module.Dir, "", function.Name)
 							if err != nil {
-								log.Println("Error finding function file", function, err)
+								log.Info().Err(err).Msgf("Error finding function file %s", function.Name)
 							} else {
-								log.Println("funcFilePath", funcFilePath)
+								log.Info().Msgf("funcFilePath: %s", funcFilePath)
 							}
 							err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, "", function.Name, strings.Join(function.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
 							if err != nil {
-								log.Println("Error upserting function", function, err)
+								log.Info().Err(err).Msgf("Error upserting function %s", function.Name)
 								return err
 							}
-							log.Println("function", k, function.Name)
+							log.Info().Msgf("function %d: %s", k, function.Name)
 						}
 						for k, struct_ := range info.Packages[0].Structs {
 							for k2, method := range struct_.Methods {
 								fmt.Printf("method\n%s", spew.Sdump(method)) // TODO: wallace debug
 								funcFilePath, err := codesurgeon.FindFunction(module.Dir, struct_.Name, method.Name)
 								if err != nil {
-									log.Println("Error finding function file", method.Name, err)
+									log.Info().Err(err).Msgf("Error finding function file %s", method.Name)
 								} else {
-									log.Println("funcFilePath", funcFilePath)
+									log.Info().Msgf("funcFilePath: %s", funcFilePath)
 								}
 								err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, struct_.Name, method.Name, strings.Join(method.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
 								if err != nil {
-									log.Println("Error upserting function", method, err)
+									log.Info().Err(err).Msgf("Error upserting function %s", method.Name)
 									return err
 								}
-								log.Println("method", k, k2, method.Name)
+								log.Info().Msgf("method %d %d: %s", k, k2, method.Name)
 							}
 						}
 
@@ -332,7 +432,7 @@ func main() {
 					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
 					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 					if err != nil {
-						log.Println("Error connecting to Neo4j (proceeding anyway):", err)
+						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
 					} else {
 						defer closeFn()
 					}
@@ -411,6 +511,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("Application failed to run")
 	}
 }

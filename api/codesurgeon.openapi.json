@@ -5,168 +5,6 @@
 		"version": "1.0.0"
 	},
 	"paths": {
-		"/codesurgeon.GptService/Introduction": {
-			"post": {
-				"summary": "Introduction",
-				"operationId": "codesurgeon.GptService.Introduction",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.IntroductionRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.IntroductionResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/ParseCodebase": {
-			"post": {
-				"summary": "ParseCodebase",
-				"operationId": "codesurgeon.GptService.ParseCodebase",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.ParseCodebaseRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.ParseCodebaseResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/UpsertCodeBlock": {
-			"post": {
-				"summary": "UpsertCodeBlock",
-				"operationId": "codesurgeon.GptService.UpsertCodeBlock",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/ExecuteBash": {
-			"post": {
-				"summary": "ExecuteBash",
-				"operationId": "codesurgeon.GptService.ExecuteBash",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.ExecuteBashRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.ExecuteBashResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/GetNeo4jSchema": {
-			"post": {
-				"summary": "GetNeo4jSchema",
-				"operationId": "codesurgeon.GptService.GetNeo4jSchema",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.GetNeo4jSchemaRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.GetNeo4jSchemaResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/QueryNeo4j": {
-			"post": {
-				"summary": "QueryNeo4j",
-				"operationId": "codesurgeon.GptService.QueryNeo4j",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.QueryNeo4jRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.QueryNeo4jResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
 		"/codesurgeon.GptService/GetOpenAPI": {
 			"post": {
 				"summary": "GetOpenAPI",
@@ -194,15 +32,15 @@
 				}
 			}
 		},
-		"/codesurgeon.GptService/SearchForGolangFunction": {
+		"/codesurgeon.GptService/NewChat": {
 			"post": {
-				"summary": "SearchForGolangFunction",
-				"operationId": "codesurgeon.GptService.SearchForGolangFunction",
+				"summary": "NewChat",
+				"operationId": "codesurgeon.GptService.NewChat",
 				"requestBody": {
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.SearchForGolangFunctionRequest"
+								"$ref": "#/components/schemas/codesurgeon.NewChatRequest"
 							}
 						}
 					}
@@ -213,7 +51,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.SearchForGolangFunctionResponse"
+									"$ref": "#/components/schemas/codesurgeon.NewChatResponse"
 								}
 							}
 						}
@@ -221,15 +59,15 @@
 				}
 			}
 		},
-		"/codesurgeon.GptService/UpsertDocumentationToFunction": {
+		"/codesurgeon.GptService/GetChat": {
 			"post": {
-				"summary": "UpsertDocumentationToFunction",
-				"operationId": "codesurgeon.GptService.UpsertDocumentationToFunction",
+				"summary": "GetChat",
+				"operationId": "codesurgeon.GptService.GetChat",
 				"requestBody": {
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.UpsertDocumentationToFunctionRequest"
+								"$ref": "#/components/schemas/codesurgeon.GetChatRequest"
 							}
 						}
 					}
@@ -240,7 +78,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.UpsertDocumentationToFunctionResponse"
+									"$ref": "#/components/schemas/codesurgeon.GetChatResponse"
 								}
 							}
 						}
@@ -248,15 +86,15 @@
 				}
 			}
 		},
-		"/codesurgeon.GptService/ExecuteGoplsImplementations": {
+		"/codesurgeon.GptService/SendMessage": {
 			"post": {
-				"summary": "ExecuteGoplsImplementations",
-				"operationId": "codesurgeon.GptService.ExecuteGoplsImplementations",
+				"summary": "SendMessage",
+				"operationId": "codesurgeon.GptService.SendMessage",
 				"requestBody": {
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.ExecuteGoplsImplementationsRequest"
+								"$ref": "#/components/schemas/codesurgeon.SendMessageRequest"
 							}
 						}
 					}
@@ -267,142 +105,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.ExecuteGoplsImplementationsResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/GitDiff": {
-			"post": {
-				"summary": "GitDiff",
-				"operationId": "codesurgeon.GptService.GitDiff",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.GitDiffRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.GitDiffResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/PageQuestions": {
-			"post": {
-				"summary": "PageQuestions",
-				"operationId": "codesurgeon.GptService.PageQuestions",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.PageQuestionsRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.PageQuestionsResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/AnswerQuestion": {
-			"post": {
-				"summary": "AnswerQuestion",
-				"operationId": "codesurgeon.GptService.AnswerQuestion",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.AnswerQuestionRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.AnswerQuestionResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/SaveQuestionAndAnswer": {
-			"post": {
-				"summary": "SaveQuestionAndAnswer",
-				"operationId": "codesurgeon.GptService.SaveQuestionAndAnswer",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.SaveQuestionAndAnswerRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.SaveQuestionAndAnswerResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/codesurgeon.GptService/SaveConversationSummary": {
-			"post": {
-				"summary": "SaveConversationSummary",
-				"operationId": "codesurgeon.GptService.SaveConversationSummary",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.SaveConversationSummaryRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.SaveConversationSummaryResponse"
+									"$ref": "#/components/schemas/codesurgeon.SendMessageResponse"
 								}
 							}
 						}
@@ -413,51 +116,127 @@
 	},
 	"components": {
 		"schemas": {
-			"codesurgeon.ExecuteGoplsImplementationsRequest": {
+			"codesurgeon.GetChatRequest": {
 				"type": "object",
 				"properties": {
-				"file_path": {
-					"type": "string"
-				},
-				"line": {
-					"type": "integer"
-				},
-				"column": {
-					"type": "integer"
-				}
+					"chat_id": {
+						"type": "string"
+					}
 				}
 			},
-			"codesurgeon.ExecuteGoplsImplementationsResponse": {
+			"codesurgeon.GetChatResponse": {
 				"type": "object",
 				"properties": {
-				"output": {
-					"type": "string"
-				},
-				"error": {
-					"type": "string"
-				}
+					"chat": {
+						"$ref": "#/components/schemas/codesurgeon.Chat"
+					}
 				}
 			},
-			"codesurgeon.ExecuteBashRequest": {
+			"codesurgeon.NewChatRequest": {
 				"type": "object",
 				"properties": {
-				"command": {
-					"type": "string"
-				}
 				}
 			},
-			"codesurgeon.ExecuteBashResponse": {
+			"codesurgeon.NewChatResponse": {
 				"type": "object",
 				"properties": {
-				"stdout": {
-					"type": "string"
-				},
-				"stderr": {
-					"type": "string"
-				},
-				"exitCode": {
-					"type": "integer"
+					"chat": {
+						"$ref": "#/components/schemas/codesurgeon.Chat"
+					}
 				}
+			},
+			"codesurgeon.Chat": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"current_mode": {
+						"$ref": "#/components/schemas/codesurgeon.Mode"
+					},
+					"messages": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.Message"
+						}
+					}
+				}
+			},
+			"codesurgeon.SendMessageRequest": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"$ref": "#/components/schemas/codesurgeon.Message"
+					}
+				}
+			},
+			"codesurgeon.SendMessageResponse": {
+				"type": "object",
+				"properties": {
+					"command": {
+						"$ref": "#/components/schemas/codesurgeon.Command"
+					},
+					"message": {
+						"$ref": "#/components/schemas/codesurgeon.Message"
+					},
+					"mode": {
+						"$ref": "#/components/schemas/codesurgeon.Mode"
+					}
+				}
+			},
+			"codesurgeon.Mode": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Command": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.Message": {
+				"type": "object",
+				"properties": {
+					"chat_id": {
+						"type": "string"
+					},
+					"text": {
+						"type": "string"
+					},
+					"form": {
+						"$ref": "#/components/schemas/codesurgeon.FormMessage"
+					},
+					"sender": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.FormMessage": {
+				"type": "object",
+				"properties": {
+					"questions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.QuestionAnswer"
+						}
+					}
+				}
+			},
+			"codesurgeon.QuestionAnswer": {
+				"type": "object",
+				"properties": {
+					"question": {
+						"type": "string"
+					},
+					"answer": {
+						"type": "string"
+					}
 				}
 			},
 			"codesurgeon.GetOpenAPIRequest": {
@@ -468,595 +247,9 @@
 			"codesurgeon.GetOpenAPIResponse": {
 				"type": "object",
 				"properties": {
-				"openapi": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.IntroductionRequest": {
-				"type": "object",
-				"properties": {
-				"short": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.IntroductionResponse": {
-				"type": "object",
-				"properties": {
-				"introduction": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.SearchForGolangFunctionRequest": {
-				"type": "object",
-				"properties": {
-				"path": {
-					"type": "string"
-				},
-				"function_name": {
-					"type": "string"
-				},
-				"receiver": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.SearchForGolangFunctionResponse": {
-				"type": "object",
-				"properties": {
-				"filepath": {
-					"type": "string"
-				},
-				"signature": {
-					"type": "string"
-				},
-				"documentation": {
-					"type": "string"
-				},
-				"body": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.UpsertDocumentationToFunctionRequest": {
-				"type": "object",
-				"properties": {
-				"filepath": {
-					"type": "string"
-				},
-				"function_name": {
-					"type": "string"
-				},
-				"documentation": {
-					"type": "string"
-				},
-				"receiver": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.UpsertDocumentationToFunctionResponse": {
-				"type": "object",
-				"properties": {
-				"ok": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.UpsertCodeBlockRequest": {
-				"type": "object",
-				"properties": {
-				"modification": {
-					"$ref": "#/components/schemas/codesurgeon.UpsertCodeBlockRequest.Modification"
-				}
-				}
-			},
-			"codesurgeon.UpsertCodeBlockRequest.Modification": {
-				"type": "object",
-				"properties": {
-				"filepath": {
-					"type": "string"
-				},
-				"package_name": {
-					"type": "string"
-				},
-				"code_block": {
-					"type": "string"
-				},
-				"overwrite": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.UpsertCodeBlockResponse": {
-				"type": "object",
-				"properties": {
-				"ok": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.ParseCodebaseRequest": {
-				"type": "object",
-				"properties": {
-				"file_or_directory": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.ParseCodebaseResponse": {
-				"type": "object",
-				"properties": {
-				"packages": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Package"
-					}
-				}
-				}
-			},
-			"codesurgeon.Package": {
-				"type": "object",
-				"properties": {
-				"package": {
-					"type": "string"
-				},
-				"imports": {
-					"type": "array",
-					"items": {
+					"openapi": {
 						"type": "string"
 					}
-				},
-				"structs": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Struct"
-					}
-				},
-				"functions": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Function"
-					}
-				},
-				"variables": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Variable"
-					}
-				},
-				"constants": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Constant"
-					}
-				},
-				"interfaces": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Interface"
-					}
-				}
-				}
-			},
-			"codesurgeon.Interface": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"methods": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Method"
-					}
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				}
-				}
-			},
-			"codesurgeon.Struct": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"fields": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Field"
-					}
-				},
-				"methods": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Method"
-					}
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				}
-				}
-			},
-			"codesurgeon.Method": {
-				"type": "object",
-				"properties": {
-				"receiver": {
-					"type": "string"
-				},
-				"name": {
-					"type": "string"
-				},
-				"params": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					}
-				},
-				"returns": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					}
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				},
-				"signature": {
-					"type": "string"
-				},
-				"body": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.Function": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"params": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					}
-				},
-				"returns": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Param"
-					}
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				},
-				"signature": {
-					"type": "string"
-				},
-				"body": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.Param": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"type": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.Field": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"type": {
-					"type": "string"
-				},
-				"tag": {
-					"type": "string"
-				},
-				"private": {
-					"type": "boolean"
-				},
-				"pointer": {
-					"type": "boolean"
-				},
-				"slice": {
-					"type": "boolean"
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				},
-				"comment": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.Variable": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"type": {
-					"type": "string"
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				}
-				}
-			},
-			"codesurgeon.Constant": {
-				"type": "object",
-				"properties": {
-				"name": {
-					"type": "string"
-				},
-				"value": {
-					"type": "string"
-				},
-				"docs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				}
-				}
-			},
-			"codesurgeon.AnswerQuestionRequest": {
-				"type": "object",
-				"properties": {
-				"questions": {
-					"type": "string"
-				},
-				"use_ai": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.Answer": {
-				"type": "object",
-				"properties": {
-				"answer": {
-					"type": "string"
-				},
-				"question": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.AnswerQuestionResponse": {
-				"type": "object",
-				"properties": {
-				"answers": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Answer"
-					}
-				},
-				"similar_questions": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Question"
-					}
-				}
-				}
-			},
-			"codesurgeon.SaveConversationSummaryRequest": {
-				"type": "object",
-				"properties": {
-				"conversation_summary": {
-					"type": "string"
-				},
-				"date_iso": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.SaveConversationSummaryResponse": {
-				"type": "object",
-				"properties": {
-				"ok": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.GitDiffRequest": {
-				"type": "object",
-				"properties": {
-				}
-			},
-			"codesurgeon.GitDiffResponse": {
-				"type": "object",
-				"properties": {
-				"output": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.FileContent": {
-				"type": "object",
-				"properties": {
-				"filename": {
-					"type": "string"
-				},
-				"content": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.GetNeo4jSchemaRequest": {
-				"type": "object",
-				"properties": {
-				}
-			},
-			"codesurgeon.GetNeo4jSchemaResponse": {
-				"type": "object",
-				"properties": {
-				"schema": {
-					"$ref": "#/components/schemas/codesurgeon.Schema"
-				}
-				}
-			},
-			"codesurgeon.Schema": {
-				"type": "object",
-				"properties": {
-				"labels": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.LabelSchema"
-					}
-				},
-				"relationships": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.RelationshipSchema"
-					}
-				}
-				}
-			},
-			"codesurgeon.RelationshipSchema": {
-				"type": "object",
-				"properties": {
-				"relationship": {
-					"type": "string"
-				},
-				"from_label": {
-					"type": "string"
-				},
-				"to_label": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.LabelSchema": {
-				"type": "object",
-				"properties": {
-				"label": {
-					"type": "string"
-				},
-				"properties": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.PropertySchema"
-					}
-				}
-				}
-			},
-			"codesurgeon.PropertySchema": {
-				"type": "object",
-				"properties": {
-				"property": {
-					"type": "string"
-				},
-				"type": {
-					"type": "string"
-				},
-				"is_indexed": {
-					"type": "boolean"
-				},
-				"unique_constraint": {
-					"type": "boolean"
-				},
-				"existence_constraint": {
-					"type": "boolean"
-				}
-				}
-			},
-			"codesurgeon.QueryNeo4jRequest": {
-				"type": "object",
-				"properties": {
-				"cypher": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.QueryNeo4jResponse": {
-				"type": "object",
-				"properties": {
-				"output": {
-					"type": "string"
-				}
-				}
-			},
-			"codesurgeon.SaveQuestionAndAnswerRequest": {
-				"type": "object",
-				"properties": {
-				"question_and_answer": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Answer"
-					}
-				}
-				}
-			},
-			"codesurgeon.SaveQuestionAndAnswerResponse": {
-				"type": "object",
-				"properties": {
-				}
-			},
-			"codesurgeon.PageQuestionsRequest": {
-				"type": "object",
-				"properties": {
-				"page": {
-					"type": "integer"
-				},
-				"page_size": {
-					"type": "integer"
-				}
-				}
-			},
-			"codesurgeon.PageQuestionsResponse": {
-				"type": "object",
-				"properties": {
-				"questions": {
-					"type": "array",
-					"items": {
-						"$ref": "#/components/schemas/codesurgeon.Question"
-					}
-				}
-				}
-			},
-			"codesurgeon.Question": {
-				"type": "object",
-				"properties": {
-				"id": {
-					"type": "string"
-				},
-				"text": {
-					"type": "string"
-				},
-				"created_at": {
-					"type": "string"
-				}
 				}
 			}
 		}

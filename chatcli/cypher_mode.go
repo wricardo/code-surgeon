@@ -1,24 +1,25 @@
-package main
+package chatcli
 
 import (
 	"context"
 	"encoding/json"
 
 	"github.com/sashabaranov/go-openai"
+	. "github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
 type CypherMode struct {
-	chat *Chat
+	chat *ChatImpl
 }
 
-func NewCypherMode(chat *Chat) *CypherMode {
+func NewCypherMode(chat *ChatImpl) *CypherMode {
 	return &CypherMode{
 		chat: chat,
 	}
 }
 
-func (m *CypherMode) Start() (Message, Command, error) {
+func (m *CypherMode) Start() (*Message, *Command, error) {
 	result, err := neo4j2.QueryNeo4J(context.Background(), *m.chat.driver, "CALL db.labels() YIELD label RETURN label", nil)
 	if err != nil {
 		return TextMessage("oops. We got an error from neo4j: " + err.Error()), NOOP, nil
@@ -35,11 +36,17 @@ func (m *CypherMode) Start() (Message, Command, error) {
 	return TextMessage(responseMessage), MODE_START, nil
 }
 
-func (m *CypherMode) HandleIntent(msg Message) (Message, Command, error) {
-	return m.HandleResponse(msg)
+func (m *CypherMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := m.HandleResponse(msg)
+	return message, NOOP, err
 }
 
-func (m *CypherMode) HandleResponse(msg Message) (Message, Command, error) {
+func (m *CypherMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
+	message, command, err := m.HandleResponse(msg)
+	return message, command, err
+}
+
+func (m *CypherMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	userMessage := msg.Text
 	type AiOutput struct {
 		Cypher   string `json:"cypher" jsonschema:"title=cypher,description=the cypher query to be executed on the neo4j database."`
@@ -61,7 +68,7 @@ func (m *CypherMode) HandleResponse(msg Message) (Message, Command, error) {
 		},
 	})
 	if err != nil {
-		return Message{}, NOOP, err
+		return nil, NOOP, err
 	}
 
 	followUp := aiOut.Question

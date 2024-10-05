@@ -1,4 +1,4 @@
-package main
+package chatcli
 
 import (
 	"fmt"
@@ -6,17 +6,18 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/sashabaranov/go-openai"
+	. "github.com/wricardo/code-surgeon/api"
 )
 
 type RestyMode struct {
 	client *resty.Client
-	chat   *Chat
-	form   *PoopForm
+	chat   *ChatImpl
+	form   *Form
 	ask    StringPromise
 }
 
-func NewRestyMode(chat *Chat) Mode {
-	restyForm := NewPoopForm()
+func NewRestyMode(chat *ChatImpl) *RestyMode {
+	restyForm := NewForm()
 
 	return &RestyMode{
 		ask:    restyForm.AddQuestion("What HTTP request would you like to make?", true, fnValidateNotEmpty, ""),
@@ -29,16 +30,21 @@ func init() {
 	RegisterMode("resty", NewRestyMode)
 }
 
-func (rm *RestyMode) Start() (Message, Command, error) {
+func (rm *RestyMode) Start() (*Message, *Command, error) {
 	rm.client = resty.New()
-	return Message{Form: rm.form.MakeFormMessage()}, MODE_START, nil
+	return &Message{Form: rm.form.MakeFormMessage()}, MODE_START, nil
 }
 
-func (rm *RestyMode) HandleIntent(msg Message) (Message, Command, error) {
+func (rm *RestyMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := rm.HandleResponse(msg)
+	return message, NOOP, err
+}
+
+func (rm *RestyMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
 	return rm.HandleResponse(msg)
 }
 
-func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
+func (rm *RestyMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	if msg.Form != nil || !rm.form.IsFilled() {
 		if msg.Form != nil {
 			for _, qa := range msg.Form.Questions {
@@ -46,7 +52,7 @@ func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
 			}
 		}
 		if !rm.form.IsFilled() {
-			return Message{Form: rm.form.MakeFormMessage()}, NOOP, nil
+			return &Message{Form: rm.form.MakeFormMessage()}, NOOP, nil
 		}
 	}
 
@@ -70,7 +76,7 @@ func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
 		},
 	})
 	if err != nil {
-		return TextMessage(fmt.Sprintf("Error processing request: %v", err)), NOOP, nil
+		return TextMessage(fmt.Sprintf("Error processing request: %v", err)), NOOP, err
 	}
 
 	// Prepare the HTTP request using Resty
@@ -97,7 +103,7 @@ func (rm *RestyMode) HandleResponse(msg Message) (Message, Command, error) {
 	// Execute the HTTP request using the specified method and URL
 	resp, err := request.Execute(method, aiOut.URL)
 	if err != nil {
-		return TextMessage(fmt.Sprintf("Error making request: %v", err)), NOOP, nil
+		return TextMessage(fmt.Sprintf("Error making request: %v", err)), NOOP, err
 	}
 
 	return TextMessage(fmt.Sprintf("Response: %s", resp.String())), NOOP, nil

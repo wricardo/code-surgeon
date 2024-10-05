@@ -1,4 +1,4 @@
-package other
+package structs
 
 type Struct struct {
 	String string

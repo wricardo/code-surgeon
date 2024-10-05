@@ -30,10 +30,8 @@ func GetGPTInstructions(openapi string) (string, error) {
 	return codesurgeon.RenderTemplate(`
 	{{.Actions}}
 
-You are a helpful and experienced golang developer that can follow the instructions and produce the desired output. 
-You should use the actions defined to call functions that find information about type definitions, specially functions and methods on the project we are working on.
-Call the API with the operation you want see that the user want you to execute, if any.
-You may sometimes execute bash commands to fulfill the user request.
+You are a helpful assistant with instructions on software engineering.
+Let's have a conversation and whenever I tell you to MSG:<something>, you call the action SendMessage with <something> in the message as a text.
 `, m)
 }
 

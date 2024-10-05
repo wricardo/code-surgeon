@@ -1,15 +1,12 @@
-package main
+package chatcli
 
 import (
 	"context"
-	"net/http"
 
-	"connectrpc.com/connect"
 	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
 	"github.com/wricardo/code-surgeon/ai"
-	"github.com/wricardo/code-surgeon/api"
-	"github.com/wricardo/code-surgeon/api/apiconnect"
+	. "github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
@@ -25,40 +22,46 @@ func init() {
 }
 
 type TeacherMode struct {
-	chat        *Chat
+	chat        *ChatImpl
 	alreadySeen map[string]bool
 }
 
-func NewTeacherMode(chat *Chat) *TeacherMode {
+func NewTeacherMode(chat *ChatImpl) *TeacherMode {
 	return &TeacherMode{
 		chat:        chat,
 		alreadySeen: make(map[string]bool),
 	}
 }
 
-func (m *TeacherMode) HandleIntent(msg Message) (Message, Command, error) {
-	return m.HandleResponse(msg)
+func (m *TeacherMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := m.HandleResponse(msg)
+	return message, NOOP, err
 }
 
-func (ats *TeacherMode) Start() (Message, Command, error) {
+func (ats *TeacherMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
+	return ats.HandleResponse(msg)
+}
+
+func (ats *TeacherMode) Start() (*Message, *Command, error) {
 	return TextMessage("Teach me by discussing topics. I'll keep track of the information and construct a Q&A for further reference."), MODE_START, nil
 }
 
-type QuestionAnswer struct {
+type QuestionAnswerLocal struct {
 	Question string `json:"question" jsonschema:"title=question,description=the question."`
 	Answer   string `json:"answer" jsonschema:"title=answer,description=the answer."`
 }
 
-func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
+func (ats *TeacherMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	userMessage := msg.Text
-
-	type AiOutput struct {
-		Response        string           `json:"response" jsonschema:"title=response,description=the assistant's response to the user."`
-		QuestionAnswers []QuestionAnswer `json:"q_and_as" jsonschema:"title=q_and_as,description=Question and answer, flashcard style."`
+	type ResponseWithQA struct {
+		Response        string                `json:"response"`
+		QuestionAnswers []QuestionAnswerLocal `json:"question_answers"`
 	}
 
-	client := apiconnect.NewGptServiceClient(http.DefaultClient, "http://localhost:8010")
-	ctx := context.Background()
+	type AiOutput struct {
+		Response        string                `json:"response" jsonschema:"title=response,description=the assistant's response to the user."`
+		QuestionAnswers []QuestionAnswerLocal `json:"q_and_as" jsonschema:"title=q_and_as,description=Question and answer, flashcard style."`
+	}
 
 	var aiOut AiOutput
 	err := ats.chat.Chat(&aiOut, []openai.ChatCompletionMessage{
@@ -73,29 +76,26 @@ func (ats *TeacherMode) HandleResponse(msg Message) (Message, Command, error) {
 		},
 	})
 	if err != nil {
-		return Message{}, NOOP, err
+		return &Message{}, NOOP, err
 	}
 	for _, qa := range aiOut.QuestionAnswers {
 		if ats.alreadySeen[qa.Question] {
 			continue
 		}
 		ats.alreadySeen[qa.Question] = true
-		qas := make([]*api.Answer, 0, len(aiOut.QuestionAnswers))
-		for _, qa := range aiOut.QuestionAnswers {
-			qas = append(qas, &api.Answer{
+		// save to knowledge base
+		err := ats.SaveQuestionAndAnswer(context.Background(), []QuestionAnswer{
+			{
 				Question: qa.Question,
 				Answer:   qa.Answer,
-			})
-		}
-		// save to knowledge base
-		client.SaveQuestionAndAnswer(ctx, &connect.Request[api.SaveQuestionAndAnswerRequest]{
-			Msg: &api.SaveQuestionAndAnswerRequest{
-				QuestionAndAnswer: qas,
 			},
 		})
+		if err != nil {
+			return &Message{}, NOOP, err
+		}
 	}
 
-	response := Message{Text: ""}
+	response := &Message{Text: ""}
 	if len(aiOut.QuestionAnswers) > 0 {
 		response.Text += "Knowledge saved:\n"
 		for _, qa := range aiOut.QuestionAnswers {
@@ -124,6 +124,7 @@ func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []Quest
 		}
 
 		err = neo4j2.CreateQuestionAndAnswers(ctx, *t.chat.driver, question, embedding, []string{answer})
+		log.Info().Str("question", question).Str("answer", answer).Msg("Q&A saved to db")
 		if err != nil {
 			log.Printf("Error saving question and answer to database: %v", err)
 			return err

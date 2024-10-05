@@ -1,10 +1,13 @@
-package main
+package chatcli
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
+	"github.com/wricardo/code-surgeon/api"
+	. "github.com/wricardo/code-surgeon/api"
 )
 
 func init() {
@@ -12,140 +15,157 @@ func init() {
 }
 
 type ParseMode struct {
-	chat *Chat
+	chat *ChatImpl
+	form *Form
 }
 
-func NewParseMode(chat *Chat) *ParseMode {
+func NewParseMode(chat *ChatImpl) *ParseMode {
 	return &ParseMode{chat: chat}
 }
 
-func (m *ParseMode) Start() (Message, Command, error) {
-	// Display a form to the user to get the directory or file path
-	form := NewForm([]QuestionAnswer{
+func (m *ParseMode) init() {
+	qas := []QuestionAnswer{
 		{Question: "Enter the directory or file path to parse:", Answer: ""},
-		{Question: "Select output format (only signatures, only names, full definition, docs):", Answer: ""},
+		{Question: "Select output format (signatures, names, full definition, docs):", Answer: "signatures"},
+	}
+	codeForm := NewForm()
+	for _, qa := range qas {
+		codeForm.AddQuestion(qa.Question, true, fnValidateNotEmpty, qa.Answer)
+	}
+	m.form = codeForm
+}
+
+func (m *ParseMode) Start() (*Message, *Command, error) {
+	m.init()
+
+	// Display a form to the user to get the directory or file path
+	return &Message{Form: m.form.MakeFormMessage()}, NOOP, nil
+}
+
+func (m *ParseMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := m.HandleResponse(msg)
+	return message, NOOP, err
+}
+
+func (m *ParseMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
+	m.init()
+
+	m.chat.FillFormWithIntent(m.form, intent, msg)
+
+	res, cmd, err := m.HandleResponse(msg)
+	if err != nil {
+		return res, cmd, err
+	}
+	// force exit after handling response from intent
+	cmd = MODE_QUIT
+	return res, cmd, err
+}
+
+func (c *ChatImpl) IsTesting() bool {
+	return c.test
+}
+
+func (c *ChatImpl) FillFormWithIntent(form *Form, intent Intent, msg *Message) error {
+	qas := form.Questions
+	type AiOutput struct {
+		Questions []QuestionAnswer `json:"questions" jsonschema:"title=questions,description=the questions to be asked to the user."`
+	}
+	var aiOut AiOutput
+
+	userMsg := `Identify which the questions are answered by the attributes. Questions:\n`
+	for _, question := range qas {
+		userMsg += fmt.Sprintf("\nQ:%s\nA:%s", question.Question, question.Answer)
+	}
+	userMsg += "\n"
+	userMsg += "Attributes:" + fmt.Sprintf("\n%v", intent.ParsedIntentAttributes)
+	userMsg += "\nAnswer in json format, with questions being the key to an array with an object question and answer inside. Example: {\"questions\":[{\"question\":\"What is the sky color?\",\"answer\":\"blue\"}]}.\n"
+	userMsg += "UserMessage:" + msg.Text + "\n"
+	userMsg += "You must only answer the questions that are not already answered.Include all given Questions in your response, even if does not have an answer. You should print only the questions that were given.Return all questions, even if no answer could be found on attributes, which should have an empty answer.\n"
+
+	err := c.Chat(&aiOut, []openai.ChatCompletionMessage{
+		{
+			Role:    "user",
+			Content: "Identify which the questions are answered by the attributes. Questions:\nQ:What's the color of HIVOLERI\nA:\nAttributes: map[What's the color of HIVOLERI:blue]\nAnswer in json format.",
+		},
+		{
+			Role:    "assistant",
+			Content: `{"questions":[{"question":"What's the color of HIVOLERI","answer":"blue"}]`,
+		},
+		{
+			Role:    "user",
+			Content: userMsg,
+		},
 	})
-	return Message{Form: form}, NOOP, nil
+	if err != nil {
+		return err
+	}
+	for _, qa := range qas {
+		for _, q := range aiOut.Questions {
+			if q.Question == qa.Question {
+				form.Answer(qa.Question, q.Answer)
+			}
+		}
+	}
+	return nil
 }
 
-func (m *ParseMode) HandleIntent(msg Message) (Message, Command, error) {
-	return m.HandleResponse(msg)
-}
+func (m *ParseMode) HandleResponse(input *Message) (*Message, *Command, error) {
+	if m.form == nil {
+		return &Message{}, NOOP, fmt.Errorf("form is nil")
+	}
+	if input.Form == nil || !m.form.IsFilled() {
+		if input.Form != nil {
+			for _, qa := range input.Form.Questions {
+				m.form.Answer(qa.Question, qa.Answer)
+			}
+		}
+		if !m.form.IsFilled() {
+			return &Message{Form: m.form.MakeFormMessage()}, NOOP, nil
+		}
 
-/*
-type ParsedInfo struct {
-	Packages []Package `json:"packages"`
-}
+	}
+	m.chat.AddMessageYou(&Message{Form: m.form.MakeFormMessage()})
 
-// Package represents a Go package with its components such as imports, structs, functions, etc.
-type Package struct {
-	Package    string      `json:"package"`
-	Imports    []string    `json:"imports,omitemity"`
-	Structs    []Struct    `json:"structs,omitemity"`
-	Functions  []Function  `json:"functions,omitemity"`
-	Variables  []Variable  `json:"variables,omitemity"`
-	Constants  []Constant  `json:"constants,omitemity"`
-	Interfaces []Interface `json:"interfaces,omitemity"`
-}
+	fileOrDirectory := m.form.Questions[0].Answer
+	outputFormat := m.form.Questions[1].Answer
 
-// Interface represents a Go interface and its methods.
-type Interface struct {
-	Name    string   `json:"name"`
-	Methods []Method `json:"methods,omitemity"`
-	Docs    []string `json:"docs,omitemity"`
-}
-
-// Struct represents a Go struct and its fields and methods.
-type Struct struct {
-	Name    string   `json:"name"`
-	Fields  []Field  `json:"fields,omitemity"`
-	Methods []Method `json:"methods,omitemity"`
-	Docs    []string `json:"docs,omitemity"`
-}
-
-// Method represents a method in a Go struct or interface.
-type Method struct {
-	Receiver  string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
-	Name      string   `json:"name"`
-	Params    []Param  `json:"params,omitemity"`
-	Returns   []Param  `json:"returns,omitemity"`
-	Docs      []string `json:"docs,omitemity"`
-	Signature string   `json:"signature"`
-	Body      string   `json:"body,omitempty"` // New field for method body
-}
-
-// Function represents a Go function with its parameters, return types, and documentation.
-type Function struct {
-	Name      string   `json:"name"`
-	Params    []Param  `json:"params,omitemity"`
-	Returns   []Param  `json:"returns,omitemity"`
-	Docs      []string `json:"docs,omitemity"`
-	Signature string   `json:"signature"`
-	Body      string   `json:"body,omitempty"` // New field for function body
-}
-
-// Param represents a parameter or return value in a Go function or method.
-type Param struct {
-	Name string `json:"name"` // Name of the parameter or return value
-	Type string `json:"type"` // Type (e.g., "int", "*string")
-}
-
-// Field represents a field in a Go struct.
-type Field struct {
-	Name    string   `json:"name"`
-	Type    string   `json:"type"`
-	Tag     string   `json:"tag"`
-	Private bool     `json:"private"`
-	Pointer bool     `json:"pointer"`
-	Slice   bool     `json:"slice"`
-	Docs    []string `json:"docs,omitemity"`
-	Comment string   `json:"comment,omitempty"`
-}
-
-// Variable represents a global variable in a Go package.
-type Variable struct {
-	Name string   `json:"name"`
-	Type string   `json:"type"`
-	Docs []string `json:"docs,omitemity"`
-}
-
-// Constant represents a constant in a Go package.
-type Constant struct {
-	Name  string   `json:"name"`
-	Value string   `json:"value"`
-	Docs  []string `json:"docs,omitemity"`
-}
-*/
-
-func (m *ParseMode) HandleResponse(input Message) (Message, Command, error) {
-	if input.Form == nil || len(input.Form.Questions) == 0 {
-		return Message{}, NOOP, fmt.Errorf("no input provided")
+	if fileOrDirectory == "" {
+		m.form.ClearAnswers()
+		return &Message{
+			Text: "Please provide a directory or file path to parse.",
+		}, MODE_QUIT, nil
 	}
 
-	fileOrDirectory := input.Form.Questions[0].Answer
-	outputFormat := input.Form.Questions[1].Answer
+	if m.chat.IsTesting() {
+		return TextMessage("TEST_MODE"), NOOP, nil
+	}
 
 	parsedInfo, err := codesurgeon.ParseDirectory(fileOrDirectory)
+	if err != nil {
+		return &Message{Text: fmt.Sprintf("Error parsing: %v", err)}, MODE_QUIT, nil
+	} else if parsedInfo == nil {
+		return &Message{Text: "parsedInfo=nil"}, MODE_QUIT, nil
+	}
 
 	output := ""
 	switch outputFormat {
-	case "only signatures":
+	case "signatures":
 		output = formatOnlySignatures(*parsedInfo)
-	case "only names":
+	case "names":
 		output = formatOnlyNames(*parsedInfo)
 	case "full definition":
 		output = formatFullDefinition(*parsedInfo)
 	case "docs":
 		output = formatDocs(*parsedInfo)
 	default:
-		output = "Invalid output format"
+		output = formatOnlySignatures(*parsedInfo)
 	}
 	if err != nil {
-		return Message{Text: fmt.Sprintf("Error parsing: %v", err)}, NOOP, nil
+		return &Message{Text: fmt.Sprintf("Error parsing: %v", err)}, MODE_QUIT, nil
 	}
 
 	// Convert parsedInfo to a string or JSON to display to the user
-	return Message{Text: output}, MODE_QUIT, nil
+	return &api.Message{Text: output}, MODE_QUIT, nil
 }
 
 func (m *ParseMode) Stop() error {

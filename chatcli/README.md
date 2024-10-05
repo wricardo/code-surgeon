@@ -106,3 +106,58 @@ Conclusion
 This application is a flexible CLI chatbot designed to assist with generating code and test templates based on user input. It features dynamic session detection, interactive sessions, and a modular architecture that makes it easy to extend. Future improvements could include better natural language understanding, persistent storage, and more sophisticated error handling.
 
 By following this detailed description, another developer should be able to replicate the functionality, understand the architecture, and add new features or sessions with minimal friction.
+
+
+# Example of how to create a mode that leverages the chat.Chat method to interact with AI.
+```
+import (
+	"github.com/sashabaranov/go-openai"
+)
+
+var EXAMPLE TMode = "example"
+
+func init() {
+	RegisterMode(EXAMPLE, NewExampleMode)
+}
+
+type ExampleMode struct {
+	chat *Chat
+}
+
+func NewExampleMode(chat *Chat) *ExampleMode {
+	return &ExampleMode{
+		chat: chat,
+	}
+}
+
+func (em *ExampleMode) Start() (Message, Command, error) {
+	return Message{Text: "let's geek out"}, MODE_START, nil
+}
+
+func (em *ExampleMode) HandleResponse(msg Message) (Message, Command, error) {
+	type AiOutput struct {
+		Response string `json:"response" jsonschema:"title=response,description=the assistant's response to the user."`
+	}
+	var aiOut AiOutput
+
+	err := em.chat.Chat(&aiOut, []openai.ChatCompletionMessage{
+		{
+			Role:    "user",
+			Content: msg.Text,
+		},
+	})
+	if err != nil {
+		return TextMessage("chat error: " + err.Error()), MODE_QUIT, nil
+	}
+	return TextMessage(aiOut.Response), NOOP, nil
+}
+
+func (em *ExampleMode) HandleIntent(msg Message, intent Intent) (Message, Command, error) {
+	return em.HandleResponse(msg)
+}
+
+func (em *ExampleMode) Stop() error {
+	// do nothing
+	return nil
+}
+```

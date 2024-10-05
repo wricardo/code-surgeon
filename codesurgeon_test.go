@@ -538,7 +538,6 @@ type NewType struct {
 	require.Equal(t, "string", structs["NewType"]["Name"])
 }
 
-// Test skipping import declarations
 func TestReplaceOrAddDecl_SkipImportDeclarations(t *testing.T) {
 	src := `
 package main

@@ -17,8 +17,8 @@ func LoggerInterceptor() connect.UnaryInterceptorFunc {
 			if req.Spec().IsClient {
 			} else {
 				log.Printf("Incoming request: %s", req.Spec().Procedure)
-				log.Printf("Request headers: %v", req.Header())
-				log.Printf("Request message: %v", req.Any())
+				// log.Printf("Request headers: %v", req.Header())
+				// log.Printf("Request message: %v", req.Any())
 			}
 			res, err := next(ctx, req)
 			if err != nil {

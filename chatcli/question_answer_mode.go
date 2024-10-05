@@ -1,4 +1,4 @@
-package main
+package chatcli
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/wricardo/code-surgeon/ai"
+	. "github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
@@ -16,39 +17,45 @@ func init() {
 }
 
 type QuestionAnswerMode struct {
-	chat *Chat
+	chat *ChatImpl
 }
 
-func NewQuestionAnswerMode(chat *Chat) *QuestionAnswerMode {
+func NewQuestionAnswerMode(chat *ChatImpl) *QuestionAnswerMode {
 	return &QuestionAnswerMode{
 		chat: chat,
 	}
 }
 
-func (ats *QuestionAnswerMode) Start() (Message, Command, error) {
+func (ats *QuestionAnswerMode) Start() (*Message, *Command, error) {
 	return TextMessage("Ask away!"), MODE_START, nil
 }
 
-func (m *QuestionAnswerMode) HandleIntent(msg Message) (Message, Command, error) {
-	// Refactored to use Message type for input and output
-	return m.HandleResponse(msg)
+func (m *QuestionAnswerMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := m.HandleResponse(msg)
+	return message, NOOP, err
 }
 
-func (m *QuestionAnswerMode) HandleResponse(msg Message) (Message, Command, error) {
+func (m *QuestionAnswerMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
+	msg, _, err := m.HandleResponse(msg)
+	// if comming from intent, we quit the mode after answering
+	return msg, MODE_QUIT, err
+}
+
+func (m *QuestionAnswerMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	userMessage := msg.Text
 
 	userEmbedding, err := ai.EmbedQuestion(m.chat.instructor.Client, msg.Text)
 	if err != nil {
-		return Message{}, NOOP, err
+		return &Message{}, NOOP, err
 	}
 	if len(userEmbedding) == 0 {
-		return Message{}, NOOP, fmt.Errorf("embedding is empty") // TODO: should return an error message instead of an error
+		return &Message{}, NOOP, fmt.Errorf("embedding is empty") // TODO: should return an error message instead of an error
 	}
 
 	// search for similar questions in neo4j
 	similarQuestions, err := neo4j2.VectorSearchQuestions(context.Background(), *m.chat.driver, userEmbedding, 3)
 	if err != nil {
-		return Message{}, NOOP, err
+		return &Message{}, NOOP, err
 	}
 
 	// Fetch top answers for similar questions
@@ -59,7 +66,7 @@ func (m *QuestionAnswerMode) HandleResponse(msg Message) (Message, Command, erro
 
 	topAnswers, err := neo4j2.GetTopAnswersForQuestions(context.Background(), *m.chat.driver, topQuestionIds)
 	if err != nil {
-		return Message{}, NOOP, err
+		return &Message{}, NOOP, err
 	}
 
 	// Generate final answer using AI
@@ -79,7 +86,7 @@ func (m *QuestionAnswerMode) HandleResponse(msg Message) (Message, Command, erro
 		},
 	})
 	if err != nil {
-		return Message{}, NOOP, err
+		return &Message{}, NOOP, err
 	}
 
 	// Construct response text

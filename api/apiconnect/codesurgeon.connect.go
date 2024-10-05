@@ -33,89 +33,31 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// GptServiceIntroductionProcedure is the fully-qualified name of the GptService's Introduction RPC.
-	GptServiceIntroductionProcedure = "/codesurgeon.GptService/Introduction"
-	// GptServiceParseCodebaseProcedure is the fully-qualified name of the GptService's ParseCodebase
-	// RPC.
-	GptServiceParseCodebaseProcedure = "/codesurgeon.GptService/ParseCodebase"
-	// GptServiceUpsertCodeBlockProcedure is the fully-qualified name of the GptService's
-	// UpsertCodeBlock RPC.
-	GptServiceUpsertCodeBlockProcedure = "/codesurgeon.GptService/UpsertCodeBlock"
-	// GptServiceExecuteBashProcedure is the fully-qualified name of the GptService's ExecuteBash RPC.
-	GptServiceExecuteBashProcedure = "/codesurgeon.GptService/ExecuteBash"
-	// GptServiceGetNeo4JSchemaProcedure is the fully-qualified name of the GptService's GetNeo4jSchema
-	// RPC.
-	GptServiceGetNeo4JSchemaProcedure = "/codesurgeon.GptService/GetNeo4jSchema"
-	// GptServiceQueryNeo4JProcedure is the fully-qualified name of the GptService's QueryNeo4j RPC.
-	GptServiceQueryNeo4JProcedure = "/codesurgeon.GptService/QueryNeo4j"
 	// GptServiceGetOpenAPIProcedure is the fully-qualified name of the GptService's GetOpenAPI RPC.
 	GptServiceGetOpenAPIProcedure = "/codesurgeon.GptService/GetOpenAPI"
-	// GptServiceSearchForGolangFunctionProcedure is the fully-qualified name of the GptService's
-	// SearchForGolangFunction RPC.
-	GptServiceSearchForGolangFunctionProcedure = "/codesurgeon.GptService/SearchForGolangFunction"
-	// GptServiceUpsertDocumentationToFunctionProcedure is the fully-qualified name of the GptService's
-	// UpsertDocumentationToFunction RPC.
-	GptServiceUpsertDocumentationToFunctionProcedure = "/codesurgeon.GptService/UpsertDocumentationToFunction"
-	// GptServiceExecuteGoplsImplementationsProcedure is the fully-qualified name of the GptService's
-	// ExecuteGoplsImplementations RPC.
-	GptServiceExecuteGoplsImplementationsProcedure = "/codesurgeon.GptService/ExecuteGoplsImplementations"
-	// GptServiceGitDiffProcedure is the fully-qualified name of the GptService's GitDiff RPC.
-	GptServiceGitDiffProcedure = "/codesurgeon.GptService/GitDiff"
-	// GptServicePageQuestionsProcedure is the fully-qualified name of the GptService's PageQuestions
-	// RPC.
-	GptServicePageQuestionsProcedure = "/codesurgeon.GptService/PageQuestions"
-	// GptServiceAnswerQuestionProcedure is the fully-qualified name of the GptService's AnswerQuestion
-	// RPC.
-	GptServiceAnswerQuestionProcedure = "/codesurgeon.GptService/AnswerQuestion"
-	// GptServiceSaveQuestionAndAnswerProcedure is the fully-qualified name of the GptService's
-	// SaveQuestionAndAnswer RPC.
-	GptServiceSaveQuestionAndAnswerProcedure = "/codesurgeon.GptService/SaveQuestionAndAnswer"
-	// GptServiceSaveConversationSummaryProcedure is the fully-qualified name of the GptService's
-	// SaveConversationSummary RPC.
-	GptServiceSaveConversationSummaryProcedure = "/codesurgeon.GptService/SaveConversationSummary"
+	// GptServiceNewChatProcedure is the fully-qualified name of the GptService's NewChat RPC.
+	GptServiceNewChatProcedure = "/codesurgeon.GptService/NewChat"
+	// GptServiceGetChatProcedure is the fully-qualified name of the GptService's GetChat RPC.
+	GptServiceGetChatProcedure = "/codesurgeon.GptService/GetChat"
+	// GptServiceSendMessageProcedure is the fully-qualified name of the GptService's SendMessage RPC.
+	GptServiceSendMessageProcedure = "/codesurgeon.GptService/SendMessage"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	gptServiceServiceDescriptor                             = api.File_api_codesurgeon_proto.Services().ByName("GptService")
-	gptServiceIntroductionMethodDescriptor                  = gptServiceServiceDescriptor.Methods().ByName("Introduction")
-	gptServiceParseCodebaseMethodDescriptor                 = gptServiceServiceDescriptor.Methods().ByName("ParseCodebase")
-	gptServiceUpsertCodeBlockMethodDescriptor               = gptServiceServiceDescriptor.Methods().ByName("UpsertCodeBlock")
-	gptServiceExecuteBashMethodDescriptor                   = gptServiceServiceDescriptor.Methods().ByName("ExecuteBash")
-	gptServiceGetNeo4JSchemaMethodDescriptor                = gptServiceServiceDescriptor.Methods().ByName("GetNeo4jSchema")
-	gptServiceQueryNeo4JMethodDescriptor                    = gptServiceServiceDescriptor.Methods().ByName("QueryNeo4j")
-	gptServiceGetOpenAPIMethodDescriptor                    = gptServiceServiceDescriptor.Methods().ByName("GetOpenAPI")
-	gptServiceSearchForGolangFunctionMethodDescriptor       = gptServiceServiceDescriptor.Methods().ByName("SearchForGolangFunction")
-	gptServiceUpsertDocumentationToFunctionMethodDescriptor = gptServiceServiceDescriptor.Methods().ByName("UpsertDocumentationToFunction")
-	gptServiceExecuteGoplsImplementationsMethodDescriptor   = gptServiceServiceDescriptor.Methods().ByName("ExecuteGoplsImplementations")
-	gptServiceGitDiffMethodDescriptor                       = gptServiceServiceDescriptor.Methods().ByName("GitDiff")
-	gptServicePageQuestionsMethodDescriptor                 = gptServiceServiceDescriptor.Methods().ByName("PageQuestions")
-	gptServiceAnswerQuestionMethodDescriptor                = gptServiceServiceDescriptor.Methods().ByName("AnswerQuestion")
-	gptServiceSaveQuestionAndAnswerMethodDescriptor         = gptServiceServiceDescriptor.Methods().ByName("SaveQuestionAndAnswer")
-	gptServiceSaveConversationSummaryMethodDescriptor       = gptServiceServiceDescriptor.Methods().ByName("SaveConversationSummary")
+	gptServiceServiceDescriptor           = api.File_api_codesurgeon_proto.Services().ByName("GptService")
+	gptServiceGetOpenAPIMethodDescriptor  = gptServiceServiceDescriptor.Methods().ByName("GetOpenAPI")
+	gptServiceNewChatMethodDescriptor     = gptServiceServiceDescriptor.Methods().ByName("NewChat")
+	gptServiceGetChatMethodDescriptor     = gptServiceServiceDescriptor.Methods().ByName("GetChat")
+	gptServiceSendMessageMethodDescriptor = gptServiceServiceDescriptor.Methods().ByName("SendMessage")
 )
 
 // GptServiceClient is a client for the codesurgeon.GptService service.
 type GptServiceClient interface {
-	// Main RPCs
-	Introduction(context.Context, *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error)
-	ParseCodebase(context.Context, *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error)
-	UpsertCodeBlock(context.Context, *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error)
-	// New RPC for executing shell commands
-	ExecuteBash(context.Context, *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error)
-	GetNeo4JSchema(context.Context, *connect.Request[api.GetNeo4JSchemaRequest]) (*connect.Response[api.GetNeo4JSchemaResponse], error)
-	QueryNeo4J(context.Context, *connect.Request[api.QueryNeo4JRequest]) (*connect.Response[api.QueryNeo4JResponse], error)
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
-	SearchForGolangFunction(context.Context, *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error)
-	UpsertDocumentationToFunction(context.Context, *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error)
-	// New RPC for executing gopls implementations command
-	ExecuteGoplsImplementations(context.Context, *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error)
-	// RPC to list modified files and return their contents
-	GitDiff(context.Context, *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error)
-	PageQuestions(context.Context, *connect.Request[api.PageQuestionsRequest]) (*connect.Response[api.PageQuestionsResponse], error)
-	AnswerQuestion(context.Context, *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error)
-	SaveQuestionAndAnswer(context.Context, *connect.Request[api.SaveQuestionAndAnswerRequest]) (*connect.Response[api.SaveQuestionAndAnswerResponse], error)
-	SaveConversationSummary(context.Context, *connect.Request[api.SaveConversationSummaryRequest]) (*connect.Response[api.SaveConversationSummaryResponse], error)
+	NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error)
+	GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error)
+	SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error)
 }
 
 // NewGptServiceClient constructs a client for the codesurgeon.GptService service. By default, it
@@ -128,94 +70,28 @@ type GptServiceClient interface {
 func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GptServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &gptServiceClient{
-		introduction: connect.NewClient[api.IntroductionRequest, api.IntroductionResponse](
-			httpClient,
-			baseURL+GptServiceIntroductionProcedure,
-			connect.WithSchema(gptServiceIntroductionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		parseCodebase: connect.NewClient[api.ParseCodebaseRequest, api.ParseCodebaseResponse](
-			httpClient,
-			baseURL+GptServiceParseCodebaseProcedure,
-			connect.WithSchema(gptServiceParseCodebaseMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		upsertCodeBlock: connect.NewClient[api.UpsertCodeBlockRequest, api.UpsertCodeBlockResponse](
-			httpClient,
-			baseURL+GptServiceUpsertCodeBlockProcedure,
-			connect.WithSchema(gptServiceUpsertCodeBlockMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		executeBash: connect.NewClient[api.ExecuteBashRequest, api.ExecuteBashResponse](
-			httpClient,
-			baseURL+GptServiceExecuteBashProcedure,
-			connect.WithSchema(gptServiceExecuteBashMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getNeo4JSchema: connect.NewClient[api.GetNeo4JSchemaRequest, api.GetNeo4JSchemaResponse](
-			httpClient,
-			baseURL+GptServiceGetNeo4JSchemaProcedure,
-			connect.WithSchema(gptServiceGetNeo4JSchemaMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		queryNeo4J: connect.NewClient[api.QueryNeo4JRequest, api.QueryNeo4JResponse](
-			httpClient,
-			baseURL+GptServiceQueryNeo4JProcedure,
-			connect.WithSchema(gptServiceQueryNeo4JMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 		getOpenAPI: connect.NewClient[api.GetOpenAPIRequest, api.GetOpenAPIResponse](
 			httpClient,
 			baseURL+GptServiceGetOpenAPIProcedure,
 			connect.WithSchema(gptServiceGetOpenAPIMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		searchForGolangFunction: connect.NewClient[api.SearchForGolangFunctionRequest, api.SearchForGolangFunctionResponse](
+		newChat: connect.NewClient[api.NewChatRequest, api.NewChatResponse](
 			httpClient,
-			baseURL+GptServiceSearchForGolangFunctionProcedure,
-			connect.WithSchema(gptServiceSearchForGolangFunctionMethodDescriptor),
+			baseURL+GptServiceNewChatProcedure,
+			connect.WithSchema(gptServiceNewChatMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		upsertDocumentationToFunction: connect.NewClient[api.UpsertDocumentationToFunctionRequest, api.UpsertDocumentationToFunctionResponse](
+		getChat: connect.NewClient[api.GetChatRequest, api.GetChatResponse](
 			httpClient,
-			baseURL+GptServiceUpsertDocumentationToFunctionProcedure,
-			connect.WithSchema(gptServiceUpsertDocumentationToFunctionMethodDescriptor),
+			baseURL+GptServiceGetChatProcedure,
+			connect.WithSchema(gptServiceGetChatMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		executeGoplsImplementations: connect.NewClient[api.ExecuteGoplsImplementationsRequest, api.ExecuteGoplsImplementationsResponse](
+		sendMessage: connect.NewClient[api.SendMessageRequest, api.SendMessageResponse](
 			httpClient,
-			baseURL+GptServiceExecuteGoplsImplementationsProcedure,
-			connect.WithSchema(gptServiceExecuteGoplsImplementationsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		gitDiff: connect.NewClient[api.GitDiffRequest, api.GitDiffResponse](
-			httpClient,
-			baseURL+GptServiceGitDiffProcedure,
-			connect.WithSchema(gptServiceGitDiffMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		pageQuestions: connect.NewClient[api.PageQuestionsRequest, api.PageQuestionsResponse](
-			httpClient,
-			baseURL+GptServicePageQuestionsProcedure,
-			connect.WithSchema(gptServicePageQuestionsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		answerQuestion: connect.NewClient[api.AnswerQuestionRequest, api.AnswerQuestionResponse](
-			httpClient,
-			baseURL+GptServiceAnswerQuestionProcedure,
-			connect.WithSchema(gptServiceAnswerQuestionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		saveQuestionAndAnswer: connect.NewClient[api.SaveQuestionAndAnswerRequest, api.SaveQuestionAndAnswerResponse](
-			httpClient,
-			baseURL+GptServiceSaveQuestionAndAnswerProcedure,
-			connect.WithSchema(gptServiceSaveQuestionAndAnswerMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		saveConversationSummary: connect.NewClient[api.SaveConversationSummaryRequest, api.SaveConversationSummaryResponse](
-			httpClient,
-			baseURL+GptServiceSaveConversationSummaryProcedure,
-			connect.WithSchema(gptServiceSaveConversationSummaryMethodDescriptor),
+			baseURL+GptServiceSendMessageProcedure,
+			connect.WithSchema(gptServiceSendMessageMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -223,51 +99,10 @@ func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 
 // gptServiceClient implements GptServiceClient.
 type gptServiceClient struct {
-	introduction                  *connect.Client[api.IntroductionRequest, api.IntroductionResponse]
-	parseCodebase                 *connect.Client[api.ParseCodebaseRequest, api.ParseCodebaseResponse]
-	upsertCodeBlock               *connect.Client[api.UpsertCodeBlockRequest, api.UpsertCodeBlockResponse]
-	executeBash                   *connect.Client[api.ExecuteBashRequest, api.ExecuteBashResponse]
-	getNeo4JSchema                *connect.Client[api.GetNeo4JSchemaRequest, api.GetNeo4JSchemaResponse]
-	queryNeo4J                    *connect.Client[api.QueryNeo4JRequest, api.QueryNeo4JResponse]
-	getOpenAPI                    *connect.Client[api.GetOpenAPIRequest, api.GetOpenAPIResponse]
-	searchForGolangFunction       *connect.Client[api.SearchForGolangFunctionRequest, api.SearchForGolangFunctionResponse]
-	upsertDocumentationToFunction *connect.Client[api.UpsertDocumentationToFunctionRequest, api.UpsertDocumentationToFunctionResponse]
-	executeGoplsImplementations   *connect.Client[api.ExecuteGoplsImplementationsRequest, api.ExecuteGoplsImplementationsResponse]
-	gitDiff                       *connect.Client[api.GitDiffRequest, api.GitDiffResponse]
-	pageQuestions                 *connect.Client[api.PageQuestionsRequest, api.PageQuestionsResponse]
-	answerQuestion                *connect.Client[api.AnswerQuestionRequest, api.AnswerQuestionResponse]
-	saveQuestionAndAnswer         *connect.Client[api.SaveQuestionAndAnswerRequest, api.SaveQuestionAndAnswerResponse]
-	saveConversationSummary       *connect.Client[api.SaveConversationSummaryRequest, api.SaveConversationSummaryResponse]
-}
-
-// Introduction calls codesurgeon.GptService.Introduction.
-func (c *gptServiceClient) Introduction(ctx context.Context, req *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error) {
-	return c.introduction.CallUnary(ctx, req)
-}
-
-// ParseCodebase calls codesurgeon.GptService.ParseCodebase.
-func (c *gptServiceClient) ParseCodebase(ctx context.Context, req *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error) {
-	return c.parseCodebase.CallUnary(ctx, req)
-}
-
-// UpsertCodeBlock calls codesurgeon.GptService.UpsertCodeBlock.
-func (c *gptServiceClient) UpsertCodeBlock(ctx context.Context, req *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error) {
-	return c.upsertCodeBlock.CallUnary(ctx, req)
-}
-
-// ExecuteBash calls codesurgeon.GptService.ExecuteBash.
-func (c *gptServiceClient) ExecuteBash(ctx context.Context, req *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error) {
-	return c.executeBash.CallUnary(ctx, req)
-}
-
-// GetNeo4JSchema calls codesurgeon.GptService.GetNeo4jSchema.
-func (c *gptServiceClient) GetNeo4JSchema(ctx context.Context, req *connect.Request[api.GetNeo4JSchemaRequest]) (*connect.Response[api.GetNeo4JSchemaResponse], error) {
-	return c.getNeo4JSchema.CallUnary(ctx, req)
-}
-
-// QueryNeo4J calls codesurgeon.GptService.QueryNeo4j.
-func (c *gptServiceClient) QueryNeo4J(ctx context.Context, req *connect.Request[api.QueryNeo4JRequest]) (*connect.Response[api.QueryNeo4JResponse], error) {
-	return c.queryNeo4J.CallUnary(ctx, req)
+	getOpenAPI  *connect.Client[api.GetOpenAPIRequest, api.GetOpenAPIResponse]
+	newChat     *connect.Client[api.NewChatRequest, api.NewChatResponse]
+	getChat     *connect.Client[api.GetChatRequest, api.GetChatResponse]
+	sendMessage *connect.Client[api.SendMessageRequest, api.SendMessageResponse]
 }
 
 // GetOpenAPI calls codesurgeon.GptService.GetOpenAPI.
@@ -275,67 +110,27 @@ func (c *gptServiceClient) GetOpenAPI(ctx context.Context, req *connect.Request[
 	return c.getOpenAPI.CallUnary(ctx, req)
 }
 
-// SearchForGolangFunction calls codesurgeon.GptService.SearchForGolangFunction.
-func (c *gptServiceClient) SearchForGolangFunction(ctx context.Context, req *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
-	return c.searchForGolangFunction.CallUnary(ctx, req)
+// NewChat calls codesurgeon.GptService.NewChat.
+func (c *gptServiceClient) NewChat(ctx context.Context, req *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
+	return c.newChat.CallUnary(ctx, req)
 }
 
-// UpsertDocumentationToFunction calls codesurgeon.GptService.UpsertDocumentationToFunction.
-func (c *gptServiceClient) UpsertDocumentationToFunction(ctx context.Context, req *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error) {
-	return c.upsertDocumentationToFunction.CallUnary(ctx, req)
+// GetChat calls codesurgeon.GptService.GetChat.
+func (c *gptServiceClient) GetChat(ctx context.Context, req *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
+	return c.getChat.CallUnary(ctx, req)
 }
 
-// ExecuteGoplsImplementations calls codesurgeon.GptService.ExecuteGoplsImplementations.
-func (c *gptServiceClient) ExecuteGoplsImplementations(ctx context.Context, req *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error) {
-	return c.executeGoplsImplementations.CallUnary(ctx, req)
-}
-
-// GitDiff calls codesurgeon.GptService.GitDiff.
-func (c *gptServiceClient) GitDiff(ctx context.Context, req *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error) {
-	return c.gitDiff.CallUnary(ctx, req)
-}
-
-// PageQuestions calls codesurgeon.GptService.PageQuestions.
-func (c *gptServiceClient) PageQuestions(ctx context.Context, req *connect.Request[api.PageQuestionsRequest]) (*connect.Response[api.PageQuestionsResponse], error) {
-	return c.pageQuestions.CallUnary(ctx, req)
-}
-
-// AnswerQuestion calls codesurgeon.GptService.AnswerQuestion.
-func (c *gptServiceClient) AnswerQuestion(ctx context.Context, req *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error) {
-	return c.answerQuestion.CallUnary(ctx, req)
-}
-
-// SaveQuestionAndAnswer calls codesurgeon.GptService.SaveQuestionAndAnswer.
-func (c *gptServiceClient) SaveQuestionAndAnswer(ctx context.Context, req *connect.Request[api.SaveQuestionAndAnswerRequest]) (*connect.Response[api.SaveQuestionAndAnswerResponse], error) {
-	return c.saveQuestionAndAnswer.CallUnary(ctx, req)
-}
-
-// SaveConversationSummary calls codesurgeon.GptService.SaveConversationSummary.
-func (c *gptServiceClient) SaveConversationSummary(ctx context.Context, req *connect.Request[api.SaveConversationSummaryRequest]) (*connect.Response[api.SaveConversationSummaryResponse], error) {
-	return c.saveConversationSummary.CallUnary(ctx, req)
+// SendMessage calls codesurgeon.GptService.SendMessage.
+func (c *gptServiceClient) SendMessage(ctx context.Context, req *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
+	return c.sendMessage.CallUnary(ctx, req)
 }
 
 // GptServiceHandler is an implementation of the codesurgeon.GptService service.
 type GptServiceHandler interface {
-	// Main RPCs
-	Introduction(context.Context, *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error)
-	ParseCodebase(context.Context, *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error)
-	UpsertCodeBlock(context.Context, *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error)
-	// New RPC for executing shell commands
-	ExecuteBash(context.Context, *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error)
-	GetNeo4JSchema(context.Context, *connect.Request[api.GetNeo4JSchemaRequest]) (*connect.Response[api.GetNeo4JSchemaResponse], error)
-	QueryNeo4J(context.Context, *connect.Request[api.QueryNeo4JRequest]) (*connect.Response[api.QueryNeo4JResponse], error)
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
-	SearchForGolangFunction(context.Context, *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error)
-	UpsertDocumentationToFunction(context.Context, *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error)
-	// New RPC for executing gopls implementations command
-	ExecuteGoplsImplementations(context.Context, *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error)
-	// RPC to list modified files and return their contents
-	GitDiff(context.Context, *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error)
-	PageQuestions(context.Context, *connect.Request[api.PageQuestionsRequest]) (*connect.Response[api.PageQuestionsResponse], error)
-	AnswerQuestion(context.Context, *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error)
-	SaveQuestionAndAnswer(context.Context, *connect.Request[api.SaveQuestionAndAnswerRequest]) (*connect.Response[api.SaveQuestionAndAnswerResponse], error)
-	SaveConversationSummary(context.Context, *connect.Request[api.SaveConversationSummaryRequest]) (*connect.Response[api.SaveConversationSummaryResponse], error)
+	NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error)
+	GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error)
+	SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error)
 }
 
 // NewGptServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -344,128 +139,40 @@ type GptServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	gptServiceIntroductionHandler := connect.NewUnaryHandler(
-		GptServiceIntroductionProcedure,
-		svc.Introduction,
-		connect.WithSchema(gptServiceIntroductionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceParseCodebaseHandler := connect.NewUnaryHandler(
-		GptServiceParseCodebaseProcedure,
-		svc.ParseCodebase,
-		connect.WithSchema(gptServiceParseCodebaseMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceUpsertCodeBlockHandler := connect.NewUnaryHandler(
-		GptServiceUpsertCodeBlockProcedure,
-		svc.UpsertCodeBlock,
-		connect.WithSchema(gptServiceUpsertCodeBlockMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceExecuteBashHandler := connect.NewUnaryHandler(
-		GptServiceExecuteBashProcedure,
-		svc.ExecuteBash,
-		connect.WithSchema(gptServiceExecuteBashMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceGetNeo4JSchemaHandler := connect.NewUnaryHandler(
-		GptServiceGetNeo4JSchemaProcedure,
-		svc.GetNeo4JSchema,
-		connect.WithSchema(gptServiceGetNeo4JSchemaMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceQueryNeo4JHandler := connect.NewUnaryHandler(
-		GptServiceQueryNeo4JProcedure,
-		svc.QueryNeo4J,
-		connect.WithSchema(gptServiceQueryNeo4JMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	gptServiceGetOpenAPIHandler := connect.NewUnaryHandler(
 		GptServiceGetOpenAPIProcedure,
 		svc.GetOpenAPI,
 		connect.WithSchema(gptServiceGetOpenAPIMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	gptServiceSearchForGolangFunctionHandler := connect.NewUnaryHandler(
-		GptServiceSearchForGolangFunctionProcedure,
-		svc.SearchForGolangFunction,
-		connect.WithSchema(gptServiceSearchForGolangFunctionMethodDescriptor),
+	gptServiceNewChatHandler := connect.NewUnaryHandler(
+		GptServiceNewChatProcedure,
+		svc.NewChat,
+		connect.WithSchema(gptServiceNewChatMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	gptServiceUpsertDocumentationToFunctionHandler := connect.NewUnaryHandler(
-		GptServiceUpsertDocumentationToFunctionProcedure,
-		svc.UpsertDocumentationToFunction,
-		connect.WithSchema(gptServiceUpsertDocumentationToFunctionMethodDescriptor),
+	gptServiceGetChatHandler := connect.NewUnaryHandler(
+		GptServiceGetChatProcedure,
+		svc.GetChat,
+		connect.WithSchema(gptServiceGetChatMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	gptServiceExecuteGoplsImplementationsHandler := connect.NewUnaryHandler(
-		GptServiceExecuteGoplsImplementationsProcedure,
-		svc.ExecuteGoplsImplementations,
-		connect.WithSchema(gptServiceExecuteGoplsImplementationsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceGitDiffHandler := connect.NewUnaryHandler(
-		GptServiceGitDiffProcedure,
-		svc.GitDiff,
-		connect.WithSchema(gptServiceGitDiffMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServicePageQuestionsHandler := connect.NewUnaryHandler(
-		GptServicePageQuestionsProcedure,
-		svc.PageQuestions,
-		connect.WithSchema(gptServicePageQuestionsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceAnswerQuestionHandler := connect.NewUnaryHandler(
-		GptServiceAnswerQuestionProcedure,
-		svc.AnswerQuestion,
-		connect.WithSchema(gptServiceAnswerQuestionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceSaveQuestionAndAnswerHandler := connect.NewUnaryHandler(
-		GptServiceSaveQuestionAndAnswerProcedure,
-		svc.SaveQuestionAndAnswer,
-		connect.WithSchema(gptServiceSaveQuestionAndAnswerMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceSaveConversationSummaryHandler := connect.NewUnaryHandler(
-		GptServiceSaveConversationSummaryProcedure,
-		svc.SaveConversationSummary,
-		connect.WithSchema(gptServiceSaveConversationSummaryMethodDescriptor),
+	gptServiceSendMessageHandler := connect.NewUnaryHandler(
+		GptServiceSendMessageProcedure,
+		svc.SendMessage,
+		connect.WithSchema(gptServiceSendMessageMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/codesurgeon.GptService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case GptServiceIntroductionProcedure:
-			gptServiceIntroductionHandler.ServeHTTP(w, r)
-		case GptServiceParseCodebaseProcedure:
-			gptServiceParseCodebaseHandler.ServeHTTP(w, r)
-		case GptServiceUpsertCodeBlockProcedure:
-			gptServiceUpsertCodeBlockHandler.ServeHTTP(w, r)
-		case GptServiceExecuteBashProcedure:
-			gptServiceExecuteBashHandler.ServeHTTP(w, r)
-		case GptServiceGetNeo4JSchemaProcedure:
-			gptServiceGetNeo4JSchemaHandler.ServeHTTP(w, r)
-		case GptServiceQueryNeo4JProcedure:
-			gptServiceQueryNeo4JHandler.ServeHTTP(w, r)
 		case GptServiceGetOpenAPIProcedure:
 			gptServiceGetOpenAPIHandler.ServeHTTP(w, r)
-		case GptServiceSearchForGolangFunctionProcedure:
-			gptServiceSearchForGolangFunctionHandler.ServeHTTP(w, r)
-		case GptServiceUpsertDocumentationToFunctionProcedure:
-			gptServiceUpsertDocumentationToFunctionHandler.ServeHTTP(w, r)
-		case GptServiceExecuteGoplsImplementationsProcedure:
-			gptServiceExecuteGoplsImplementationsHandler.ServeHTTP(w, r)
-		case GptServiceGitDiffProcedure:
-			gptServiceGitDiffHandler.ServeHTTP(w, r)
-		case GptServicePageQuestionsProcedure:
-			gptServicePageQuestionsHandler.ServeHTTP(w, r)
-		case GptServiceAnswerQuestionProcedure:
-			gptServiceAnswerQuestionHandler.ServeHTTP(w, r)
-		case GptServiceSaveQuestionAndAnswerProcedure:
-			gptServiceSaveQuestionAndAnswerHandler.ServeHTTP(w, r)
-		case GptServiceSaveConversationSummaryProcedure:
-			gptServiceSaveConversationSummaryHandler.ServeHTTP(w, r)
+		case GptServiceNewChatProcedure:
+			gptServiceNewChatHandler.ServeHTTP(w, r)
+		case GptServiceGetChatProcedure:
+			gptServiceGetChatHandler.ServeHTTP(w, r)
+		case GptServiceSendMessageProcedure:
+			gptServiceSendMessageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -475,62 +182,18 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 // UnimplementedGptServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGptServiceHandler struct{}
 
-func (UnimplementedGptServiceHandler) Introduction(context.Context, *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.Introduction is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) ParseCodebase(context.Context, *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ParseCodebase is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) UpsertCodeBlock(context.Context, *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.UpsertCodeBlock is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) ExecuteBash(context.Context, *connect.Request[api.ExecuteBashRequest]) (*connect.Response[api.ExecuteBashResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ExecuteBash is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) GetNeo4JSchema(context.Context, *connect.Request[api.GetNeo4JSchemaRequest]) (*connect.Response[api.GetNeo4JSchemaResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GetNeo4jSchema is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) QueryNeo4J(context.Context, *connect.Request[api.QueryNeo4JRequest]) (*connect.Response[api.QueryNeo4JResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.QueryNeo4j is not implemented"))
-}
-
 func (UnimplementedGptServiceHandler) GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GetOpenAPI is not implemented"))
 }
 
-func (UnimplementedGptServiceHandler) SearchForGolangFunction(context.Context, *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SearchForGolangFunction is not implemented"))
+func (UnimplementedGptServiceHandler) NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.NewChat is not implemented"))
 }
 
-func (UnimplementedGptServiceHandler) UpsertDocumentationToFunction(context.Context, *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.UpsertDocumentationToFunction is not implemented"))
+func (UnimplementedGptServiceHandler) GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GetChat is not implemented"))
 }
 
-func (UnimplementedGptServiceHandler) ExecuteGoplsImplementations(context.Context, *connect.Request[api.ExecuteGoplsImplementationsRequest]) (*connect.Response[api.ExecuteGoplsImplementationsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ExecuteGoplsImplementations is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) GitDiff(context.Context, *connect.Request[api.GitDiffRequest]) (*connect.Response[api.GitDiffResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GitDiff is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) PageQuestions(context.Context, *connect.Request[api.PageQuestionsRequest]) (*connect.Response[api.PageQuestionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.PageQuestions is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) AnswerQuestion(context.Context, *connect.Request[api.AnswerQuestionRequest]) (*connect.Response[api.AnswerQuestionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.AnswerQuestion is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) SaveQuestionAndAnswer(context.Context, *connect.Request[api.SaveQuestionAndAnswerRequest]) (*connect.Response[api.SaveQuestionAndAnswerResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SaveQuestionAndAnswer is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) SaveConversationSummary(context.Context, *connect.Request[api.SaveConversationSummaryRequest]) (*connect.Response[api.SaveConversationSummaryResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SaveConversationSummary is not implemented"))
+func (UnimplementedGptServiceHandler) SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SendMessage is not implemented"))
 }

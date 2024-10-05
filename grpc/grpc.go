@@ -2,40 +2,115 @@ package grpc
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"strings"
+	"sync"
+
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
 	"github.com/Jeffail/gabs"
-	"github.com/instructor-ai/instructor-go/pkg/instructor"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-	"github.com/sashabaranov/go-openai"
+	"github.com/davecgh/go-spew/spew"
 	codesurgeon "github.com/wricardo/code-surgeon"
-	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/wricardo/code-surgeon/chatcli"
 )
 
 var _ apiconnect.GptServiceHandler = (*Handler)(nil)
 
 type Handler struct {
-	url              string
-	neo4jDriver      neo4j.DriverWithContext
-	instructorClient *instructor.InstructorOpenAI
-	openaiClient     *openai.Client
+	publicUrl string
+	// chat      chatcli.IChat
+	mu sync.Mutex // protects the chat
 }
 
-func NewHandler(url string, ic *instructor.InstructorOpenAI, oc *openai.Client, driver neo4j.DriverWithContext) *Handler {
-
-	return &Handler{
-		url:              url,
-		neo4jDriver:      driver,
-		instructorClient: ic,
-		openaiClient:     oc,
+func (h *Handler) NewChat(ctx context.Context, req *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
+	// Create a new Chat instance
+	newChat := &api.Chat{
+		Id:       uuid.New().String(),
+		Messages: []*api.Message{},
 	}
+
+	// Create the response
+	response := &api.NewChatResponse{
+		Chat: newChat,
+	}
+
+	// Return the response
+	return &connect.Response[api.NewChatResponse]{Msg: response}, nil
 }
 
+func NewHandler(publicUrl string) *Handler {
+	h := &Handler{
+		publicUrl: publicUrl,
+	}
+	return h
+}
+
+func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	res, cmd, err := chatcli.GLOBAL_CHAT.HandleUserMessage(req.Msg.Message)
+	if err != nil {
+		log.Error().Err(err).Msg("Error sending message")
+	}
+	if cmd != nil && cmd.Name != "" {
+		// FIXME: handle commands
+		if cmd.Name == "exit" {
+			// h.chat.Stop()
+		}
+	}
+
+	modeName := chatcli.GLOBAL_CHAT.GetModeText()
+	if req.Msg.Message.Text == "/debug" {
+		modeName = "debug"
+	}
+
+	response := &api.SendMessageResponse{
+		Command: cmd,
+		Message: res,
+		Mode: &api.Mode{
+			Name: modeName,
+		},
+	}
+
+	return &connect.Response[api.SendMessageResponse]{Msg: response}, nil
+}
+
+func (h *Handler) GetChat(ctx context.Context, req *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
+
+	// Create an empty Chat instance
+	emptyChat := &api.Chat{
+		Id:       "",               // Empty ID
+		Messages: []*api.Message{}, // Empty list of messages
+	}
+
+	// Create the response
+	response := &api.GetChatResponse{
+		Chat: emptyChat,
+	}
+
+	GLOBAL_CHAT := chatcli.GLOBAL_CHAT
+	if GLOBAL_CHAT != nil {
+		for _, msg := range GLOBAL_CHAT.GetHistory() {
+			response.Chat.Messages = append(response.Chat.Messages, msg)
+		}
+		if GLOBAL_CHAT.GetModeText() != "" {
+			response.Chat.CurrentMode = &api.Mode{
+				Name: GLOBAL_CHAT.GetModeText(),
+			}
+
+		}
+
+	}
+
+	// Return the response
+	return &connect.Response[api.GetChatResponse]{Msg: response}, nil
+}
+
+/*
 func (*Handler) SearchForGolangFunction(ctx context.Context, req *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
 	path := req.Msg.Path
 	if path == "" {
@@ -204,6 +279,7 @@ func (h *Handler) Introduction(ctx context.Context, req *connect.Request[api.Int
 		},
 	}, nil
 }
+*/
 
 func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error) {
 	// Read the embedded file using the embedded FS
@@ -219,8 +295,9 @@ func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOp
 	// https://chatgpt.com/gpts/editor/g-v09HRlzOu
 
 	// add "server" field
-	url := h.url
-	url = strings.TrimSuffix(url, "/")
+	url := h.publicUrl
+	url = strings.TrimSuffix("https://"+url, "/")
+	log.Printf("url: %s", spew.Sdump(h.publicUrl))
 
 	parsed.Array("servers")
 	parsed.ArrayAppend(map[string]string{

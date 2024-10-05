@@ -13,10 +13,8 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	codesurgeon "github.com/wricardo/code-surgeon"
-	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 	"github.com/wricardo/code-surgeon/grpc"
-	"github.com/wricardo/code-surgeon/neo4j2"
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
 	"golang.org/x/net/http2"
@@ -48,29 +46,14 @@ func Start(
 		}
 	}
 
-	url := fmt.Sprintf("http://localhost:%d", port)
-	if useNgrok {
-		url = ln.URL()
-	}
-
-	instructorClient := ai.GetInstructor()
-
-	driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
-	if err != nil {
-		log.Println("Error connecting to Neo4j (proceeding anyway):", err)
-	} else {
-		defer closeFn()
-	}
-
 	// graceful shutdown
-	rulesServer := grpc.NewHandler(url, instructorClient, instructorClient.Client, driver)
+	grpcHandler := grpc.NewHandler(ngrokDomain)
 
 	mux := http.NewServeMux()
 
 	// add static file route
 
 	fs.WalkDir(codesurgeon.STATICFS, ".", func(path string, d fs.DirEntry, err error) error {
-		fmt.Println("aaaaaaaaaaaaaaaaaaa", path)
 		return nil
 	})
 
@@ -78,7 +61,7 @@ func Start(
 		http.FileServerFS(codesurgeon.STATICFS),
 	))
 
-	path, handler := apiconnect.NewGptServiceHandler(rulesServer, connect.WithInterceptors(grpc.LoggerInterceptor()))
+	path, handler := apiconnect.NewGptServiceHandler(grpcHandler, connect.WithInterceptors(grpc.LoggerInterceptor()))
 	mux.Handle(path, handler)
 
 	reflector := grpcreflect.NewStaticReflector(

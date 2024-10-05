@@ -25,13 +25,22 @@ func Configure() {
 	}
 
 	// if we are in local development, we want to write to the console
+	if false {
+		consoleWriter := zerolog.ConsoleWriter{Out: os.Stderr}
+		writers = append(writers, &consoleWriter)
+	}
 	if true {
-		f, err := os.OpenFile("main.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile("console.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to open log file")
 		}
 		consoleWriter := zerolog.ConsoleWriter{Out: f}
 		writers = append(writers, &consoleWriter)
+		f2, err := os.OpenFile("json.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open log file")
+		}
+		writers = append(writers, f2)
 	}
 
 	level := zerolog.DebugLevel

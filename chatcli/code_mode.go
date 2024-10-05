@@ -1,10 +1,14 @@
-package main
+package chatcli
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 
 	"github.com/rs/zerolog/log"
+	. "github.com/wricardo/code-surgeon/api"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -16,15 +20,15 @@ func init() {
 }
 
 type CodeMode struct {
-	chat *Chat
-	form *PoopForm
+	chat *ChatImpl
+	form *Form
 
 	ask      StringPromise
 	filename StringPromise
 }
 
-func NewCodeMode(chat *Chat) *CodeMode {
-	codeForm := NewPoopForm()
+func NewCodeMode(chat *ChatImpl) *CodeMode {
+	codeForm := NewForm()
 
 	return &CodeMode{
 		chat:     chat,
@@ -34,11 +38,11 @@ func NewCodeMode(chat *Chat) *CodeMode {
 	}
 }
 
-func (cs *CodeMode) Start() (Message, Command, error) {
-	return Message{Form: cs.form.MakeFormMessage()}, MODE_START, nil
+func (cs *CodeMode) Start() (*Message, *Command, error) {
+	return &Message{Form: cs.form.MakeFormMessage()}, MODE_START, nil
 }
 
-func (cs *CodeMode) HandleResponse(msg Message) (Message, Command, error) {
+func (cs *CodeMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	log.Debug().
 		Any("msg", msg).
 		Msg("handling response on code")
@@ -49,19 +53,24 @@ func (cs *CodeMode) HandleResponse(msg Message) (Message, Command, error) {
 			}
 		}
 		if !cs.form.IsFilled() {
-			return Message{Form: cs.form.MakeFormMessage()}, NOOP, nil
+			return &Message{Form: cs.form.MakeFormMessage()}, NOOP, nil
 		}
 	}
 
 	// Generate code after form is filled
 	response, err := cs.GenerateCode()
 	if err != nil {
-		return Message{}, NOOP, err
+		return &Message{}, NOOP, err
 	}
 	return TextMessage(response), MODE_QUIT, nil
 }
 
-func (cs *CodeMode) HandleIntent(msg Message) (Message, Command, error) {
+func (cs *CodeMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := cs.HandleResponse(msg)
+	return message, NOOP, err
+}
+
+func (cs *CodeMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
 	return cs.HandleResponse(msg)
 }
 
@@ -112,13 +121,26 @@ func (cs *CodeMode) Stop() error {
 // Aider function to execute a CLI command
 func Aider(file string, message string) (string, error) {
 	// Construct the command with the necessary arguments
-	cmd := exec.Command("aider", "--yes", "--read", "CONVENTIONS.md", "--auto-commits", "false", "--gitignore", "--show-diff", "--message", message, "--file", file, "--auto-test", "--test-cmd", "echo 'No tests, ok'")
+	cmd := exec.Command("aider", "--read", "CONVENTIONS.md", "--no-auto-commits", "--gitignore", "--show-diff", "--message", message, "--file", file, "--auto-test", "--test-cmd", "echo 'No tests, ok'", "--architect")
 
-	// Run the command and capture the output
-	output, err := cmd.CombinedOutput()
+	// Connect the command's stdin to the user's stdin
+	cmd.Stdin = os.Stdin
+
+	// Create a buffer to store the output
+	var outputBuffer bytes.Buffer
+
+	// Use MultiWriter to write to both the buffer and stdout
+	multiWriter := io.MultiWriter(&outputBuffer, os.Stdout)
+
+	// Set the command's stdout and stderr to the multiWriter
+	cmd.Stdout = multiWriter
+	cmd.Stderr = multiWriter
+
+	// Run the command
+	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("failed to execute aider command: %w\nOutput: %s", err, string(output))
+		return "", fmt.Errorf("failed to execute aider command: %w\nOutput: %s", err, outputBuffer.String())
 	}
 
-	return string(output), nil
+	return outputBuffer.String(), nil
 }

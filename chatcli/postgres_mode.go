@@ -1,4 +1,4 @@
-package main
+package chatcli
 
 import (
 	"database/sql"
@@ -7,93 +7,14 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
+	. "github.com/wricardo/code-surgeon/api"
 )
 
-type PoopForm struct {
-	Questions []PoopFormQuestion
-}
-
-type PoopFormQuestion struct {
-	Question   string
-	Answer     string
-	Required   bool
-	Validation func(string) bool
-}
-
-func NewPoopForm() *PoopForm {
-	return &PoopForm{}
-}
-
-func (pf *PoopForm) AddQuestion(question string, required bool, validation func(string) bool, defaultValue string) StringPromise {
-	q := PoopFormQuestion{
-		Question:   question,
-		Required:   required,
-		Validation: validation,
-		Answer:     defaultValue,
-	}
-	pf.Questions = append(pf.Questions, q)
-	return func() string {
-		for _, q := range pf.Questions {
-			if q.Question == question {
-				return q.Answer
-			}
-		}
-		return ""
-	}
-}
-
-func (pf *PoopForm) IsQuestionFilled(q PoopFormQuestion) bool {
-	if q.Required && q.Answer == "" {
-		return false
-	} else if q.Answer != "" {
-		if q.Validation != nil && !q.Validation(q.Answer) {
-			return false
-		}
-	}
-	return true
-}
-
-func (pf *PoopForm) IsFilled() bool {
-	for _, q := range pf.Questions {
-		if !pf.IsQuestionFilled(q) {
-			return false
-		}
-	}
-	return true
-}
-
-func (pf *PoopForm) Answer(question, answer string) {
-	for i, q := range pf.Questions {
-		if q.Question == question {
-			pf.Questions[i].Answer = answer
-			return
-		}
-	}
-}
-
-func (pf *PoopForm) MakeFormMessage() *FormMessage {
-	qas := []QuestionAnswer{}
-	for _, q := range pf.Questions {
-		qas = append(qas, QuestionAnswer{
-			Question: q.Question,
-			Answer:   q.Answer,
-		})
-	}
-	return NewForm(qas)
-}
-
-type StringPromise func() string
-
-func fnValidateNotEmpty[T comparable](s T) bool {
-	var z T
-	return s != z
-}
-
 type PostgresMode struct {
-	chat *Chat
+	chat *ChatImpl
 	db   *sql.DB
 
-	form *PoopForm
+	form *Form
 	host StringPromise
 	port StringPromise
 	user StringPromise
@@ -101,11 +22,11 @@ type PostgresMode struct {
 	dbnm StringPromise
 }
 
-func NewPostgresMode(chat *Chat) *PostgresMode {
+func NewPostgresMode(chat *ChatImpl) *PostgresMode {
 	m := &PostgresMode{
 		chat: chat,
 	}
-	connectionForm := NewPoopForm()
+	connectionForm := NewForm()
 
 	m.host = connectionForm.AddQuestion("Enter the PostgreSQL host:", true, fnValidateNotEmpty, "localhost")
 	m.port = connectionForm.AddQuestion("Enter the PostgreSQL port:", true, fnValidateNotEmpty, "5432")
@@ -117,19 +38,24 @@ func NewPostgresMode(chat *Chat) *PostgresMode {
 	return m
 }
 
-func (pm *PostgresMode) Start() (Message, Command, error) {
+func (pm *PostgresMode) Start() (*Message, *Command, error) {
 	if !pm.form.IsFilled() {
-		return Message{Form: pm.form.MakeFormMessage()}, MODE_START, nil
+		return &Message{Form: pm.form.MakeFormMessage()}, MODE_START, nil
 	}
-	return Message{}, MODE_START, nil
+	return &Message{}, MODE_START, nil
 }
 
-func (pm *PostgresMode) HandleIntent(msg Message) (Message, Command, error) {
+func (pm *PostgresMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := pm.HandleResponse(msg)
+	return message, NOOP, err
+}
+
+func (pm *PostgresMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
 	// For simplicity, you can delegate to HandleResponse
 	return pm.HandleResponse(msg)
 }
 
-func (pm *PostgresMode) HandleResponse(msg Message) (Message, Command, error) {
+func (pm *PostgresMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	if msg.Form != nil || !pm.form.IsFilled() {
 		if msg.Form != nil {
 			for _, qa := range msg.Form.Questions {
@@ -137,7 +63,7 @@ func (pm *PostgresMode) HandleResponse(msg Message) (Message, Command, error) {
 			}
 		}
 		if !pm.form.IsFilled() {
-			return Message{Form: pm.form.MakeFormMessage()}, NOOP, nil
+			return &Message{Form: pm.form.MakeFormMessage()}, NOOP, nil
 		}
 	}
 
@@ -175,7 +101,7 @@ func (pm *PostgresMode) HandleResponse(msg Message) (Message, Command, error) {
 		return TextMessage("Failed to execute query: " + err.Error()), NOOP, nil
 	}
 
-	return TextMessage(query + "\n" + result), NOOP, nil
+	return &Message{Text: query + "\n" + result}, NOOP, nil
 }
 
 func (pm *PostgresMode) Stop() error {

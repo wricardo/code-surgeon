@@ -1,4 +1,4 @@
-package main
+package chatcli
 
 import (
 	"fmt"
@@ -7,21 +7,22 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
+	. "github.com/wricardo/code-surgeon/api"
 )
 
 type BashMode struct {
-	chat *Chat
+	chat *ChatImpl
 }
 
-func NewBashMode(chat *Chat) *BashMode {
+func NewBashMode(chat *ChatImpl) *BashMode {
 	return &BashMode{chat: chat}
 }
 
-func (bm *BashMode) Start() (Message, Command, error) {
+func (bm *BashMode) Start() (*Message, *Command, error) {
 	return TextMessage("Enter a bash command or describe what you want to do:"), MODE_START, nil
 }
 
-func (bm *BashMode) HandleResponse(msg Message) (Message, Command, error) {
+func (bm *BashMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	command := strings.TrimSpace(msg.Text)
 	if command == "" {
 		return TextMessage("Please enter a valid bash command or description."), NOOP, nil
@@ -45,7 +46,12 @@ func (bm *BashMode) HandleResponse(msg Message) (Message, Command, error) {
 	return TextMessage(fmt.Sprintf("Generated command:\n%s\n\nOutput:\n%s", generatedCommand, output)), NOOP, nil
 }
 
-func (bm *BashMode) HandleIntent(msg Message) (Message, Command, error) {
+func (bm *BashMode) BestShot(msg *Message) (*Message, *Command, error) {
+	message, _, err := bm.HandleResponse(msg)
+	return message, NOOP, err
+}
+
+func (bm *BashMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
 	return bm.HandleResponse(msg)
 }
 

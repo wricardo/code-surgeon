@@ -2,324 +2,72 @@ syntax = "proto3";
 
 package codesurgeon;
 
-
 // Service definition
 service GptService {
-  
-  // Main RPCs
-  rpc Introduction(IntroductionRequest) returns (IntroductionResponse);
-  rpc ParseCodebase(ParseCodebaseRequest) returns (ParseCodebaseResponse);
-  rpc UpsertCodeBlock(UpsertCodeBlockRequest) returns (UpsertCodeBlockResponse);
-  // New RPC for executing shell commands
-  rpc ExecuteBash(ExecuteBashRequest) returns (ExecuteBashResponse);
-
-  rpc GetNeo4jSchema(GetNeo4jSchemaRequest) returns (GetNeo4jSchemaResponse);
-  rpc QueryNeo4j(QueryNeo4jRequest) returns (QueryNeo4jResponse);
-
   rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
-  rpc SearchForGolangFunction(SearchForGolangFunctionRequest) returns (SearchForGolangFunctionResponse);
-  rpc UpsertDocumentationToFunction(UpsertDocumentationToFunctionRequest) returns (UpsertDocumentationToFunctionResponse);
-  // New RPC for executing gopls implementations command
-  rpc ExecuteGoplsImplementations(ExecuteGoplsImplementationsRequest) returns (ExecuteGoplsImplementationsResponse);
-
-  // RPC to list modified files and return their contents
-  rpc GitDiff(GitDiffRequest) returns (GitDiffResponse);
-
-  rpc PageQuestions(PageQuestionsRequest) returns (PageQuestionsResponse);
-  rpc AnswerQuestion(AnswerQuestionRequest) returns (AnswerQuestionResponse);
-  rpc SaveQuestionAndAnswer(SaveQuestionAndAnswerRequest) returns (SaveQuestionAndAnswerResponse);
-
-  rpc SaveConversationSummary(SaveConversationSummaryRequest) returns (SaveConversationSummaryResponse);
+  rpc NewChat(NewChatRequest) returns (NewChatResponse);
+  rpc GetChat(GetChatRequest) returns (GetChatResponse);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
 }
 
-message ExecuteGoplsImplementationsRequest {
-  string file_path = 1;  // Path to the Go file
-  int32 line = 2;        // Line number
-  int32 column = 3;      // Column number
+message GetChatRequest {
+  string chat_id = 1;
 }
 
-// Response message for ExecuteGoplsImplementations RPC
-message ExecuteGoplsImplementationsResponse {
-  string output = 1;  // Standard output of the gopls implementations command
-  string error = 2;   // Standard error of the gopls implementations command, if any
+message GetChatResponse {
+  Chat chat = 1;
 }
 
-
-// Request message for ExecuteBash RPC
-message ExecuteBashRequest {
-  string command = 1;  // The shell command to execute
+message NewChatRequest {
 }
 
-// Response message for ExecuteBash RPC
-message ExecuteBashResponse {
-  string stdout = 1;   // Standard output of the executed command
-  string stderr = 2;   // Standard error of the executed command
-  int32 exitCode = 3;  // Exit code of the executed command
+message NewChatResponse {
+  Chat chat = 1;
 }
 
-// Request message for GetOpenAPI
+message Chat {
+  string id = 1;
+  Mode current_mode = 2;
+  repeated Message messages = 4;
+}
+
+message SendMessageRequest {
+  Message message = 1;
+}
+
+message SendMessageResponse {
+  Command command = 1;
+  Message message = 2;
+  Mode mode = 3; // mode if any
+} 
+
+message Mode {
+  string name = 1;
+}
+
+message Command {
+  string name = 1;
+}
+
+message Message {
+  string chat_id = 1; // Add this line
+  string text = 2;
+  FormMessage form = 3;
+  string sender = 4; // user or ai or mode
+}
+
+message FormMessage {
+  repeated QuestionAnswer questions = 1;
+}
+
+message QuestionAnswer {
+  string question = 1;
+  string answer = 2;
+}
+
 message GetOpenAPIRequest {
 }
 
-// Response message for GetOpenAPI
 message GetOpenAPIResponse {
   string openapi = 1;
-}
-
-// Request message for Introductiono
-message IntroductionRequest {
-  bool short = 1;
-}
-
-// Response message for Introduction
-message IntroductionResponse {
-  string introduction = 1;
-}
-
-message SearchForGolangFunctionRequest {
-  // path is the path to the file or directory to search for the function
-  string path = 1;
-  string function_name = 2;
-  // receiver is optional, only used if search for a method in a struct
-  string receiver = 3;
-}
-
-message SearchForGolangFunctionResponse {
-  string filepath = 1;
-  string signature = 2;
-  string documentation = 3;
-  // receiver is optional, only used if search for a method in a struct
-  string body = 4;
-}
-
-message UpsertDocumentationToFunctionRequest {
-  // filepath is the path to the file where the function is located
-  string filepath = 1;
-  string function_name = 2;
-  string documentation = 3;
-  // receiver is optional, only used if search for a method in a struct
-  string receiver = 4;
-}
-
-message UpsertDocumentationToFunctionResponse {
-  bool ok = 1;
-} 
-
-message UpsertCodeBlockRequest {
-  message Modification {
-    // filepath is the path to the file where the code block will be upserted
-    string filepath = 1;
-    // package_name is the package name of the file that is used to create the file if not exists
-    string package_name = 2;
-
-    // code_block is the code block to be upserted
-    string code_block = 3;
-
-    // overwrite is a flag to indicate if the code block should be overwritten if it already exists
-    bool overwrite = 4;
-  }
-  Modification modification = 1;
-}
-
-message UpsertCodeBlockResponse {
-  bool ok = 1;
-}
-
-
-// Request message for ParseCodebase
-message ParseCodebaseRequest {
-  string file_or_directory = 1; // The path to the file or directory to be parsed
-}
-
-// Response message for ParseCodebase
-message ParseCodebaseResponse {
-  repeated Package packages = 1; // List of parsed packages
-}
-
-// Representation of a parsed package
-message Package {
-  string package = 1;
-  repeated string imports = 2;
-  repeated Struct structs = 3;
-  repeated Function functions = 4;
-  repeated Variable variables = 5;
-  repeated Constant constants = 6;
-  repeated Interface interfaces = 7;
-}
-
-// Representation of a parsed interface
-message Interface {
-  string name = 1;
-  repeated Method methods = 2;
-  repeated string docs = 3;
-}
-
-// Representation of a parsed struct
-message Struct {
-  string name = 1;
-  repeated Field fields = 2;
-  repeated Method methods = 3;
-  repeated string docs = 4;
-}
-
-// Representation of a parsed method
-message Method {
-  string receiver = 1; // Receiver type (e.g., "*MyStruct" or "MyStruct")
-  string name = 2;
-  repeated Param params = 3;
-  repeated Param returns = 4;
-  repeated string docs = 5;
-  string signature = 6;
-  string body = 7; // Body of the method
-}
-
-// Representation of a parsed function
-message Function {
-  string name = 1;
-  repeated Param params = 2;
-  repeated Param returns = 3;
-  repeated string docs = 4;
-  string signature = 5;
-  string body = 6; // Body of the function
-}
-
-// Representation of a parameter for functions and methods
-message Param {
-  string name = 1; // Name of the parameter or return value
-  string type = 2; // Type (e.g., "int", "*string")
-}
-
-// Representation of a field in a struct
-message Field {
-  string name = 1;
-  string type = 2;
-  string tag = 3;
-  bool private = 4;
-  bool pointer = 5;
-  bool slice = 6;
-  repeated string docs = 7;
-  string comment = 8;
-}
-
-// Representation of a parsed variable
-message Variable {
-  string name = 1;
-  string type = 2;
-  repeated string docs = 3;
-}
-
-// Representation of a parsed constant
-message Constant {
-  string name = 1;
-  string value = 2;
-  repeated string docs = 3;
-}
-
-// Request message for AnswerQuestion
-message AnswerQuestionRequest {
-  string questions = 1;
-  bool use_ai = 2;
-}
-
-message Answer {
-  string answer = 1;
-  string question = 2;
-}
-
-// Response message for AnswerQuestion
-message AnswerQuestionResponse {
-  repeated Answer answers = 1;
-  repeated Question similar_questions = 2;
-}
-
-message SaveConversationSummaryRequest {
-  string conversation_summary = 1;
-  string date_iso = 2;
-}
-
-message SaveConversationSummaryResponse {
-  bool ok = 1;
-}
-
-// Request message for GitDiff
-message GitDiffRequest {
-}
-
-// Response message for GitDiff
-message GitDiffResponse {
-  string output = 1;  // Standard output of the git diff command
-}
-
-// Representation of a file and its content
-message FileContent {
-  string filename = 1;   // Name of the file
-  string content = 2;    // Content of the file
-}
-
-message GetNeo4jSchemaRequest {
-}
-
-// GetNeo4jSchemaResponse is the top-level response message that contains the entire schema.
-message GetNeo4jSchemaResponse {
-    Schema schema = 1;
-}
-
-// Schema represents the entire database schema.
-message Schema {
-    repeated LabelSchema labels = 1;
-    repeated RelationshipSchema relationships = 2;
-
-}
-
-message RelationshipSchema {
-    string relationship = 1;
-    string from_label = 2;
-    string to_label = 3;
-    //repeated PropertySchema properties = 4;
-}
-
-// LabelSchema represents the schema for a single label in the database.
-message LabelSchema {
-    string label = 1;
-    repeated PropertySchema properties = 2;
-}
-
-// PropertySchema represents the schema details for a single property.
-message PropertySchema {
-    string property = 1;
-    string type = 2;
-    bool is_indexed = 3;
-    bool unique_constraint = 4;
-    bool existence_constraint = 5;
-}
-
-message QueryNeo4jRequest {
-  string cypher = 1;
-}
-
-message QueryNeo4jResponse {
-  string output = 1;
-}
-
-
-message SaveQuestionAndAnswerRequest {
-  repeated Answer question_and_answer = 1;
-}
-
-message SaveQuestionAndAnswerResponse {
-}
-
-message PageQuestionsRequest {
-  int32 page = 1;
-  int32 page_size = 2;
-}
-
-message PageQuestionsResponse {
-  repeated Question questions= 1;
-}
-
-message Question {
-  string id = 1;
-  string text = 2;
-  string created_at = 3;
 }
