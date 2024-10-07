@@ -2,6 +2,8 @@ package chatcli
 
 import (
 	"testing"
+
+	"github.com/wricardo/code-surgeon/api"
 )
 
 func TestMirrorMode_Start(t *testing.T) {
@@ -27,8 +29,8 @@ func TestMirrorMode_HandleIntent(t *testing.T) {
 	chat := &ChatImpl{}
 	mirrorMode := NewMirrorMode(chat)
 
-	inputMessage := Message{Text: "Hello, Mirror!"}
-	message, command, err := mirrorMode.HandleIntent(inputMessage, Intent{})
+	inputMessage := api.Message{Text: "Hello, Mirror!"}
+	message, command, err := mirrorMode.HandleIntent(&inputMessage, Intent{})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -46,7 +48,7 @@ func TestMirrorMode_HandleResponse(t *testing.T) {
 	chat := &ChatImpl{}
 	mirrorMode := NewMirrorMode(chat)
 
-	inputMessage := Message{Text: "Echo this!"}
+	inputMessage := &api.Message{Text: "Echo this!"}
 	message, command, err := mirrorMode.HandleResponse(inputMessage)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)

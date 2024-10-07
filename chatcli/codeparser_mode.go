@@ -24,7 +24,7 @@ func NewParseMode(chat *ChatImpl) *ParseMode {
 }
 
 func (m *ParseMode) init() {
-	qas := []QuestionAnswer{
+	qas := []*QuestionAnswer{
 		{Question: "Enter the directory or file path to parse:", Answer: ""},
 		{Question: "Select output format (signatures, names, full definition, docs):", Answer: "signatures"},
 	}
@@ -68,7 +68,7 @@ func (c *ChatImpl) IsTesting() bool {
 func (c *ChatImpl) FillFormWithIntent(form *Form, intent Intent, msg *Message) error {
 	qas := form.Questions
 	type AiOutput struct {
-		Questions []QuestionAnswer `json:"questions" jsonschema:"title=questions,description=the questions to be asked to the user."`
+		Questions []*QuestionAnswer `json:"questions" jsonschema:"title=questions,description=the questions to be asked to the user."`
 	}
 	var aiOut AiOutput
 
@@ -159,9 +159,6 @@ func (m *ParseMode) HandleResponse(input *Message) (*Message, *Command, error) {
 		output = formatDocs(*parsedInfo)
 	default:
 		output = formatOnlySignatures(*parsedInfo)
-	}
-	if err != nil {
-		return &Message{Text: fmt.Sprintf("Error parsing: %v", err)}, MODE_QUIT, nil
 	}
 
 	// Convert parsedInfo to a string or JSON to display to the user

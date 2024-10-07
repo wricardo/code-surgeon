@@ -24,7 +24,7 @@ import (
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
 	"github.com/wricardo/code-surgeon/chatcli"
-	"github.com/wricardo/code-surgeon/grpc/server"
+	"github.com/wricardo/code-surgeon/grpc"
 	"github.com/wricardo/code-surgeon/log2"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
@@ -40,17 +40,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Msg("Error loading .env file")
 	}
-	neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-	neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-	neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
-	ctx := context.Background()
-	driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
-	if err != nil {
-		log.Fatal().Msgf("Failed to connect to Neo4j: %v", err)
-	}
-	defer closeFn()
-
-	instructorClient := ai.GetInstructor()
 
 	app := &cli.App{
 		Name:  "code-surgeon",
@@ -86,12 +75,9 @@ func main() {
 						return err
 					}
 					message.Text = string(stdinBytes)
-					if err != nil {
-						return fmt.Errorf("Error reading stdin: %w", err)
-					}
-
 					sendMsgReq := &api.SendMessageRequest{Message: message}
 
+					ctx := context.Background()
 					response, err := client.SendMessage(ctx, connect.NewRequest(sendMsgReq))
 					if err != nil {
 						fmt.Println("Error sending message:", err)
@@ -150,24 +136,10 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 
-					chatcli.GLOBAL_CHAT = chatcli.NewChat(&driver, instructorClient)
-					if err := chatcli.GLOBAL_CHAT.LoadState("chat_state.json"); err != nil {
-						log.Warn().Msgf("No previous chat state found: %v", err)
-					}
-					defer func() {
-						if err := chatcli.GLOBAL_CHAT.SaveState("chat_state.json"); err != nil {
-							log.Error().Msgf("Failed to save CLI chat state: %v", err)
-						} else {
-							fmt.Println("\nBye saved", err)
-						}
-					}()
+					opts := grpc.NewServerOptions()
+					serv := grpc.NewServer(opts)
 
-					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
-					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
-
-					return server.Start(cCtx.Int("port"), useNgrok, ngrokDomain, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+					return serv.Start()
 
 				},
 			},

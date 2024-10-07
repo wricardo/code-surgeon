@@ -5,7 +5,7 @@ import (
 	. "github.com/wricardo/code-surgeon/api"
 )
 
-var ARCHITECT = TMode("architect")
+var ARCHITECT TMode = "architect"
 
 func init() {
 	RegisterMode(ARCHITECT, NewArchitectMode)
@@ -17,16 +17,18 @@ type ArchitectMode struct {
 
 func NewArchitectMode(chat *ChatImpl) *ArchitectMode {
 
-	return &ArchitectMode{chat: chat}
+	return &ArchitectMode{
+		chat: chat,
+	}
 }
 
 func (as *ArchitectMode) Start() (*Message, *Command, error) {
-	return &Message{Text: "let's geek out"}, &Command{Name: "MODE_START"}, nil
+	return &Message{Text: "let's geek out"}, MODE_START, nil
 }
 
 func (as *ArchitectMode) BestShot(msg *Message) (*Message, *Command, error) {
-	message, command, err := as.HandleResponse(msg)
-	return message, command, err
+	message, _, err := as.HandleResponse(msg)
+	return message, NOOP, err
 }
 
 func (as *ArchitectMode) HandleResponse(msg *Message) (*Message, *Command, error) {
@@ -47,14 +49,13 @@ func (as *ArchitectMode) HandleResponse(msg *Message) (*Message, *Command, error
 		},
 	})
 	if err != nil {
-		return &Message{Text: "chat error: " + err.Error()}, &Command{Name: "MODE_QUIT"}, nil
+		return TextMessage("chat error: " + err.Error()), MODE_QUIT, nil
 	}
-	return &Message{Text: aiOut.Response}, &Command{Name: "NOOP"}, nil
+	return TextMessage(aiOut.Response), NOOP, nil
 }
 
 func (as *ArchitectMode) HandleIntent(msg *Message, intent Intent) (*Message, *Command, error) {
-	message, command, err := as.HandleResponse(msg)
-	return message, command, err
+	return as.HandleResponse(msg)
 }
 
 func (as *ArchitectMode) Stop() error {

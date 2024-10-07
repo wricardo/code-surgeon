@@ -16,7 +16,7 @@ func main() {
 	fragments := map[string][]codesurgeon.CodeFragment{
 		"dynamic.go": {
 			codesurgeon.CodeFragment{
-				Content: codesurgeon.RenderTemplate(`
+				Content: codesurgeon.RenderTemplateNoError(`
 					{{- range .}}
 					type {{.Name}}Provider struct {
 						Id   int
@@ -28,7 +28,7 @@ func main() {
 				Overwrite: true,
 			},
 			codesurgeon.CodeFragment{
-				Content: codesurgeon.RenderTemplate(`
+				Content: codesurgeon.RenderTemplateNoError(`
 				{{- range .}}
 				func (p *{{.Name}}Provider) SendSMS(to, body string) error {
 					fmt.Printf("Sending SMS to %s using %s provider\n", to, p.Name)

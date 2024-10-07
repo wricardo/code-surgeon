@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 
 	"connectrpc.com/connect"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/charmbracelet/huh"
@@ -81,6 +82,10 @@ type ChatState struct {
 
 // SaveState saves the chat state to a file
 func (c *ChatImpl) SaveState(filename string) error {
+	return nil
+	if c == nil {
+		panic("chat is nil, on chat.SaveState")
+	}
 	log.Debug().Str("filename", filename).Msg("SaveState")
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -117,7 +122,11 @@ func (c *ChatImpl) LoadState(filename string) error {
 
 	c.history = state.History
 	c.conversationSummary = state.ConversationSummary
-	log.Debug().Str("history", fmt.Sprintf("%v", c.history)).Str("conversationSummary", c.conversationSummary).Msg("LoadState")
+	logger := log.Debug().Str("conversationSummary", c.conversationSummary).Int("historyLength", len(c.history))
+	if log.Logger.GetLevel() == zerolog.TraceLevel {
+		logger.Str("history", fmt.Sprintf("%v", c.history))
+	}
+	logger.Msg("LoadState")
 	return nil
 }
 
@@ -215,7 +224,15 @@ func (c *ChatImpl) HandleUserMessage(msg *api.Message) (responseMsg *api.Message
 			Msg("Chat.HandleUserMessage completed.")
 	}()
 	log.Debug().Any("msg", msg).Msg("Chat.HandleUserMessage started.")
+
+	if c == nil {
+		return nil, NOOP, fmt.Errorf("chat is nil on HandleUserMessage")
+	}
 	c.generateConversationSummary()
+
+	if c.modeManager == nil {
+		return nil, NOOP, fmt.Errorf("modeManager is nil on HandleUserMessage")
+	}
 
 	// If in a mode, delegate input handling to the mode manager
 	if c.modeManager.currentMode != nil {
@@ -530,8 +547,7 @@ func (c *ChatImpl) DetectIntent(msg *api.Message) (detectedIntent Intent, ok boo
 		},
 	})
 	if err != nil {
-		panic(err)
-		log.Printf("Failed to detect intent: %v", err)
+		log.Warn().Err(err).Msg("Failed to detect intent")
 		return Intent{}, false
 	}
 
@@ -735,29 +751,6 @@ type CliChat struct {
 	mux    sync.Mutex
 }
 
-// // SaveState saves the chat state to a file
-// func (cli *CliChat) SaveState(filename string) error {
-// 	cli.mux.Lock()
-// 	defer cli.mux.Unlock()
-// 	err := cli.chat.SaveState(filename)
-// 	if err != nil {
-// 		log.Error().Msgf("Failed to save chat state: %v", err)
-// 	} else {
-// 		log.Info().Msg("Saved chat state")
-// 	}
-// 	return err
-// }
-
-// // LoadState loads the chat state from a file
-// func (cli *CliChat) LoadState(filename string) error {
-// 	cli.mux.Lock()
-// 	defer cli.mux.Unlock()
-// 	return cli.chat.LoadState(filename)
-// }
-//chatcli/chatcli.go|761 col 11| cannot use chat (variable of type *ChatImpl) as IChat value in struct literal: *ChatImpl does not implement IChat (wrong type for method HandleUserMessage)
-// have HandleUserMessage(*"github.com/wricardo/code-surgeon/api".Message) (*"github.com/wricardo/code-surgeon/api".Message, *"github.com/wricardo/code-surgeon/api".Command, error)
-// want HandleUserMessage(*"github.com/wricardo/code-surgeon/api".Message) (*"github.com/wricardo/code-surgeon/api".Message, "github.com/wricardo/code-surgeon/api".Command, error)
-
 func NewCliChat(url string, chat *ChatImpl) *CliChat {
 	client := apiconnect.NewGptServiceClient(http.DefaultClient, url) // replace with actual server URL
 	return &CliChat{
@@ -781,6 +774,7 @@ func (cli *CliChat) Start(shutdownChan chan struct{}) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("ChatCLI - Type your message and press Enter. Type /help for commands.")
 
+	currentModeName := ""
 	for {
 		select {
 		case <-shutdownChan:
@@ -789,7 +783,11 @@ func (cli *CliChat) Start(shutdownChan chan struct{}) {
 		}
 
 		// Display prompt and read user input
-		fmt.Print("🧓: ")
+		if currentModeName == "" {
+			fmt.Print("🧓: ")
+		} else {
+			fmt.Printf("🧓(%s): ", currentModeName)
+		}
 		userMessage, _ := reader.ReadString('\n')
 		userMessage = strings.TrimSpace(userMessage)
 		if userMessage == "" {
@@ -806,10 +804,12 @@ func (cli *CliChat) Start(shutdownChan chan struct{}) {
 			return
 		}
 
+		if response.Msg.Mode != nil {
+			currentModeName = response.Msg.Mode.Name
+		}
 		// Handle the response from the server
 		if response.Msg.Message.Text != "" {
-			modeStr := response.Msg.Mode
-			fmt.Printf("🤖(%s): %s\n", modeStr.Name, response.Msg.Message.Text)
+			fmt.Printf("🤖(%s): %s\n", currentModeName, response.Msg.Message.Text)
 		}
 
 		// Handle form response if present

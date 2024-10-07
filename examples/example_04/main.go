@@ -24,7 +24,7 @@ func main() {
 	fragment := make([]codesurgeon.CodeFragment, 0)
 	for _, s := range pkg.Structs {
 		fragment = append(fragment, codesurgeon.CodeFragment{
-			Content: codesurgeon.RenderTemplate(`
+			Content: codesurgeon.RenderTemplateNoError(`
 			func (n {{.Name}}) GetID() string {
 				return n.Id
 			}

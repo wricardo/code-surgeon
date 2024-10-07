@@ -42,6 +42,8 @@ func TestNewChat(t *testing.T) {
 	require.Empty(t, newChatResponse.Msg.Chat.Messages)
 }
 
+// TestSendMessageDebug tests sending a "/debug" message to the gRPC server, which should switch the chat mode to debug.
+// The response should contain the new mode name.
 func TestSendMessageDebug(t *testing.T) {
 	ctx := context.Background()
 
@@ -103,14 +105,8 @@ func TestSendMessage(t *testing.T) {
 	}
 	sendMessageResponse, err := client.SendMessage(ctx, connect.NewRequest(sendMessageRequest))
 	log.Printf("Response: %v", sendMessageResponse)
-
-	// Ensure no error occurred
 	require.NoError(t, err)
-
-	// Ensure the response is not nil
 	require.NotNil(t, sendMessageResponse)
-
-	// Ensure the response message is not nil
 	require.NotNil(t, sendMessageResponse.Msg)
 
 	// Ensure the response message text matches the sent message
@@ -122,4 +118,40 @@ func TestSendMessage(t *testing.T) {
 
 	// Ensure the response command is NOOP
 	require.Equal(t, chatcli.NOOP.Name, sendMessageResponse.Msg.Command.Name)
+}
+
+// TestSendMessageHistory tests sending a "/debug history" message to the gRPC server, which should return the chat history and remain in the main mode.
+func TestSendMessageHistory(t *testing.T) {
+	ctx := context.Background()
+
+	// Connect to the gRPC server
+	client := apiconnect.NewGptServiceClient(http.DefaultClient, "http://localhost:8010")
+
+	// Create a new chat
+	newChatResponse, err := client.NewChat(ctx, connect.NewRequest(&api.NewChatRequest{}))
+	require.NoError(t, err)
+	require.NotNil(t, newChatResponse)
+	require.NotNil(t, newChatResponse.Msg)
+	require.NotNil(t, newChatResponse.Msg.Chat)
+	require.NotEmpty(t, newChatResponse.Msg.Chat.Id)
+
+	// Send a /debug history message to the new chat
+	sendMessageRequest := &api.SendMessageRequest{
+		Message: &api.Message{
+			ChatId: newChatResponse.Msg.Chat.Id,
+			Text:   "/debug history",
+		},
+	}
+	sendMessageResponse, err := client.SendMessage(ctx, connect.NewRequest(sendMessageRequest))
+	require.NoError(t, err)
+	require.NotNil(t, sendMessageResponse)
+	require.NotNil(t, sendMessageResponse.Msg)
+	msg := sendMessageResponse.Msg.Message
+
+	// Ensure the response contains the chat history
+	require.NotNil(t, msg.Text)
+
+	// Ensure the mode remains in main (empty mode name)
+	require.NotNil(t, sendMessageResponse.Msg.Mode)
+	require.Equal(t, "", sendMessageResponse.Msg.Mode.Name)
 }

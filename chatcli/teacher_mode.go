@@ -84,7 +84,7 @@ func (ats *TeacherMode) HandleResponse(msg *Message) (*Message, *Command, error)
 		}
 		ats.alreadySeen[qa.Question] = true
 		// save to knowledge base
-		err := ats.SaveQuestionAndAnswer(context.Background(), []QuestionAnswer{
+		err := ats.SaveQuestionAndAnswer(context.Background(), []*QuestionAnswer{
 			{
 				Question: qa.Question,
 				Answer:   qa.Answer,
@@ -112,7 +112,7 @@ func (ats *TeacherMode) Stop() error {
 	return nil
 }
 
-func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []QuestionAnswer) error {
+func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []*QuestionAnswer) error {
 	for _, qa := range qaPairs {
 		question := qa.Question
 		answer := qa.Answer

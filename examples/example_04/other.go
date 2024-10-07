@@ -9,7 +9,7 @@ func (p Person) GetID() string {
 	return p.Id
 }
 func (p Person) SetID(id string) {
-	p.Id = id
+	p.Id = id // nolint
 }
 func (_ Person) GetLabel() string {
 	return "Person"
@@ -21,6 +21,6 @@ func (p Person) GetProps() map[string]any {
 }
 func (p Person) SetProps(props map[string]any) {
 	if val, ok := props["Name"]; ok {
-		p.Name = val.(string)
+		p.Name = val.(string) // nolint
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/instructor-ai/instructor-go/pkg/instructor"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
@@ -18,31 +17,27 @@ import (
 func main() {
 	request := getUserRequest()
 
-	inst := instructor.FromOpenAI(
-		openai.NewClient(os.Getenv("OPENAI_API_KEY")),
-		instructor.WithMode(instructor.ModeJSON),
-		instructor.WithMaxRetries(3),
-	)
-	client, err := ai.NewClient(inst)
-	if err != nil {
-		log.Fatalf("Failed to create AI client: %v", err)
-
-	}
-
 	fmt.Println("AI Software Engineer response:")
 	fileContent, err := readFileContents("dynamic.go")
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
-	implementationsMap := analyzeRequest(client, fileContent, request)
+	implementationsMap := analyzeRequest(fileContent, request)
 	fmt.Println(implementationsMap)
 
 	codesurgeon.InsertCodeFragments(implementationsMap)
 }
 
 // Simulate the AI analysis and response
-func analyzeRequest(client *ai.Client, fileContents, request string) map[string][]codesurgeon.CodeFragment {
-	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
+func analyzeRequest(fileContents, request string) map[string][]codesurgeon.CodeFragment {
+
+	type AIOutput struct {
+		Output string `json:"output" jsonschema:"title=output,description=the assistant's response to the user."`
+	}
+
+	var aiOutput AIOutput
+	inst := ai.GetInstructor()
+	_, err := inst.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
 		Model: openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{
 			{
@@ -55,10 +50,10 @@ func analyzeRequest(client *ai.Client, fileContents, request string) map[string]
 			},
 			{
 				Role:    openai.ChatMessageRoleUser,
-				Content: "write only the golang function without any package or import. Just the code block with the golang function.",
+				Content: "write only the golang function without any package or import. Just the code block with the golang function. write the output to json object key 'output'",
 			},
 		},
-	})
+	}, &aiOutput)
 
 	if err != nil {
 		log.Fatalf("Failed to get response from OpenAI: %v", err)
@@ -73,7 +68,7 @@ func analyzeRequest(client *ai.Client, fileContents, request string) map[string]
 	// For this example, we'll just use the response directly
 	return map[string][]codesurgeon.CodeFragment{
 		"dynamic.go": {
-			fn(resp.Choices[0].Message.Content),
+			fn(aiOutput.Output),
 		},
 	}
 }

@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 
@@ -63,6 +64,9 @@ func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.Send
 		}
 	}
 
+	if chatcli.GLOBAL_CHAT == nil {
+		return nil, errors.New("chat not initialized")
+	}
 	modeName := chatcli.GLOBAL_CHAT.GetModeText()
 	if req.Msg.Message.Text == "/debug" {
 		modeName = "debug"
@@ -80,7 +84,9 @@ func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.Send
 }
 
 func (h *Handler) GetChat(ctx context.Context, req *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
-
+	if chatcli.GLOBAL_CHAT == nil {
+		return nil, errors.New("chat not initialized")
+	}
 	// Create an empty Chat instance
 	emptyChat := &api.Chat{
 		Id:       "",               // Empty ID

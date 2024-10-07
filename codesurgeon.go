@@ -117,6 +117,11 @@ func MustRenderTemplate(tmpl string, data interface{}) string {
 	return buf.String()
 }
 
+func RenderTemplateNoError(tmpl string, data interface{}) string {
+	res, _ := RenderTemplate(tmpl, data)
+	return res
+}
+
 func RenderTemplate(tmpl string, data interface{}) (string, error) {
 	t, err := template.New("tpl").Parse(tmpl)
 	if err != nil {

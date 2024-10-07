@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/log2"
 )
 
@@ -23,7 +24,7 @@ func TestParseMode_HandleResponse_ValidInput(t *testing.T) {
 	require.NotEmpty(t, msg.Form.Questions[0].Question)
 
 	// Execute
-	msg, cmd, err := parseMode.HandleIntent(Message{
+	msg, cmd, err := parseMode.HandleIntent(&api.Message{
 		Text: "I want to parse the directory ./tmp/, output format is names",
 	}, Intent{
 		TMode: "codeparser",

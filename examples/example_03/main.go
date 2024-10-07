@@ -25,7 +25,7 @@ func main() {
 			File:        "assets/dynamic.go",
 			Fragments: []codesurgeon.CodeFragment{
 				{
-					Content: codesurgeon.RenderTemplate(`
+					Content: codesurgeon.RenderTemplateNoError(`
 			import "fmt"
 			{{- range .}}
 			type {{.Name}}Provider struct {

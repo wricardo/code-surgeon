@@ -359,7 +359,7 @@ func GenerateCypher(client *instructor.InstructorOpenAI, ask string) (string, er
 func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, questionsAnswers []neo4j2.QuestionAnswer) (string, error) {
 	// Create a struct to capture the AI's response
 	type AiOutput struct {
-		FinalAnswer string `json:"final_answer" jsonschema:"title=final_answer,description=the final answer to the user's question.`
+		FinalAnswer string `json:"final_answer" jsonschema:"title=final_answer,description=the final answer to the user's question."`
 	}
 
 	// Context for the OpenAI API call

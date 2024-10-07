@@ -649,9 +649,13 @@ func cleanDocText(doc string) string {
 	return strings.Trim(strings.Trim(doc, " "), "\n")
 }
 
+// nolint: unusedparams
 func justTypeString(a string, b, c bool, err error) string {
+	void(a, b, c, err)
 	return a
 }
+
+func void(_ ...interface{}) {}
 
 // TODO: solve for: unknown type for &ast.InterfaceType{Interface:552, Methods:(*ast.FieldList)(0x14000112a50), Incomplete:false}
 func getType(expr ast.Expr) (typeString string, isSlice, isPointer bool, err error) {
