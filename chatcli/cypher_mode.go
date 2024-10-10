@@ -93,6 +93,10 @@ func (m *CypherMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	return TextMessage(followUp), NOOP, nil
 }
 
+func (m *CypherMode) Name() string {
+	return "cypher"
+}
+
 func (m *CypherMode) Stop() error {
 	return nil
 }

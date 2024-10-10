@@ -41,15 +41,19 @@ const (
 	GptServiceGetChatProcedure = "/codesurgeon.GptService/GetChat"
 	// GptServiceSendMessageProcedure is the fully-qualified name of the GptService's SendMessage RPC.
 	GptServiceSendMessageProcedure = "/codesurgeon.GptService/SendMessage"
+	// GptServiceReceiveSlackMessageProcedure is the fully-qualified name of the GptService's
+	// ReceiveSlackMessage RPC.
+	GptServiceReceiveSlackMessageProcedure = "/codesurgeon.GptService/ReceiveSlackMessage"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	gptServiceServiceDescriptor           = api.File_api_codesurgeon_proto.Services().ByName("GptService")
-	gptServiceGetOpenAPIMethodDescriptor  = gptServiceServiceDescriptor.Methods().ByName("GetOpenAPI")
-	gptServiceNewChatMethodDescriptor     = gptServiceServiceDescriptor.Methods().ByName("NewChat")
-	gptServiceGetChatMethodDescriptor     = gptServiceServiceDescriptor.Methods().ByName("GetChat")
-	gptServiceSendMessageMethodDescriptor = gptServiceServiceDescriptor.Methods().ByName("SendMessage")
+	gptServiceServiceDescriptor                   = api.File_api_codesurgeon_proto.Services().ByName("GptService")
+	gptServiceGetOpenAPIMethodDescriptor          = gptServiceServiceDescriptor.Methods().ByName("GetOpenAPI")
+	gptServiceNewChatMethodDescriptor             = gptServiceServiceDescriptor.Methods().ByName("NewChat")
+	gptServiceGetChatMethodDescriptor             = gptServiceServiceDescriptor.Methods().ByName("GetChat")
+	gptServiceSendMessageMethodDescriptor         = gptServiceServiceDescriptor.Methods().ByName("SendMessage")
+	gptServiceReceiveSlackMessageMethodDescriptor = gptServiceServiceDescriptor.Methods().ByName("ReceiveSlackMessage")
 )
 
 // GptServiceClient is a client for the codesurgeon.GptService service.
@@ -58,6 +62,7 @@ type GptServiceClient interface {
 	NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error)
 	GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error)
 	SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error)
+	ReceiveSlackMessage(context.Context, *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error)
 }
 
 // NewGptServiceClient constructs a client for the codesurgeon.GptService service. By default, it
@@ -94,15 +99,22 @@ func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(gptServiceSendMessageMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		receiveSlackMessage: connect.NewClient[api.ReceiveSlackMessageRequest, api.ReceiveSlackMessageResponse](
+			httpClient,
+			baseURL+GptServiceReceiveSlackMessageProcedure,
+			connect.WithSchema(gptServiceReceiveSlackMessageMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // gptServiceClient implements GptServiceClient.
 type gptServiceClient struct {
-	getOpenAPI  *connect.Client[api.GetOpenAPIRequest, api.GetOpenAPIResponse]
-	newChat     *connect.Client[api.NewChatRequest, api.NewChatResponse]
-	getChat     *connect.Client[api.GetChatRequest, api.GetChatResponse]
-	sendMessage *connect.Client[api.SendMessageRequest, api.SendMessageResponse]
+	getOpenAPI          *connect.Client[api.GetOpenAPIRequest, api.GetOpenAPIResponse]
+	newChat             *connect.Client[api.NewChatRequest, api.NewChatResponse]
+	getChat             *connect.Client[api.GetChatRequest, api.GetChatResponse]
+	sendMessage         *connect.Client[api.SendMessageRequest, api.SendMessageResponse]
+	receiveSlackMessage *connect.Client[api.ReceiveSlackMessageRequest, api.ReceiveSlackMessageResponse]
 }
 
 // GetOpenAPI calls codesurgeon.GptService.GetOpenAPI.
@@ -125,12 +137,18 @@ func (c *gptServiceClient) SendMessage(ctx context.Context, req *connect.Request
 	return c.sendMessage.CallUnary(ctx, req)
 }
 
+// ReceiveSlackMessage calls codesurgeon.GptService.ReceiveSlackMessage.
+func (c *gptServiceClient) ReceiveSlackMessage(ctx context.Context, req *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error) {
+	return c.receiveSlackMessage.CallUnary(ctx, req)
+}
+
 // GptServiceHandler is an implementation of the codesurgeon.GptService service.
 type GptServiceHandler interface {
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
 	NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error)
 	GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error)
 	SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error)
+	ReceiveSlackMessage(context.Context, *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error)
 }
 
 // NewGptServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -163,6 +181,12 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(gptServiceSendMessageMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	gptServiceReceiveSlackMessageHandler := connect.NewUnaryHandler(
+		GptServiceReceiveSlackMessageProcedure,
+		svc.ReceiveSlackMessage,
+		connect.WithSchema(gptServiceReceiveSlackMessageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/codesurgeon.GptService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case GptServiceGetOpenAPIProcedure:
@@ -173,6 +197,8 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 			gptServiceGetChatHandler.ServeHTTP(w, r)
 		case GptServiceSendMessageProcedure:
 			gptServiceSendMessageHandler.ServeHTTP(w, r)
+		case GptServiceReceiveSlackMessageProcedure:
+			gptServiceReceiveSlackMessageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -196,4 +222,8 @@ func (UnimplementedGptServiceHandler) GetChat(context.Context, *connect.Request[
 
 func (UnimplementedGptServiceHandler) SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SendMessage is not implemented"))
+}
+
+func (UnimplementedGptServiceHandler) ReceiveSlackMessage(context.Context, *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ReceiveSlackMessage is not implemented"))
 }

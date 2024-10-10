@@ -6,7 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/uuid"
+	"github.com/instructor-ai/instructor-go/pkg/instructor"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
@@ -23,13 +24,49 @@ var _ apiconnect.GptServiceHandler = (*Handler)(nil)
 type Handler struct {
 	publicUrl string
 	// chat      chatcli.IChat
-	mu sync.Mutex // protects the chat
+	mu       sync.Mutex // protects the chat
+	chatRepo chatcli.ChatRepository
+
+	driver           *neo4j.DriverWithContext
+	instructorClient *instructor.InstructorOpenAI
+}
+
+func NewHandler(
+	publicUrl string,
+	driver *neo4j.DriverWithContext,
+	instructorClient *instructor.InstructorOpenAI,
+) *Handler {
+	if instructorClient == nil {
+		panic("instructorClient is required")
+	}
+	repo, err := chatcli.NewInMemoryChatRepository("chats.json", driver, instructorClient)
+	if err != nil {
+		panic(err)
+	}
+	h := &Handler{
+		publicUrl:        publicUrl,
+		chatRepo:         repo,
+		driver:           driver,
+		instructorClient: instructorClient,
+	}
+	return h
 }
 
 func (h *Handler) NewChat(ctx context.Context, req *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
+	// Save the chat
+	chat := chatcli.NewChat(h.driver, h.instructorClient, h.chatRepo)
+	// hack to set chat id from external id if set
+	if req.Msg.ExternalId != "" {
+		chat.Id = req.Msg.ExternalId
+	}
+	err := h.chatRepo.SaveChat(chat.Id, chat)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create a new Chat instance
 	newChat := &api.Chat{
-		Id:       uuid.New().String(),
+		Id:       chat.Id,
 		Messages: []*api.Message{},
 	}
 
@@ -42,21 +79,40 @@ func (h *Handler) NewChat(ctx context.Context, req *connect.Request[api.NewChatR
 	return &connect.Response[api.NewChatResponse]{Msg: response}, nil
 }
 
-func NewHandler(publicUrl string) *Handler {
-	h := &Handler{
-		publicUrl: publicUrl,
-	}
-	return h
-}
-
 func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if req.Msg.ChatId == "" {
+		return nil, errors.New("chat ID is required")
+	}
 
-	res, cmd, err := chatcli.GLOBAL_CHAT.HandleUserMessage(req.Msg.Message)
+	chat, err := h.chatRepo.GetChat(req.Msg.ChatId)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a new chat if not found
+	if chat == nil {
+		newChatRes, err := h.NewChat(ctx, connect.NewRequest(&api.NewChatRequest{
+			ExternalId: req.Msg.ChatId,
+		}))
+		if err != nil {
+			return nil, err
+		}
+
+		chat, err = h.chatRepo.GetChat(newChatRes.Msg.Chat.Id)
+		if err != nil {
+			return nil, err
+		} else if chat == nil {
+			return nil, errors.New("chat not found")
+		}
+	}
+
+	res, cmd, err := chat.HandleUserMessage(req.Msg.Message)
 	if err != nil {
 		log.Error().Err(err).Msg("Error sending message")
 	}
+	chatcli.HandleTopLevelResponseCommand(cmd, chat, h.chatRepo)
 	if cmd != nil && cmd.Name != "" {
 		// FIXME: handle commands
 		if cmd.Name == "exit" {
@@ -64,13 +120,7 @@ func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.Send
 		}
 	}
 
-	if chatcli.GLOBAL_CHAT == nil {
-		return nil, errors.New("chat not initialized")
-	}
-	modeName := chatcli.GLOBAL_CHAT.GetModeText()
-	if req.Msg.Message.Text == "/debug" {
-		modeName = "debug"
-	}
+	modeName := chat.GetModeText()
 
 	response := &api.SendMessageResponse{
 		Command: cmd,
@@ -84,32 +134,23 @@ func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.Send
 }
 
 func (h *Handler) GetChat(ctx context.Context, req *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
-	if chatcli.GLOBAL_CHAT == nil {
-		return nil, errors.New("chat not initialized")
+	chat, err := h.chatRepo.GetChat(req.Msg.ChatId)
+	if err != nil {
+		return nil, err
+	} else if chat == nil {
+		return nil, errors.New("chat not found") // should not be 500 error
 	}
+
 	// Create an empty Chat instance
 	emptyChat := &api.Chat{
-		Id:       "",               // Empty ID
-		Messages: []*api.Message{}, // Empty list of messages
+		Id:        chat.Id,
+		Messages:  chat.GetHistory(),
+		ModeState: chat.GetModeState(),
 	}
 
 	// Create the response
 	response := &api.GetChatResponse{
 		Chat: emptyChat,
-	}
-
-	GLOBAL_CHAT := chatcli.GLOBAL_CHAT
-	if GLOBAL_CHAT != nil {
-		for _, msg := range GLOBAL_CHAT.GetHistory() {
-			response.Chat.Messages = append(response.Chat.Messages, msg)
-		}
-		if GLOBAL_CHAT.GetModeText() != "" {
-			response.Chat.CurrentMode = &api.Mode{
-				Name: GLOBAL_CHAT.GetModeText(),
-			}
-
-		}
-
 	}
 
 	// Return the response
@@ -351,6 +392,16 @@ func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOp
 	return &connect.Response[api.GetOpenAPIResponse]{
 		Msg: &api.GetOpenAPIResponse{
 			Openapi: parsed.String(),
+		},
+	}, nil
+}
+
+func (h *Handler) ReceiveSlackMessage(ctx context.Context, req *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error) {
+	log.Debug().Msg("Received Slack message")
+
+	return &connect.Response[api.ReceiveSlackMessageResponse]{
+		Msg: &api.ReceiveSlackMessageResponse{
+			Challenge: req.Msg.Challenge,
 		},
 	}, nil
 }

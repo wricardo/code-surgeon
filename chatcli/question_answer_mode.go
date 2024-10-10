@@ -89,14 +89,18 @@ func (m *QuestionAnswerMode) HandleResponse(msg *Message) (*Message, *Command, e
 		return &Message{}, NOOP, err
 	}
 
-	// Construct response text
-	responseText := "Similar Questions:\n"
-	for _, ta := range topAnswers {
-		responseText += fmt.Sprintf("Q:%s\nA:%s\n", ta.Question, ta.Answer)
-	}
-	responseText += "\nFinal Answer:\n" + finalAnswerOut.FinalAnswer
+	// // Construct response text
+	// responseText := "Similar Questions:\n"
+	// for _, ta := range topAnswers {
+	// 	responseText += fmt.Sprintf("Q:%s\nA:%s\n", ta.Question, ta.Answer)
+	// }
+	// responseText += "\nFinal Answer:\n" + finalAnswerOut.FinalAnswer
 
-	return TextMessage(responseText), NOOP, nil
+	return TextMessage(finalAnswerOut.FinalAnswer), NOOP, nil
+}
+
+func (ats *QuestionAnswerMode) Name() string {
+	return "question_answer"
 }
 
 func (ats *QuestionAnswerMode) Stop() error {

@@ -36,34 +36,38 @@ func (m *DebugMode) HandleIntent(msg *Message, intent Intent) (*Message, *Comman
 		msg.Text = "history"
 	} else {
 		log.Warn().Str("action", action).Interface("attributes", intent.ParsedIntentAttributes).Msg("invalid command on intent")
-		return TextMessage("invalid command on intent. Available commands: summary, history"), NOOP, nil
+		return TextMessage("invalid command on intent. Available commands: summary, history"), SILENT, nil
 	}
 
 	res, _, err := m.HandleResponse(msg)
-	return res, MODE_QUIT, err
+	return res, SILENT_MODE_QUIT, err
 }
 
 func (m *DebugMode) BestShot(msg *Message) (*Message, *Command, error) {
 	msg.Text = strings.TrimPrefix(msg.Text, "/debug ")
 	message, _, err := m.HandleResponse(msg)
-	return message, NOOP, err
+	return message, SILENT, err
 }
 
 func (m *DebugMode) Start() (*Message, *Command, error) {
-	return TextMessage("you can ask for: summary, history"), NOOP, nil
+	return TextMessage("you can ask for: summary, history"), SILENT, nil
 }
 
 func (m *DebugMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	userMessage := msg.Text
 	if userMessage == "summary" {
-		return TextMessage(m.chat.GetConversationSummary()), NOOP, nil
+		return TextMessage(m.chat.GetConversationSummary()), SILENT, nil
 	}
 
 	if userMessage == "history" {
-		return TextMessage(m.chat.SprintHistory()), NOOP, nil
+		return TextMessage(m.chat.SprintHistory()), SILENT, nil
 	}
 
-	return TextMessage("Available commands: summary, history"), NOOP, nil
+	return TextMessage("Available commands: summary, history"), SILENT, nil
+}
+
+func (m *DebugMode) Name() string {
+	return "debug"
 }
 
 func (m *DebugMode) Stop() error {

@@ -8,6 +8,8 @@ service GptService {
   rpc NewChat(NewChatRequest) returns (NewChatResponse);
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc ReceiveSlackMessage(ReceiveSlackMessageRequest) returns (ReceiveSlackMessageResponse);
+  
 }
 
 message GetChatRequest {
@@ -19,6 +21,7 @@ message GetChatResponse {
 }
 
 message NewChatRequest {
+  string external_id = 1;
 }
 
 message NewChatResponse {
@@ -28,17 +31,26 @@ message NewChatResponse {
 message Chat {
   string id = 1;
   Mode current_mode = 2;
+  repeated ModeState mode_state = 3;
   repeated Message messages = 4;
 }
 
+message ModeState {
+  string mode_name = 1;
+  string key = 2;
+  string value = 3;
+}
+
 message SendMessageRequest {
-  Message message = 1;
+  string chat_id = 1;
+  Message message = 2;
 }
 
 message SendMessageResponse {
-  Command command = 1;
-  Message message = 2;
-  Mode mode = 3; // mode if any
+  string chat_id = 1;
+  Command command = 2;
+  Message message = 3;
+  Mode mode = 4; // mode if any
 } 
 
 message Mode {
@@ -50,7 +62,6 @@ message Command {
 }
 
 message Message {
-  string chat_id = 1; // Add this line
   string text = 2;
   FormMessage form = 3;
   string sender = 4; // user or ai or mode
@@ -70,4 +81,15 @@ message GetOpenAPIRequest {
 
 message GetOpenAPIResponse {
   string openapi = 1;
+}
+
+message ReceiveSlackMessageRequest {
+  string token = 1;
+  string challenge = 2;
+  string type = 3;
+}
+
+
+message ReceiveSlackMessageResponse {
+  string challenge = 1;
 }

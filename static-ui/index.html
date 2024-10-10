@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #343541;
+            color: #d1d5db;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: #444654;
+            border: none;
+        }
+        textarea {
+            background-color: #3e3f4b;
+            color: #d1d5db;
+            border: none;
+            resize: none;
+        }
+        textarea:focus {
+            box-shadow: none;
+        }
+        .btn-primary {
+            background-color: #10a37f;
+            border: none;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #3b82f6;
+            color: #ffffff;
+            align-self: flex-end;
+        }
+        .bot-message {
+            background-color: #444654;
+            color: #d1d5db;
+            align-self: flex-start;
+        }
+        #chat {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 70vh;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #343541;
+            border-radius: 10px;
+        }
+        #input-area {
+            padding: 20px;
+            background-color: #444654;
+            border-radius: 10px;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body class="container mt-5 d-flex flex-column">
+    <h1 class="text-center mb-4">Chat Room</h1>
+    <div id="chat" class="card"></div>
+
+    <div id="input-area" class="card mt-4">
+        <div class="mb-3">
+            <textarea class="form-control" id="message-input" placeholder="Your message" rows="3" required></textarea>
+        </div>
+        <button id="send-button" class="btn btn-primary">Send</button>
+    </div>
+    <script>
+        let chatID = new URLSearchParams(window.location.search).get('chat-id') || localStorage.getItem('chatID') || '';
+        if (!chatID) {
+            // Fetch a new chat ID from the server
+            fetch('/api/messages')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to create new chat');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    chatID = data.id;
+                    localStorage.setItem('chatID', chatID);
+                    fetchMessages();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        } else {
+            fetchMessages();
+        }
+
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+
+        function sendMessage() {
+            const content = document.getElementById('message-input').value.trim();
+            if (content === '') return;
+
+            const message = {
+                chat_id: chatID,
+                content: content
+            };
+
+            fetch('/api/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(message),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('message-input').value = '';
+                appendMessage(content, 'User');
+                appendMessage(data.text, 'Bot');
+                scrollToBottom();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function fetchMessages() {
+            fetch(`/api/messages?chat_id=${chatID}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch messages');
+                    }
+                    return response.json();
+                })
+                .then(messages => {
+                    const chatDiv = document.getElementById('chat');
+                    chatDiv.innerHTML = ''; // Clear existing messages
+                    messages.forEach(msg => {
+                        appendMessage(msg.text, msg.role);
+                    });
+                    scrollToBottom();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function appendMessage(content, sender) {
+            const chatDiv = document.getElementById('chat');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.textContent = content;
+
+            if (sender === 'User') {
+                messageDiv.classList.add('user-message');
+            } else {
+                messageDiv.classList.add('bot-message');
+            }
+
+            chatDiv.appendChild(messageDiv);
+        }
+
+        function scrollToBottom() {
+            const chatDiv = document.getElementById('chat');
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

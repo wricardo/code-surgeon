@@ -54,7 +54,9 @@ func (rm *RouterMode) HandleResponse(userMessage *Message) (*Message, *Command, 
 	return &Message{}, NOOP, nil
 }
 
-// Stop handles any cleanup logic when RouterMode is deactivated
+func (rm *RouterMode) Name() string {
+	return "router"
+}
 func (rm *RouterMode) Stop() error {
 	// Implement any necessary cleanup logic here
 	return nil

@@ -7,8 +7,7 @@ import (
 )
 
 func TestMirrorMode_Start(t *testing.T) {
-	chat := &ChatImpl{}
-	mirrorMode := NewMirrorMode(chat)
+	mirrorMode := NewMirrorMode(nil)
 
 	message, command, err := mirrorMode.Start()
 	if err != nil {
@@ -26,8 +25,7 @@ func TestMirrorMode_Start(t *testing.T) {
 }
 
 func TestMirrorMode_HandleIntent(t *testing.T) {
-	chat := &ChatImpl{}
-	mirrorMode := NewMirrorMode(chat)
+	mirrorMode := NewMirrorMode(nil)
 
 	inputMessage := api.Message{Text: "Hello, Mirror!"}
 	message, command, err := mirrorMode.HandleIntent(&inputMessage, Intent{})
@@ -45,8 +43,7 @@ func TestMirrorMode_HandleIntent(t *testing.T) {
 }
 
 func TestMirrorMode_HandleResponse(t *testing.T) {
-	chat := &ChatImpl{}
-	mirrorMode := NewMirrorMode(chat)
+	mirrorMode := NewMirrorMode(nil)
 
 	inputMessage := &api.Message{Text: "Echo this!"}
 	message, command, err := mirrorMode.HandleResponse(inputMessage)
@@ -64,8 +61,7 @@ func TestMirrorMode_HandleResponse(t *testing.T) {
 }
 
 func TestMirrorMode_Stop(t *testing.T) {
-	chat := &ChatImpl{}
-	mirrorMode := NewMirrorMode(chat)
+	mirrorMode := NewMirrorMode(nil)
 
 	err := mirrorMode.Stop()
 	if err != nil {

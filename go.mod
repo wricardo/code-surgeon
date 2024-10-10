@@ -43,6 +43,7 @@ require (
 	github.com/go-playground/validator/v10 v10.21.0 // indirect
 	github.com/go-resty/resty/v2 v2.15.3 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/log15 v3.0.0-testing.3+incompatible // indirect
 	github.com/inconshreveable/log15/v3 v3.0.0-testing.5 // indirect
 	github.com/invopop/jsonschema v0.12.0 // indirect
@@ -64,6 +65,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/slack-go/slack v0.14.0 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

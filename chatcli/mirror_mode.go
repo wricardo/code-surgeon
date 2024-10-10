@@ -10,14 +10,11 @@ func init() {
 
 // NewMirrorMode creates a new instance of the MirrorMode
 func NewMirrorMode(chat *ChatImpl) *MirrorMode {
-	return &MirrorMode{
-		chat: chat,
-	}
+	return &MirrorMode{}
 }
 
 // MirrorMode struct implements the Mode interface
 type MirrorMode struct {
-	chat *ChatImpl
 }
 
 // Start initializes the MirrorMode with a welcoming message
@@ -27,9 +24,9 @@ func (mm *MirrorMode) Start() (*Message, *Command, error) {
 	}, MODE_START, nil
 }
 
-
 func (mm *MirrorMode) BestShot(msg *Message) (*Message, *Command, error) {
 	message, _, err := mm.HandleResponse(msg)
+	message.Text = "Response through BestShot: " + message.Text
 	return message, NOOP, err
 }
 
@@ -49,4 +46,8 @@ func (mm *MirrorMode) HandleResponse(userMessage *Message) (*Message, *Command, 
 // Stop handles any cleanup logic when MirrorMode is deactivated
 func (mm *MirrorMode) Stop() error {
 	return nil
+}
+
+func (mm *MirrorMode) Name() string {
+	return "mirror"
 }

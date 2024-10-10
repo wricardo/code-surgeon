@@ -1,56 +1,92 @@
 package main
 
 import (
-	"html/template"
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
+
+	"connectrpc.com/connect"
+	"github.com/wricardo/code-surgeon/api"
+	"github.com/wricardo/code-surgeon/api/apiconnect"
 )
 
-type Message struct {
-	Author  string
-	Content string
-}
-
-var messages []Message
+const (
+	serverAddress = "localhost:8080" // Replace with your server address
+	grpcAddress   = "localhost:8010" // Replace with your gRPC server address
+)
 
 func main() {
-	http.HandleFunc("/", chatHandler)
+	http.HandleFunc("/", chatPageHandler)
+	http.HandleFunc("/api/send", sendMessageHandler)
+	http.HandleFunc("/api/messages", getMessagesHandler)
 	log.Println("Starting server on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func chatHandler(w http.ResponseWriter, r *http.Request) {
+func getClient() apiconnect.GptServiceClient {
+	return apiconnect.NewGptServiceClient(http.DefaultClient, "http://"+grpcAddress)
+}
+
+func chatPageHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "static-ui/index.html")
+}
+
+func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		author := r.FormValue("author")
-		content := r.FormValue("content")
-		if author != "" && content != "" {
-			messages = append(messages, Message{Author: author, Content: content})
+		var req struct {
+			ChatID  string `json:"chat_id"`
+			Content string `json:"content"`
 		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		if req.ChatID == "" || req.Content == "" {
+			http.Error(w, "chat_id and content are required", http.StatusBadRequest)
+			return
+		}
+
+		client := getClient()
+		message := &api.Message{
+			Text: req.Content,
+		}
+		sendMsgReq := &api.SendMessageRequest{
+			ChatId:  req.ChatID,
+			Message: message,
+		}
+
+		resp, err := client.SendMessage(context.Background(), connect.NewRequest(sendMsgReq))
+		if err != nil {
+			log.Println("Error sending message:", err)
+			http.Error(w, "Failed to send message", http.StatusInternalServerError)
+			return
+		}
+
+		responseMsg := resp.Msg.Message
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(responseMsg)
+	} else {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func getMessagesHandler(w http.ResponseWriter, r *http.Request) {
+	chatID := r.URL.Query().Get("chat_id")
+	if chatID == "" {
+		http.Error(w, "chat_id is required", http.StatusBadRequest)
+		return
 	}
 
-	tmpl := template.Must(template.New("chat").Parse(`
-		<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>Chat UI</title>
-		</head>
-		<body>
-			<h1>Chat Room</h1>
-			<form method="POST" action="/">
-				<input type="text" name="author" placeholder="Your name" required>
-				<input type="text" name="content" placeholder="Your message" required>
-				<button type="submit">Send</button>
-			</form>
-			<div id="chat">
-				{{range .}}
-					<p><strong>{{.Author}}:</strong> {{.Content}}</p>
-				{{end}}
-			</div>
-		</body>
-		</html>
-	`))
+	client := getClient()
+	getChatResp, err := client.GetChat(context.Background(), connect.NewRequest(&api.GetChatRequest{ChatId: chatID}))
+	if err != nil {
+		http.Error(w, "Failed to get chat messages", http.StatusInternalServerError)
+		return
+	}
 
-	tmpl.Execute(w, messages)
+	messages := getChatResp.Msg.Chat.Messages
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
 }

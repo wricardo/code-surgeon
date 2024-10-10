@@ -114,6 +114,10 @@ func (cs *CodeMode) GenerateCode() (string, error) {
 	return "Instructions: " + aiOut.Instructions + "\n\nAider output:\n" + aiderOut, nil
 }
 
+func (cs *CodeMode) Name() string {
+	return "code"
+}
+
 func (cs *CodeMode) Stop() error {
 	return nil
 }

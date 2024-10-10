@@ -38,7 +38,7 @@ func main() {
 	var myEnv map[string]string
 	myEnv, err := godotenv.Read()
 	if err != nil {
-		log.Fatal().Msg("Error loading .env file")
+		log.Warn().Msg("Error loading .env file")
 	}
 
 	app := &cli.App{
@@ -51,7 +51,11 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name: "message",
-
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "chat-id",
+					},
+				},
 				Action: func(cCtx *cli.Context) error {
 					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
 					if !useNgrok {
@@ -75,7 +79,10 @@ func main() {
 						return err
 					}
 					message.Text = string(stdinBytes)
-					sendMsgReq := &api.SendMessageRequest{Message: message}
+					sendMsgReq := &api.SendMessageRequest{
+						ChatId:  cCtx.String("chat-id"),
+						Message: message,
+					}
 
 					ctx := context.Background()
 					response, err := client.SendMessage(ctx, connect.NewRequest(sendMsgReq))
@@ -90,7 +97,7 @@ func main() {
 				},
 			},
 			{
-				Name: "chat",
+				Name: "new-chat",
 				Action: func(cCtx *cli.Context) error {
 					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
 					if !useNgrok {
@@ -100,18 +107,54 @@ func main() {
 					// Setup signal handling for graceful exit
 					signalChan := make(chan os.Signal, 1)
 					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+					// connect to the grpc server
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, "https://"+ngrokDomain) // replace with actual server URL
+
+					ctx := context.Background()
+					response, err := client.NewChat(ctx, connect.NewRequest(&api.NewChatRequest{}))
+					if err != nil {
+						fmt.Println("Error sending message:", err)
+						return err
+					}
+					if response.Msg != nil {
+						fmt.Println(response.Msg.Chat.Id)
+					}
+					return nil
+				},
+			},
+			{
+				Name: "chat",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "chat-id",
+						Required: true,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					domain, useNgrok := myEnv["NGROK_DOMAIN"]
+					if !useNgrok {
+						domain = "http://localhost:8010"
+					}
+
+					// Setup signal handling for graceful exit
+					signalChan := make(chan os.Signal, 1)
+					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 					shutdownChan := make(chan struct{})
 
-					// Instantiate chat service
-					chat := chatcli.GLOBAL_CHAT
+					// connect to the grpc server
+					chatId := cCtx.String("chat-id")
 
 					var wg sync.WaitGroup
 					wg.Add(1)
 					go func() {
 						// Start CLI
-						cliChat := chatcli.NewCliChat("http://"+ngrokDomain, chat)
+						cliChat := chatcli.NewCliChat("http://" + domain)
 						defer wg.Done()
-						cliChat.Start(shutdownChan)
+						err := cliChat.Start(shutdownChan, chatId)
+						if err != nil {
+							log.Fatal().Err(err).Msg("Error starting chat")
+						}
 						return
 					}()
 					<-signalChan

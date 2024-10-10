@@ -25,11 +25,11 @@ func Configure() {
 	}
 
 	// if we are in local development, we want to write to the console
-	if false {
+	if true {
 		consoleWriter := zerolog.ConsoleWriter{Out: os.Stderr}
 		writers = append(writers, &consoleWriter)
 	}
-	if true {
+	if false {
 		f, err := os.OpenFile("console.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to open log file")

@@ -55,6 +55,10 @@ func (bm *BashMode) HandleIntent(msg *Message, intent Intent) (*Message, *Comman
 	return bm.HandleResponse(msg)
 }
 
+func (bm *BashMode) Name() string {
+	return "bash"
+}
+
 func (bm *BashMode) Stop() error {
 	return nil
 }

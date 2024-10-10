@@ -24,12 +24,15 @@ func init() {
 type TeacherMode struct {
 	chat        *ChatImpl
 	alreadySeen map[string]bool
+	form        *Form
 }
 
 func NewTeacherMode(chat *ChatImpl) *TeacherMode {
+	form := NewForm()
 	return &TeacherMode{
 		chat:        chat,
 		alreadySeen: make(map[string]bool),
+		form:        form,
 	}
 }
 
@@ -66,8 +69,12 @@ func (ats *TeacherMode) HandleResponse(msg *Message) (*Message, *Command, error)
 	var aiOut AiOutput
 	err := ats.chat.Chat(&aiOut, []openai.ChatCompletionMessage{
 		{
-			Role:    "system",
-			Content: "You are a helpful assistant which can respond to user's input in the most helpful form. Any information that you find it useful to remember for future conversations, write them in the json on the q_and_as key. The json should contain a list of objects with the keys question and answer. The question is the question that goes in the flashcard about important information in this conversation. Above all you should be helpful and informative, writing your response to the user under the response key.",
+			Role: "system",
+			Content: `You are a helpful assistant which can respond to user's input in the most helpful form. 
+			Any information that you find it useful to remember for future conversations, write them in the json on the q_and_as key. 
+			The json should contain a list of objects with the keys question and answer. 
+			The question is the question that goes in the flashcard about important information in this conversation. 
+			Above all you should be helpful and informative, writing your response to the user under the response key.`,
 		},
 
 		{
@@ -108,8 +115,8 @@ func (ats *TeacherMode) HandleResponse(msg *Message) (*Message, *Command, error)
 	return response, NOOP, nil
 }
 
-func (ats *TeacherMode) Stop() error {
-	return nil
+func (ats *TeacherMode) Name() string {
+	return "teacher"
 }
 
 func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []*QuestionAnswer) error {
@@ -131,5 +138,9 @@ func (t *TeacherMode) SaveQuestionAndAnswer(ctx context.Context, qaPairs []*Ques
 		}
 	}
 
+	return nil
+}
+
+func (t *TeacherMode) Stop() error {
 	return nil
 }

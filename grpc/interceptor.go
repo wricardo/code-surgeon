@@ -2,7 +2,9 @@ package grpc
 
 import (
 	"context"
-	"log"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
 )
@@ -14,17 +16,23 @@ func LoggerInterceptor() connect.UnaryInterceptorFunc {
 			ctx context.Context,
 			req connect.AnyRequest,
 		) (connect.AnyResponse, error) {
+			x := log.Debug()
+			defer x.Msg("GRPC Request")
 			if req.Spec().IsClient {
 			} else {
-				log.Printf("Incoming request: %s", req.Spec().Procedure)
+				if log.Logger.GetLevel() == zerolog.TraceLevel {
+					x.Any("request", req.Any())
+				}
 				// log.Printf("Request headers: %v", req.Header())
 				// log.Printf("Request message: %v", req.Any())
 			}
 			res, err := next(ctx, req)
 			if err != nil {
-				log.Printf("Error: %v", err)
+				x.Err(err)
 			} else {
-				log.Printf("Response: %v", res)
+				if log.Logger.GetLevel() == zerolog.TraceLevel {
+					x.Any("response", res)
+				}
 			}
 			return res, err
 		})

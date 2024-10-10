@@ -58,6 +58,10 @@ func (as *ArchitectMode) HandleIntent(msg *Message, intent Intent) (*Message, *C
 	return as.HandleResponse(msg)
 }
 
+func (as *ArchitectMode) Name() string {
+	return "architect"
+}
+
 func (as *ArchitectMode) Stop() error {
 	// do nothing
 	return nil

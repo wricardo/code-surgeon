@@ -112,6 +112,33 @@
 					}
 				}
 			}
+		},
+		"/codesurgeon.GptService/ReceiveSlackMessage": {
+			"post": {
+				"summary": "ReceiveSlackMessage",
+				"operationId": "codesurgeon.GptService.ReceiveSlackMessage",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ReceiveSlackMessageRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ReceiveSlackMessageResponse"
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"components": {
@@ -135,6 +162,9 @@
 			"codesurgeon.NewChatRequest": {
 				"type": "object",
 				"properties": {
+					"external_id": {
+						"type": "string"
+					}
 				}
 			},
 			"codesurgeon.NewChatResponse": {
@@ -154,6 +184,12 @@
 					"current_mode": {
 						"$ref": "#/components/schemas/codesurgeon.Mode"
 					},
+					"mode_state": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.ModeState"
+						}
+					},
 					"messages": {
 						"type": "array",
 						"items": {
@@ -162,9 +198,26 @@
 					}
 				}
 			},
+			"codesurgeon.ModeState": {
+				"type": "object",
+				"properties": {
+					"mode_name": {
+						"type": "string"
+					},
+					"key": {
+						"type": "string"
+					},
+					"value": {
+						"type": "string"
+					}
+				}
+			},
 			"codesurgeon.SendMessageRequest": {
 				"type": "object",
 				"properties": {
+					"chat_id": {
+						"type": "string"
+					},
 					"message": {
 						"$ref": "#/components/schemas/codesurgeon.Message"
 					}
@@ -173,6 +226,9 @@
 			"codesurgeon.SendMessageResponse": {
 				"type": "object",
 				"properties": {
+					"chat_id": {
+						"type": "string"
+					},
 					"command": {
 						"$ref": "#/components/schemas/codesurgeon.Command"
 					},
@@ -203,9 +259,6 @@
 			"codesurgeon.Message": {
 				"type": "object",
 				"properties": {
-					"chat_id": {
-						"type": "string"
-					},
 					"text": {
 						"type": "string"
 					},
@@ -248,6 +301,28 @@
 				"type": "object",
 				"properties": {
 					"openapi": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ReceiveSlackMessageRequest": {
+				"type": "object",
+				"properties": {
+					"token": {
+						"type": "string"
+					},
+					"challenge": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ReceiveSlackMessageResponse": {
+				"type": "object",
+				"properties": {
+					"challenge": {
 						"type": "string"
 					}
 				}

@@ -28,7 +28,7 @@ func newTestChat() *ChatImpl {
 	instructorClient := ai.GetInstructor()
 
 	// Instantiate chat service
-	chat := NewChat(&driver, instructorClient)
-	chat.test = true
+	chat := NewChat(&driver, instructorClient, nil)
+	chat.IsTest = true
 	return chat
 }

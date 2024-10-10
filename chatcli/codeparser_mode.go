@@ -62,7 +62,7 @@ func (m *ParseMode) HandleIntent(msg *Message, intent Intent) (*Message, *Comman
 }
 
 func (c *ChatImpl) IsTesting() bool {
-	return c.test
+	return c.IsTest
 }
 
 func (c *ChatImpl) FillFormWithIntent(form *Form, intent Intent, msg *Message) error {
@@ -163,6 +163,10 @@ func (m *ParseMode) HandleResponse(input *Message) (*Message, *Command, error) {
 
 	// Convert parsedInfo to a string or JSON to display to the user
 	return &api.Message{Text: output}, MODE_QUIT, nil
+}
+
+func (m *ParseMode) Name() string {
+	return "codeparser"
 }
 
 func (m *ParseMode) Stop() error {

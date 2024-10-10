@@ -48,10 +48,6 @@ func (s *Server) Start() error {
 	}
 	s.neo4jCloseFn = closeFn
 	instructorClient := ai.GetInstructor()
-	chatcli.GLOBAL_CHAT = chatcli.NewChat(&driver, instructorClient)
-	if err := chatcli.GLOBAL_CHAT.LoadState("chat_state.json"); err != nil {
-		log.Warn().Msgf("No previous chat state found: %v", err)
-	}
 
 	// Initialize ngrok listener if needed
 	if s.options.UseNgrok {
@@ -66,8 +62,8 @@ func (s *Server) Start() error {
 	}
 
 	// Set up gRPC and HTTP handlers
-	grpcHandler := NewHandler(s.options.NgrokDomain)
-	mux := setupHTTPHandlers(grpcHandler)
+	grpcHandler := NewHandler(s.options.NgrokDomain, &driver, instructorClient)
+	mux := setupHTTPHandlers(grpcHandler, s.options.SlackToken)
 
 	// Start HTTP server
 	go func() {
@@ -104,21 +100,24 @@ func (s *Server) Stop() {
 	if s.neo4jCloseFn != nil {
 		s.neo4jCloseFn()
 	}
-	defer func() {
-		if err := chatcli.GLOBAL_CHAT.SaveState("chat_state.json"); err != nil {
-			log.Error().Msgf("Failed to save CLI chat state: %v", err)
-		} else {
-			fmt.Println("\nBye saved", err)
-		}
-	}()
+	// defer func() {
+	// 	if err := chatcli.GLOBAL_CHAT.SaveState("chat_state.json"); err != nil {
+	// 		log.Error().Msgf("Failed to save CLI chat state: %v", err)
+	// 	} else {
+	// 		fmt.Println("\nBye saved", err)
+	// 	}
+	// }()
 	// Perform any cleanup or resource freeing here if needed
 	if s != nil && s.ctx != nil {
 		s.ctx.Done()
 	}
 }
 
-func setupHTTPHandlers(grpcHandler apiconnect.GptServiceHandler) *http.ServeMux {
+func setupHTTPHandlers(grpcHandler apiconnect.GptServiceHandler, slackToken string) *http.ServeMux {
 	mux := http.NewServeMux()
+	bot := chatcli.NewSlackBot(slackToken, grpcHandler)
+
+	mux.HandleFunc("/slack_message", bot.SlackMessageHandler())
 
 	// Add static file route
 	mux.Handle("/api/", http.StripPrefix("/api/", http.FileServer(http.FS(codesurgeon.STATICFS))))
@@ -153,6 +152,7 @@ type ServerOptions struct {
 	Neo4jDbUri      string
 	Neo4jDbUser     string
 	Neo4jDbPassword string
+	SlackToken      string
 }
 
 func NewServerOptions() ServerOptions {
@@ -173,6 +173,7 @@ func NewServerOptions() ServerOptions {
 	if ngrokEnabled != "true" {
 		useNgrok = false
 	}
+	slackToken, _ := myEnv["SLACK_BOT_TOKEN"]
 
 	return ServerOptions{
 		Port:            8010,
@@ -181,5 +182,6 @@ func NewServerOptions() ServerOptions {
 		Neo4jDbUri:      neo4jDbUri,
 		Neo4jDbUser:     neo4jDbUser,
 		Neo4jDbPassword: neo4jDbPassword,
+		SlackToken:      slackToken,
 	}
 }

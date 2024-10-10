@@ -109,6 +109,10 @@ func (rm *RestyMode) HandleResponse(msg *Message) (*Message, *Command, error) {
 	return TextMessage(fmt.Sprintf("Response: %s", resp.String())), NOOP, nil
 }
 
+func (rm *RestyMode) Name() string {
+	return "resty"
+}
+
 func (rm *RestyMode) Stop() error {
 	// Clean up resources if necessary
 	return nil
