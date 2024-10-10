@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
@@ -127,8 +128,8 @@ func main() {
 				Name: "chat",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "chat-id",
-						Required: true,
+						Name: "chat-id",
+						// Required: true,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
@@ -144,6 +145,9 @@ func main() {
 
 					// connect to the grpc server
 					chatId := cCtx.String("chat-id")
+					if chatId == "" {
+						chatId = uuid.New().String()
+					}
 
 					var wg sync.WaitGroup
 					wg.Add(1)

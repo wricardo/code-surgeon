@@ -1,6 +1,9 @@
 # code-surgeon
 
-Code Surgeon is a library for generating code, parsing code. It offers functionality as a library, as a webservice and as a command line tool.
+Code Surgeon is:
+- a library for generating code, parsing golang code. 
+- a command line tool to parse golang code
+- an AI chatbot through grpc
 
 
 ## Dependencies
@@ -17,16 +20,25 @@ NGROK_AUTH_TOKEN=your_ngrok_auth_token
 NGROK_DOMAIN=example-domain.ngrok-free.app
 NEO4j_DB_URI=neo4j://localhost
 NEO4j_DB_USER=neo4j
-NEO4j_DB_PASSWORD=heo4j123
+NEO4j_DB_PASSWORD=neo4jneo4j
 ```
 
 https://dashboard.ngrok.com/cloud-edge/domains
 
-## Using the GPT Server
+## Using chatbot
 
-- Install the code-surgeon binary to your path. `make install`
-- Change directory to the root of the project you want to generate code for.
-- Run `code-surgeon server` to start the server.
-- On another tab, run `code-surgeon openapi-json | pbcopy` to copy the OpenAPI JSON to your clipboard. Use that to configure your chatGpt "Actions" in the OpenAI console. https://openai.com/index/introducing-gpts/
-- Run `code-surgeon instructions` to the Instructions test that goes in the customGPT (same page as the step above)
 
+- Start infrastructure (terminal 1)
+```
+docker-compose up
+```
+
+- Run the chatbot server (terminal 2)
+```
+make run-server
+```
+
+- Run the chatbot cli client (terminal 3)
+```
+make new-chat
+```

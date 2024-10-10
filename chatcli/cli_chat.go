@@ -11,7 +11,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/charmbracelet/huh"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
@@ -46,12 +45,16 @@ func (cli *CliChat) Start(shutdownChan chan struct{}, chatId string) error {
 	fmt.Println("ChatCLI - Type your message and press Enter. Type /help for commands.")
 
 	getChatRes, err := cli.client.GetChat(ctx, connect.NewRequest(&api.GetChatRequest{ChatId: chatId}))
-	if err != nil {
-		return fmt.Errorf("Error getting chat: %v", err)
+	var chat *api.Chat
+	if err != nil || getChatRes.Msg.Chat == nil {
+		newChatRes, err := cli.client.NewChat(ctx, connect.NewRequest(&api.NewChatRequest{ExternalId: chatId}))
+		if err != nil {
+			return fmt.Errorf("Error creating new chat: %v", err)
+		}
+		chat = newChatRes.Msg.Chat
 	}
-	spew.Dump(chatId)
-	spew.Dump(getChatRes.Msg)
-	for _, msg := range getChatRes.Msg.Chat.GetMessages() {
+	getChatRes = nil
+	for _, msg := range chat.GetMessages() {
 		if msg.Sender == "AI" {
 			fmt.Printf("🤖: %s\n", msg.Text)
 		} else {
