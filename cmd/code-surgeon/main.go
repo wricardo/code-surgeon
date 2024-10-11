@@ -226,16 +226,82 @@ func main() {
 						Value:    ".",
 						Required: false,
 					},
+					&cli.BoolFlag{
+						Name:    "recursive",
+						Aliases: []string{"r"},
+						Usage:   "recursively parse directories",
+					},
+					&cli.StringFlag{
+						Name:  "format",
+						Value: "llm",
+						Usage: "format to print the parsed information: llm, text_short, test_long, json",
+					},
+					&cli.BoolFlag{
+						Name:  "plain-structs",
+						Usage: "print plain structs",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "fields-plain-structs",
+						Usage: "print fields of plain structs",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "structs-with-method",
+						Usage: "print structs with methods",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "fields-structs-with-method",
+						Usage: "print fields of structs with methods",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "methods",
+						Usage: "print methods",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "functions",
+						Usage: "print functions",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "comments",
+						Usage: "print comments",
+						Value: true,
+					},
+					&cli.BoolFlag{
+						Name:  "tags",
+						Usage: "print tags",
+						Value: true,
+					},
+					&cli.StringSliceFlag{
+						Name:  "ignore-rule",
+						Usage: "ignore files or directories that match the rule. ",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
 					path := cCtx.String("path") // Get the 'path' argument
 
-					parsed, err := codesurgeon.ParseDirectoryWithFilter(path, nil)
-					if err != nil {
-						log.Fatal().Err(err).Msg("Failed to parse directory")
+					ignores := cCtx.StringSlice("ignore-rule")
+
+					if cCtx.Bool("recursive") {
+						// ParseDirectoryRecursive
+						parsed, err := codesurgeon.ParseDirectoryRecursive(path)
+						if err != nil {
+							log.Fatal().Err(err).Msg("Failed to parse directory")
+						}
+
+						fmt.Println(codesurgeon.PrettyPrint(parsed, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments")))
+
+					} else {
+						parsed, err := codesurgeon.ParseDirectoryWithFilter(path, nil)
+						if err != nil {
+							log.Fatal().Err(err).Msg("Failed to parse directory")
+						}
+						fmt.Println(codesurgeon.PrettyPrint([]*codesurgeon.ParsedInfo{parsed}, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments")))
 					}
-					encoded, _ := json.Marshal(parsed)
-					fmt.Println(string(encoded))
 					return nil
 				},
 			},

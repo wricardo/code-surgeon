@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -23,7 +24,9 @@ var FS embed.FS
 
 // ParsedInfo holds parsed information about Go packages.
 type ParsedInfo struct {
-	Packages []Package `json:"packages"`
+	Packages  []Package `json:"packages"`
+	Directory string    `json:"directory"` // if information was parsed from a directory. It's either a directory or a file
+	File      string    `json:"file"`      // if information was parsed from a single file. It's either a directory or a file
 }
 
 // Package represents a Go package with its components such as imports, structs, functions, etc.
@@ -133,6 +136,43 @@ func ParseString(fileContent string) (*ParsedInfo, error) {
 	return extractStructsFromPackages(packages)
 }
 
+func augment(m map[string]interface{}, n map[string]interface{}) map[string]interface{} {
+	copy_ := make(map[string]interface{}, len(m)+len(n))
+	for k, v := range m {
+		copy_[k] = v
+
+	}
+	for k, v := range n {
+		copy_[k] = v
+	}
+	return copy_
+}
+
+// ParseDirectoryRecursive parses a directory recursively and returns the parsed information.
+func ParseDirectoryRecursive(path string) ([]*ParsedInfo, error) {
+	var results []*ParsedInfo
+
+	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() { // Process only directories
+			if strings.Contains(p, ".git") {
+				return nil
+			}
+			parsed, err := ParseDirectoryWithFilter(p, func(info fs.FileInfo) bool {
+				return true
+			}) // Assuming this function parses a single file
+			if err != nil {
+				return err
+			}
+			results = append(results, parsed)
+		}
+		return nil
+	})
+	return results, err
+}
+
 // ParseDirectoryWithFilter parses a directory with an optional filter function to include specific files.
 func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) bool) (*ParsedInfo, error) {
 	fi, err := os.Stat(fileOrDirectory)
@@ -143,6 +183,7 @@ func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) b
 	var packages map[string]*ast.Package
 	fset := token.NewFileSet()
 
+	isDir := true
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
 		packages, err = parser.ParseDir(fset, fileOrDirectory, filter, parser.ParseComments|parser.AllErrors|parser.DeclarationErrors)
@@ -150,6 +191,7 @@ func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) b
 			return nil, err
 		}
 	case mode.IsRegular():
+		isDir = false
 		file, err := parser.ParseFile(fset, fileOrDirectory, nil, parser.ParseComments|parser.AllErrors|parser.DeclarationErrors)
 		if err != nil {
 			return nil, err
@@ -162,7 +204,22 @@ func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) b
 		}
 	}
 
-	return extractStructsFromPackages(packages)
+	parsedInfo, err := extractStructsFromPackages(packages)
+	if err != nil {
+		return nil, err
+	}
+	if isDir {
+		parsedInfo.Directory = fileOrDirectory
+		if abs, err := filepath.Abs(fileOrDirectory); err == nil {
+			parsedInfo.Directory = abs
+		}
+	} else {
+		parsedInfo.File = fileOrDirectory
+		if abs, err := filepath.Abs(fileOrDirectory); err == nil {
+			parsedInfo.File = abs
+		}
+	}
+	return parsedInfo, nil
 }
 
 // extractStructsFromPackages processes parsed Go packages to extract structs, interfaces, functions, and more.
