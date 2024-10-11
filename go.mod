@@ -1,4 +1,4 @@
-module github.com/wricardo/code-surgeon
+module bitbucket.org/zetaactions/code-surgeon
 
 go 1.23.0
 
@@ -20,6 +20,7 @@ require (
 	github.com/slack-go/slack v0.14.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.27.4
+	github.com/wricardo/code-surgeon v0.0.0-20241011153251-2cd20da004c3
 	golang.ngrok.com/ngrok v1.10.0
 	golang.org/x/net v0.28.0
 	golang.org/x/tools v0.24.0
@@ -80,3 +81,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/wricardo/code-surgeon => ./
