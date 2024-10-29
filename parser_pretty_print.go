@@ -97,6 +97,31 @@ func prettyPrintLLM(
 			if functions && len(pkg.Functions) > 0 {
 				printFunctions(pkg.Functions, ignoreRules, sb)
 			}
+			// interfaces
+			for _, i := range pkg.Interfaces {
+				fmt.Fprintf(sb, "  Interface: %s\n", i.Name)
+				if comments && len(i.Docs) > 0 {
+					fmt.Fprintf(sb, "    Comment: %s\n", strings.Join(i.Docs, "\n"))
+				}
+				for _, m := range i.Methods {
+					fmt.Fprintf(sb, "    Method: %s\n", m.Name)
+					if comments && len(m.Docs) > 0 {
+						fmt.Fprintf(sb, "      Comment: %s\n", strings.Join(m.Docs, "\n"))
+					}
+					for _, p := range m.Params {
+						fmt.Fprintf(sb, "      Param: %s (%s)\n", p.Name, p.Type)
+					}
+				}
+			}
+			// variables
+			for _, v := range pkg.Variables {
+				fmt.Fprintf(sb, "  Variable: %s (%s)\n", v.Name, v.Type)
+			}
+
+			// constants
+			for _, c := range pkg.Constants {
+				fmt.Fprintf(sb, "  Constant: %s\n", c.Name)
+			}
 		}
 	}
 	return sb.String()
@@ -400,15 +425,15 @@ func shouldIgnoreField(f Field, ignoreRules []string) bool {
 }
 
 func printMethods(methods []Method, ignoreRules []string, sb *strings.Builder) {
-	var methodNames []string
+	var methodNamesAndSig []string
 	for _, m := range methods {
 		if shouldIgnoreMethod(m, ignoreRules) {
 			continue
 		}
-		methodNames = append(methodNames, m.Name)
+		methodNamesAndSig = append(methodNamesAndSig, m.Signature)
 	}
-	if len(methodNames) > 0 {
-		fmt.Fprintf(sb, "    Methods: %s\n", strings.Join(methodNames, ", "))
+	if len(methodNamesAndSig) > 0 {
+		fmt.Fprintf(sb, "    Methods: %s\n", strings.Join(methodNamesAndSig, ", "))
 	}
 }
 

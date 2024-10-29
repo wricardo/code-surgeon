@@ -445,7 +445,7 @@ func TestFirstStructMethods(t *testing.T) {
 				firstStruct := parsed.Struct("FirstStruct")
 				require.Len(t, firstStruct.Docs, 2)
 				require.Equal(t, "FirstStruct this is the comment for the first struct.", firstStruct.Docs[0])
-				require.Len(t, firstStruct.Methods, 2)
+				require.Len(t, firstStruct.Methods, 3)
 				require.Equal(t, "MyOtherTestMethod(ctx context.Context, x string) (string, error)", firstStruct.Methods[0].Signature)
 				require.Equal(t, "MyTestMethod(ctx context.Context, x []string, y []string, z int) (a string, b string, c int)", firstStruct.Methods[1].Signature)
 			})
@@ -637,7 +637,7 @@ func TestParseString(t *testing.T) {
 
 		f = structInfo.Field("FuncField")
 		require.Equal(t, "FuncField", f.Name)
-		require.Equal(t, "/*func*/", f.Type)
+		require.Equal(t, "func(string) (error)", f.Type)
 	})
 }
 
@@ -873,4 +873,32 @@ func TestParseMethodsWithBody(t *testing.T) {
 		require.Contains(t, method.Body, "return \"Hello, \" + name")
 	})
 
+}
+
+func TestParseGenericMethod(t *testing.T) {
+	code := `
+	package test
+
+	// UnimplementedZivoAPIHandler returns CodeUnimplemented from all methods.
+	type UnimplementedZivoAPIHandler struct{}
+
+	func (UnimplementedZivoAPIHandler) SendSms(ctx context.Context, r *connect.Request[FirstStruct]) (*connect.Response[FirstStruct], error) {
+		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("trinity.zivo.ZivoAPI.SendSms is not implemented"))
+	}
+	`
+	parsed, err := ParseString(code)
+	require.NoError(t, err)
+
+	parsedHelper := newHelper(&parsed.Packages[0])
+	structInfo := parsedHelper.Struct("UnimplementedZivoAPIHandler")
+	require.NotNil(t, structInfo)
+
+	require.Len(t, structInfo.Methods, 1)
+	method := structInfo.Methods[0]
+
+	expectedSignature := "SendSms(ctx context.Context, r *connect.Request[FirstStruct]) (*connect.Response[FirstStruct], error)"
+	require.Equal(t, expectedSignature, method.Signature)
+
+	require.Equal(t, "*connect.Request[FirstStruct]", structInfo.Methods[0].Params[1].Type)
+	require.Equal(t, "*connect.Response[FirstStruct]", structInfo.Methods[0].Returns[0].Type)
 }

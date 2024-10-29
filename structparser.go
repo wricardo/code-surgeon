@@ -9,6 +9,7 @@ import (
 	"go/doc"
 	"go/format"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"io/fs"
 	"os"
@@ -293,7 +294,7 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 						}
 
 						var err error
-						field.Type, field.Slice, field.Pointer, err = getType(fvalue.Type)
+						field.Type, field.Pointer, field.Slice, err = getType(fvalue.Type)
 						if err != nil {
 							return nil, err
 						}
@@ -329,7 +330,6 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 				}
 			}
 
-			// Extract methods associated with the struct
 			// Extract methods associated with the struct
 			for _, spec := range t.Methods {
 				funcDecl := spec.Decl
@@ -629,6 +629,15 @@ func formatParams(fields *ast.FieldList) string {
 }
 
 func exprToString(expr ast.Expr) string {
+	var buf bytes.Buffer
+	err := printer.Fprint(&buf, token.NewFileSet(), expr)
+	if err != nil {
+		return "<err>"
+	}
+	return buf.String()
+}
+
+func exprToStringoriginal(expr ast.Expr) string {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		return e.Value
@@ -714,49 +723,145 @@ func justTypeString(a string, b, c bool, err error) string {
 
 func void(_ ...interface{}) {}
 
-// TODO: solve for: unknown type for &ast.InterfaceType{Interface:552, Methods:(*ast.FieldList)(0x14000112a50), Incomplete:false}
-func getType(expr ast.Expr) (typeString string, isSlice, isPointer bool, err error) {
-	switch expr.(type) {
-	case *ast.Ident:
-		x := expr.(*ast.Ident)
-		return x.Name, false, false, nil
-	case *ast.SelectorExpr:
-		x := expr.(*ast.SelectorExpr)
-		return x.X.(*ast.Ident).Name + "." + x.Sel.Name, false, false, nil
-	case *ast.ArrayType:
-		tmp := expr.(*ast.ArrayType)
-		if tmp.Len != nil {
-			tmpLen, ok := tmp.Len.(*ast.BasicLit)
-			if !ok {
-				return "", false, false, errors.New("array len has unknown type")
+func fieldListToString(fl *ast.FieldList) (string, error) {
+	if fl == nil {
+		return "", nil
+	}
+	parts := []string{}
+	for _, field := range fl.List {
+		typ, _, _, err := getType(field.Type)
+		if err != nil {
+			return "", err
+		}
+		if len(field.Names) == 0 {
+			parts = append(parts, typ)
+		} else {
+			names := []string{}
+			for _, name := range field.Names {
+				names = append(names, name.Name)
 			}
-			return "[" + tmpLen.Value + "]" + justTypeString(getType(tmp.Elt)), true, false, nil
+			parts = append(parts, fmt.Sprintf("%s %s", strings.Join(names, ", "), typ))
 		}
-		return "[]" + justTypeString(getType(tmp.Elt)), true, false, nil
-	case *ast.MapType:
-		tmp := expr.(*ast.MapType)
-		return "map[" + justTypeString(getType(tmp.Key)) + "]" + justTypeString(getType(tmp.Value)), false, false, nil
+	}
+	return strings.Join(parts, ", "), nil
+}
+
+// TODO: solve for: unknown type for &ast.InterfaceType{Interface:552, Methods:(*ast.FieldList)(0x14000112a50), Incomplete:false}
+// getType returns the type as a string, and two booleans indicating
+// whether the type is a pointer and whether it's a slice, along with any error encountered.
+func getType(expr ast.Expr) (string, bool, bool, error) {
+	var typeStr string
+	var isPointer, isSlice bool
+	switch t := expr.(type) {
+	case *ast.Ident:
+		typeStr = t.Name
+	case *ast.SelectorExpr:
+		x, _, _, err := getType(t.X)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = x + "." + t.Sel.Name
 	case *ast.StarExpr:
-		return "*" + justTypeString(getType(expr.(*ast.StarExpr).X)), false, true, nil
-	case *ast.FuncType:
-		return "/*func*/", false, false, nil
-	case *ast.StructType:
-		return "/*struct*/", false, false, nil
-	case *ast.ChanType:
-		tmp := expr.(*ast.ChanType)
-		switch tmp.Dir {
-		case ast.SEND:
-			return "chan<- " + justTypeString(getType(tmp.Value)), false, false, nil
-		case ast.RECV:
-			return "<-chan " + justTypeString(getType(tmp.Value)), false, false, nil
+		isPointer = true
+		innerType, p, s, err := getType(t.X)
+		if err != nil {
+			return "", false, false, err
 		}
-		return "chan " + justTypeString(getType(tmp.Value)), false, false, nil
+		// Propagate pointer and slice flags
+		isPointer = isPointer || p
+		isSlice = isSlice || s
+		typeStr = "*" + innerType
+	case *ast.IndexExpr:
+		// Handle single type parameter (legacy support)
+		x, _, _, err := getType(t.X)
+		if err != nil {
+			return "", false, false, err
+		}
+		index, _, _, err := getType(t.Index)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = fmt.Sprintf("%s[%s]", x, index)
+	case *ast.IndexListExpr:
+		// Handle multiple type parameters (generics)
+		x, _, _, err := getType(t.X)
+		if err != nil {
+			return "", false, false, err
+		}
+		indices := []string{}
+		for _, index := range t.Indices {
+			indexStr, _, _, err := getType(index)
+			if err != nil {
+				return "", false, false, err
+			}
+			indices = append(indices, indexStr)
+		}
+		typeStr = fmt.Sprintf("%s[%s]", x, strings.Join(indices, ", "))
+	case *ast.ArrayType:
+		isSlice = true
+		eltType, _, _, err := getType(t.Elt)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = "[]" + eltType
+	case *ast.ChanType:
+		// Handle channel types
+		dir := ""
+		switch t.Dir {
+		case ast.RECV:
+			dir = "<-chan "
+		case ast.SEND:
+			dir = "chan<- "
+		default:
+			dir = "chan "
+		}
+		elemType, _, _, err := getType(t.Value)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = fmt.Sprintf("%s%s", dir, elemType)
+	case *ast.MapType:
+		keyType, _, _, err := getType(t.Key)
+		if err != nil {
+			return "", false, false, err
+		}
+		valueType, _, _, err := getType(t.Value)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = fmt.Sprintf("map[%s]%s", keyType, valueType)
+	case *ast.FuncType:
+		// Simplistic representation; expand as needed
+		params, err := fieldListToString(t.Params)
+		if err != nil {
+			return "", false, false, err
+		}
+		results, err := fieldListToString(t.Results)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = fmt.Sprintf("func(%s) (%s)", params, results)
+	case *ast.InterfaceType:
+		methodsStr, err := fieldListToString(t.Methods)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = fmt.Sprintf("interface{%s}", methodsStr)
+	case *ast.StructType:
+		fieldsStr, err := fieldListToString(t.Fields)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = fmt.Sprintf("struct{%s}", fieldsStr)
 	case *ast.Ellipsis:
 		tmp := expr.(*ast.Ellipsis)
-		return "..." + justTypeString(getType(tmp.Elt)), false, false, nil
-	case *ast.InterfaceType:
-		return "interface{}", false, false, nil
-
+		eltType, _, _, err := getType(tmp.Elt)
+		if err != nil {
+			return "", false, false, err
+		}
+		typeStr = "..." + justTypeString(eltType, false, false, nil)
+	default:
+		return "", false, false, fmt.Errorf("unsupported type: %T", expr)
 	}
-	return "", false, false, fmt.Errorf("unknown type for %#v", expr)
+	return typeStr, isPointer, isSlice, nil
 }
