@@ -3,6 +3,7 @@ package neo4j2
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,6 +14,52 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
+func UpsertStructInfo(ctx context.Context, driver neo4j.DriverWithContext, name string, documentation string, packageName string, package_ string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		result, err := tx.Run(ctx, `
+		MERGE (f:Struct {package: $package, name: $name})
+		SET f.documentation = $documentation, f.packageName = $packageName, f.name = $name
+		with f
+		MERGE (p:Package {package: $package})
+		SET p.name = $packageName, p.packageName = $packageName
+		MERGE (f)-[:BELONGS_TO]->(p)
+		RETURN id(f) as nodeID
+		`, map[string]interface{}{
+			"name":          name,
+			"documentation": documentation,
+			"packageName":   packageName,
+			"package":       package_,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, fmt.Errorf("no records returned")
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+type ReceiverInfo struct {
+}
+
+func GetReceiverInfo(ctx context.Context, driver neo4j.DriverWithContext, receiver string) ReceiverInfo {
+	return ReceiverInfo{}
+}
+
 func UpsertFunctionInfo(ctx context.Context, driver neo4j.DriverWithContext, file string, receiver, function string, documentation string, packageName string, package_ string) error {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
@@ -21,15 +68,35 @@ func UpsertFunctionInfo(ctx context.Context, driver neo4j.DriverWithContext, fil
 		if receiver == "" {
 			name = function
 		}
-		result, err := tx.Run(ctx, `
+		extra := ""
+		if receiver != "" {
+			extra = `
+			MERGE (r:Struct {package: $package, name: $receiver})
+			SET r.name = $receiver, r.packageName = $packageName
+			MERGE (f)-[:RECEIVER]->(r)
+			`
+		}
+
+		cypher := `
 		MERGE (f:Function {package: $package, receiver: $receiver, function: $function})
 		SET f.documentation = $documentation, f.packageName = $packageName, f.file = $file, f.name = $name
 		with f
+		` + extra + `
 		MERGE (p:Package {package: $package})
 		SET p.name = $packageName, p.packageName = $packageName
-		MERGE (f)-[:BELONGS_TO]->(p)
+		`
+
+		if receiver == "" {
+			cypher += `
+			MERGE (f)-[:BELONGS_TO]->(p)
+			`
+		}
+
+		cypher += `
 		RETURN id(f) as nodeID
-		`, map[string]interface{}{
+		`
+
+		result, err := tx.Run(ctx, cypher, map[string]interface{}{
 			"file":          file,
 			"name":          name,
 			"documentation": documentation,
@@ -57,6 +124,229 @@ func UpsertFunctionInfo(ctx context.Context, driver neo4j.DriverWithContext, fil
 	}
 	return nil
 
+}
+
+func UpsertInterfaceInfo(ctx context.Context, driver neo4j.DriverWithContext, name string, documentation string, packageName string, package_ string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		result, err := tx.Run(ctx, `
+		MERGE (i:Interface {package: $package, name: $name})
+		SET i.documentation = $documentation, i.packageName = $packageName, i.name = $name
+		WITH i
+		MERGE (p:Package {package: $package})
+		SET p.name = $packageName, p.packageName = $packageName
+		MERGE (i)-[:BELONGS_TO]->(p)
+		RETURN id(i) as nodeID
+		`, map[string]interface{}{
+			"name":          name,
+			"documentation": documentation,
+			"packageName":   packageName,
+			"package":       package_,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, errors.New("no records returned")
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpsertMethodReturn(ctx context.Context, driver neo4j.DriverWithContext, methodName string, paramName string, paramType string, documentation string, methodPackageName string, methodPackage_ string, receiver string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		cypher := `
+		MERGE (t:Type {type: $paramType})
+		SET  t.type = $paramType
+		WITH t
+		MERGE (p:Return {name: $paramName, type: $paramType, package: $package, methodName: $methodName})
+		SET  p.name = $paramName, p.type = $paramType
+		WITH p, t
+		MERGE (m:Function {package: $package, receiver: $receiver, function: $methodName})
+		SET m.name = $methodName
+`
+
+		cypher += `
+		WITH m, p, t
+		MERGE (p)-[:BELONGS_TO]->(m)
+		MERGE (p)-[:OF_TYPE]->(t)
+		RETURN id(p) as nodeID
+		`
+		result, err := tx.Run(ctx, cypher, map[string]interface{}{
+			"methodName":    methodName,
+			"paramName":     paramName,
+			"paramType":     paramType,
+			"documentation": documentation,
+			"packageName":   methodPackageName,
+			"package":       methodPackage_,
+			"receiver":      receiver,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, errors.New("no records returned")
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpsertMethodParam(ctx context.Context, driver neo4j.DriverWithContext, methodName string, paramName string, paramType string, documentation string, methodPackageName string, methodPackage_ string, receiver string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		cypher := `
+		MERGE (t:Type {type: $paramType})
+		SET  t.type = $paramType
+		WITH t
+		MERGE (p:Param {name: $paramName, type: $paramType, package: $package, methodName: $methodName})
+		SET  p.name = $paramName, p.type = $paramType
+		WITH p, t
+		MERGE (m:Function {package: $package,  receiver: $receiver, function: $methodName})
+		SET m.name = $methodName
+`
+
+		cypher += `
+		WITH m, p, t
+		MERGE (p)-[:BELONGS_TO]->(m)
+		MERGE (p)-[:OF_TYPE]->(t)
+		RETURN id(p) as nodeID
+		`
+		result, err := tx.Run(ctx, cypher, map[string]interface{}{
+			"methodName":    methodName,
+			"paramName":     paramName,
+			"paramType":     paramType,
+			"documentation": documentation,
+			"packageName":   methodPackageName,
+			"package":       methodPackage_,
+			"receiver":      receiver,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, errors.New("no records returned")
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpsertInterfaceMethodParam(ctx context.Context, driver neo4j.DriverWithContext, interfaceName string, methodName string, paramName string, paramType string, documentation string, methodPackageName string, methodPackage_ string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		result, err := tx.Run(ctx, `
+		MERGE (p:Param {name: $paramName, type: $paramType})
+		SET  p.name = $paramName, p.type = $paramType
+		WITH p
+		MERGE (m:Function {package: $package, interfaceName: $interfaceName, name: $methodName})
+		SET m.name = $methodName
+		WITH m, p
+		MERGE (p)-[:BELONGS_TO]->(m)
+		RETURN id(p) as nodeID
+		`, map[string]interface{}{
+			"interfaceName": interfaceName,
+			"methodName":    methodName,
+			"paramName":     paramName,
+			"paramType":     paramType,
+			"documentation": documentation,
+			"packageName":   methodPackageName,
+			"package":       methodPackage_,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, errors.New("no records returned")
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpsertInterfaceMethod creates or updates a method node in Neo4j and links it to its interface and package.
+func UpsertInterfaceMethod(ctx context.Context, driver neo4j.DriverWithContext, interfaceName string, methodName string, documentation string, packageName string, package_ string) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		result, err := tx.Run(ctx, `
+		MERGE (m:Function {package: $package, interfaceName: $interfaceName, name: $methodName})
+		SET m.documentation = $documentation, m.packageName = $packageName, m.name = $methodName
+		WITH m
+		MERGE (i:Interface {package: $package, name: $interfaceName})
+		SET i.name = $interfaceName, i.packageName = $packageName
+		MERGE (m)-[:BELONGS_TO]->(i)
+		MERGE (p:Package {package: $package})
+		SET p.name = $packageName, p.packageName = $packageName
+		MERGE (m)-[:BELONGS_TO]->(p)
+		RETURN id(m) as nodeID
+		`, map[string]interface{}{
+			"interfaceName": interfaceName,
+			"methodName":    methodName,
+			"documentation": documentation,
+			"packageName":   packageName,
+			"package":       package_,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, errors.New("no records returned")
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func ListFileFromFunctions(ctx context.Context, driver neo4j.DriverWithContext) ([]string, error) {

@@ -17,7 +17,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 	codesurgeon "github.com/wricardo/code-surgeon"
@@ -182,12 +181,10 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-
 					opts := grpc.NewServerOptions()
 					serv := grpc.NewServer(opts)
 
 					return serv.Start()
-
 				},
 			},
 			{
@@ -211,7 +208,6 @@ func main() {
 					}
 					fmt.Println(openAPI.Msg.Openapi)
 					return nil
-
 				},
 			},
 			{
@@ -355,7 +351,6 @@ func main() {
 						fmt.Println("Nothing to do")
 					}
 					return nil
-
 				},
 			},
 			// {
@@ -413,7 +408,6 @@ func main() {
 					}
 					fmt.Println(rendered)
 					return nil
-
 				},
 			},
 			{
@@ -427,6 +421,10 @@ func main() {
 						Usage:    "path to the file or directory to parse",
 						Value:    "./.",
 						Required: false,
+					},
+					&cli.BoolFlag{
+						Name:  "deep",
+						Value: false,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
@@ -468,29 +466,22 @@ func main() {
 							continue
 						}
 
-						fmt.Println("len functions", len(info.Packages[0].Functions))
-						for k, function := range info.Packages[0].Functions {
-							funcFilePath, err := codesurgeon.FindFunction(module.Dir, "", function.Name)
-							if err != nil {
-								log.Info().Err(err).Msgf("Error finding function file %s", function.Name)
-							} else {
-								log.Info().Msgf("funcFilePath: %s", funcFilePath)
-							}
-							err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, "", function.Name, strings.Join(function.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
-							if err != nil {
-								log.Info().Err(err).Msgf("Error upserting function %s", function.Name)
+						log.Info().Msgf("Parsed %s", module.Dir)
+						for k, struct_ := range info.Packages[0].Structs {
+							log.Info().Msgf("struct %d: %s", k, struct_.Name)
+							if err = neo4j2.UpsertStructInfo(ctx, driver, struct_.Name, strings.Join(struct_.Docs, "\n"), info.Packages[0].Package, module.ImportPath); err != nil {
+								log.Info().Err(err).Msgf("Error upserting struct %s", struct_.Name)
 								return err
 							}
-							log.Info().Msgf("function %d: %s", k, function.Name)
-						}
-						for k, struct_ := range info.Packages[0].Structs {
 							for k2, method := range struct_.Methods {
-								fmt.Printf("method\n%s", spew.Sdump(method)) // TODO: wallace debug
-								funcFilePath, err := codesurgeon.FindFunction(module.Dir, struct_.Name, method.Name)
-								if err != nil {
-									log.Info().Err(err).Msgf("Error finding function file %s", method.Name)
-								} else {
-									log.Info().Msgf("funcFilePath: %s", funcFilePath)
+								funcFilePath := ""
+								if cCtx.Bool("deep") {
+									funcFilePath, err = codesurgeon.FindFunction(module.Dir, struct_.Name, method.Name)
+									if err != nil {
+										log.Info().Err(err).Msgf("Error finding function file %s", method.Name)
+									} else {
+										log.Info().Msgf("funcFilePath: %s", funcFilePath)
+									}
 								}
 								err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, struct_.Name, method.Name, strings.Join(method.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
 								if err != nil {
@@ -498,10 +489,117 @@ func main() {
 									return err
 								}
 								log.Info().Msgf("method %d %d: %s", k, k2, method.Name)
+								for _, param := range method.Params {
+									err = neo4j2.UpsertMethodParam(
+										ctx,
+										driver,
+										method.Name,
+										param.Name,
+										param.Type,
+										"",
+										info.Packages[0].Package,
+										module.ImportPath,
+										struct_.Name,
+									)
+									if err != nil {
+										log.Info().Err(err).Msgf("Error upserting function param %s", param.Name)
+										return err
+									}
+								}
+								for _, result := range method.Returns {
+									err = neo4j2.UpsertMethodReturn(
+										ctx,
+										driver,
+										method.Name,
+										result.Name,
+										result.Type,
+										"",
+										info.Packages[0].Package,
+										module.ImportPath,
+										struct_.Name,
+									)
+									if err != nil {
+										log.Info().Err(err).Msgf("Error upserting function return %s", result.Name)
+										return err
+									}
+								}
+
+							}
+						}
+						fmt.Println("len functions", len(info.Packages[0].Functions))
+						for k, function := range info.Packages[0].Functions {
+							funcFilePath := ""
+							if cCtx.Bool("deep") {
+								funcFilePath, err = codesurgeon.FindFunction(module.Dir, "", function.Name)
+								if err != nil {
+									log.Info().Err(err).Msgf("Error finding function file %s", function.Name)
+								} else {
+									log.Info().Msgf("funcFilePath: %s", funcFilePath)
+								}
+							}
+							err = neo4j2.UpsertFunctionInfo(ctx, driver, funcFilePath, "", function.Name, strings.Join(function.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
+							if err != nil {
+								log.Info().Err(err).Msgf("Error upserting function %s", function.Name)
+								return err
+							}
+							log.Info().Msgf("function %d: %s", k, function.Name)
+							for _, param := range function.Params {
+								err = neo4j2.UpsertMethodParam(
+									ctx,
+									driver,
+									function.Name,
+									param.Name,
+									param.Type,
+									"",
+									info.Packages[0].Package,
+									module.ImportPath,
+									"",
+								)
+								if err != nil {
+									log.Info().Err(err).Msgf("Error upserting function param %s", param.Name)
+									return err
+								}
+							}
+							for _, result := range function.Returns {
+								err = neo4j2.UpsertMethodReturn(
+									ctx,
+									driver,
+									function.Name,
+									result.Name,
+									result.Type,
+									"",
+									info.Packages[0].Package,
+									module.ImportPath,
+									"",
+								)
+								if err != nil {
+									log.Info().Err(err).Msgf("Error upserting function return %s", result.Name)
+									return err
+								}
+							}
+						}
+						for _, interface_ := range info.Packages[0].Interfaces {
+							log.Info().Msgf("interface: %s", interface_.Name)
+							if err = neo4j2.UpsertInterfaceInfo(ctx, driver, interface_.Name, strings.Join(interface_.Docs, "\n"), info.Packages[0].Package, module.ImportPath); err != nil {
+								log.Info().Err(err).Msgf("Error upserting interface %s", interface_.Name)
+								return err
+							}
+							for _, method := range interface_.Methods {
+								err = neo4j2.UpsertInterfaceMethod(ctx, driver, interface_.Name, method.Name, strings.Join(method.Docs, "\n"), info.Packages[0].Package, module.ImportPath)
+								if err != nil {
+									log.Info().Err(err).Msgf("Error upserting function %s", method.Name)
+									return err
+								}
+								for _, param := range method.Params {
+									err = neo4j2.UpsertInterfaceMethodParam(ctx, driver, interface_.Name, method.Name, param.Name, param.Type, "", info.Packages[0].Package, module.ImportPath)
+									if err != nil {
+										log.Info().Err(err).Msgf("Error upserting function param %s", param.Name)
+										return err
+									}
+								}
 							}
 						}
 
-						log.Printf("Parsed %s\n", module.Dir)
 					}
 
 					return nil
