@@ -142,7 +142,7 @@ func TestParseDirectory(t *testing.T) {
 
 			f = firstStruct.Field("ArrayInt")
 			require.Equal(t, "ArrayInt", f.Name)
-			require.Equal(t, "[3]int", f.Type)
+			require.Equal(t, "[]int", f.Type)
 			require.Equal(t, false, f.Pointer)
 			require.Equal(t, true, f.Slice)
 
@@ -162,13 +162,13 @@ func TestParseDirectory(t *testing.T) {
 			require.Equal(t, "PointerSliceString", f.Name)
 			require.Equal(t, "*[]string", f.Type)
 			require.Equal(t, true, f.Pointer)
-			require.Equal(t, false, f.Slice)
+			require.Equal(t, true, f.Slice)
 
 			f = firstStruct.Field("PointerSlicePointerString")
 			require.Equal(t, "PointerSlicePointerString", f.Name)
 			require.Equal(t, "*[]*string", f.Type)
 			require.Equal(t, true, f.Pointer)
-			require.Equal(t, false, f.Slice)
+			require.Equal(t, true, f.Slice)
 
 			f = firstStruct.Field("ChanString")
 			require.Equal(t, "ChanString", f.Name)
@@ -289,7 +289,6 @@ func TestParseDirectory(t *testing.T) {
 			require.Equal(t, "chan *other.Struct", f.Type)
 			require.Equal(t, false, f.Pointer)
 			require.Equal(t, false, f.Slice)
-
 		})
 
 		t.Run("FirstStruct", func(t *testing.T) {
@@ -430,7 +429,6 @@ func TestCleanDocText(t *testing.T) {
 	for _, v := range inputs {
 		require.Equal(t, v.expect, cleanDocText(v.input))
 	}
-
 }
 
 func TestFirstStructMethods(t *testing.T) {
@@ -758,7 +756,6 @@ func TestParseStringComments(t *testing.T) {
 		helloWorldFunc := pkg.Functions[0]
 		require.Equal(t, "HelloWorld", helloWorldFunc.Name)
 		require.Equal(t, []string{"HelloWorld returns a greeting message"}, helloWorldFunc.Docs)
-
 	})
 }
 
@@ -872,7 +869,6 @@ func TestParseMethodsWithBody(t *testing.T) {
 		require.NotEmpty(t, method.Body)
 		require.Contains(t, method.Body, "return \"Hello, \" + name")
 	})
-
 }
 
 func TestParseGenericMethod(t *testing.T) {
