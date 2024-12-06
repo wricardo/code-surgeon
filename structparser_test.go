@@ -444,8 +444,17 @@ func TestFirstStructMethods(t *testing.T) {
 				require.Len(t, firstStruct.Docs, 2)
 				require.Equal(t, "FirstStruct this is the comment for the first struct.", firstStruct.Docs[0])
 				require.Len(t, firstStruct.Methods, 3)
-				require.Equal(t, "MyOtherTestMethod(ctx context.Context, x string) (string, error)", firstStruct.Methods[0].Signature)
-				require.Equal(t, "MyTestMethod(ctx context.Context, x []string, y []string, z int) (a string, b string, c int)", firstStruct.Methods[1].Signature)
+				for _, m := range firstStruct.Methods {
+					if m.Name == "MyTestMethod" {
+						require.Equal(t, "MyTestMethod(ctx context.Context, x []string, y []string, z int) (a string, b string, c int)", m.Signature)
+						require.Len(t, m.Docs, 1)
+						require.Equal(t, "MyTestMethod this is the comment for the MyTestMethod method.", m.Docs[0])
+					} else if m.Name == "MyOtherTestMethod" {
+						require.Equal(t, "MyOtherTestMethod(ctx context.Context, x string) (string, error)", m.Signature)
+						require.Len(t, m.Docs, 1)
+						require.Equal(t, "MyOtherTestMethod this is the comment for the MyOtherTestMethod method.", m.Docs[0])
+					}
+				}
 			})
 		}
 	}
@@ -589,8 +598,8 @@ func TestParseString(t *testing.T) {
 
 		require.Len(t, structInfo.Methods, 2)
 
-		require.Equal(t, "Greet(name string) (string)", structInfo.Methods[0].Signature)
-		require.Equal(t, "Sum(a int, b int) (int)", structInfo.Methods[1].Signature)
+		require.Equal(t, "Greet(name string) string", structInfo.Methods[0].Signature)
+		require.Equal(t, "Sum(a int, b int) int", structInfo.Methods[1].Signature)
 
 		// Check method documentation
 		require.Equal(t, "Greet returns a greeting message", structInfo.Methods[0].Docs[0])
@@ -674,12 +683,12 @@ func TestParseStringWithFunctions(t *testing.T) {
 			switch f.Name {
 			case "HelloWorld":
 				require.Equal(t, "HelloWorld", f.Name)
-				require.Equal(t, "HelloWorld() (string)", f.Signature)
+				require.Equal(t, "HelloWorld() string", f.Signature)
 				require.Equal(t, []string{"HelloWorld returns a greeting message"}, f.Docs)
 				countOk++
 			case "Add":
 				require.Equal(t, "Add", f.Name)
-				require.Equal(t, "Add(a int, b int) (int)", f.Signature)
+				require.Equal(t, "Add(a int, b int) int", f.Signature)
 				require.Equal(t, []string{"Add sums two integers"}, f.Docs)
 				countOk++
 			case "Divide":
@@ -826,7 +835,7 @@ func TestParseFunctionWithBody(t *testing.T) {
 	require.NotNil(t, output)
 	require.Len(t, output.Packages[0].Functions, 1)
 	require.Equal(t, "HelloWorld", output.Packages[0].Functions[0].Name)
-	require.Equal(t, "HelloWorld() (string)", output.Packages[0].Functions[0].Signature)
+	require.Equal(t, "HelloWorld() string", output.Packages[0].Functions[0].Signature)
 	require.Equal(t, []string{"HelloWorld returns a greeting message"}, output.Packages[0].Functions[0].Docs)
 	require.NotEmpty(t, output.Packages[0].Functions[0].Body)
 	require.Contains(t, output.Packages[0].Functions[0].Body, "return \"Hello, World!\"")
@@ -863,7 +872,7 @@ func TestParseMethodsWithBody(t *testing.T) {
 	t.Run("Method Greet", func(t *testing.T) {
 		method := myGreeter.Methods[0]
 		require.Equal(t, "Greet", method.Name)
-		require.Equal(t, "Greet(name string) (string)", method.Signature)
+		require.Equal(t, "Greet(name string) string", method.Signature)
 		require.Len(t, method.Docs, 1)
 		require.Equal(t, "Greet returns a greeting message", method.Docs[0])
 		require.NotEmpty(t, method.Body)

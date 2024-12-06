@@ -436,6 +436,7 @@ func main() {
 					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 					if err != nil {
 						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
+						return err
 					} else {
 						defer closeFn()
 					}

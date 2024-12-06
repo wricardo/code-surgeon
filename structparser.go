@@ -134,14 +134,13 @@ func ParseString(fileContent string) (*ParsedInfo, error) {
 		},
 	}
 
-	return extractStructsFromPackages(packages)
+	return extractParsedInfo(packages)
 }
 
 func augment(m map[string]interface{}, n map[string]interface{}) map[string]interface{} {
 	copy_ := make(map[string]interface{}, len(m)+len(n))
 	for k, v := range m {
 		copy_[k] = v
-
 	}
 	for k, v := range n {
 		copy_[k] = v
@@ -205,7 +204,7 @@ func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) b
 		}
 	}
 
-	parsedInfo, err := extractStructsFromPackages(packages)
+	parsedInfo, err := extractParsedInfo(packages)
 	if err != nil {
 		return nil, err
 	}
@@ -223,221 +222,133 @@ func ParseDirectoryWithFilter(fileOrDirectory string, filter func(fs.FileInfo) b
 	return parsedInfo, nil
 }
 
-// extractStructsFromPackages processes parsed Go packages to extract structs, interfaces, functions, and more.
-func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, error) {
-	output := &ParsedInfo{
-		Packages: make([]Package, 0, len(packages)),
+// extractStructs extracts structs from the provided documentation package.
+func extractStructs(docPkg *doc.Package) ([]Struct, error) {
+	var structs []Struct
+	for _, t := range docPkg.Types {
+		if t == nil || t.Decl == nil {
+			return nil, errors.New("t or t.Decl is nil")
+		}
+
+		for _, spec := range t.Decl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				return nil, errors.New("not a *ast.TypeSpec")
+			}
+
+			structType, ok := typeSpec.Type.(*ast.StructType)
+			if ok {
+				parsedStruct := Struct{
+					Name:    t.Name,
+					Fields:  make([]Field, 0, len(structType.Fields.List)),
+					Docs:    getDocsForStruct(t.Doc),
+					Methods: make([]Method, 0),
+				}
+
+				for _, fvalue := range structType.Fields.List {
+					name := ""
+					if len(fvalue.Names) > 0 {
+						name = fvalue.Names[0].Obj.Name
+					}
+
+					field := Field{
+						Name:    name,
+						Type:    "",
+						Tag:     "",
+						Pointer: false,
+						Slice:   false,
+					}
+
+					if len(field.Name) > 0 {
+						field.Private = strings.ToLower(string(field.Name[0])) == string(field.Name[0])
+					}
+
+					if fvalue.Doc != nil {
+						field.Docs = getDocsForFieldAst(fvalue.Doc)
+					}
+
+					if fvalue.Comment != nil {
+						field.Comment = cleanDocText(fvalue.Comment.Text())
+					}
+
+					if fvalue.Tag != nil {
+						field.Tag = strings.Trim(fvalue.Tag.Value, "`")
+					}
+
+					var err error
+					field.Type, field.Pointer, field.Slice, err = getType(fvalue.Type)
+					if err != nil {
+						return nil, err
+					}
+
+					parsedStruct.Fields = append(parsedStruct.Fields, field)
+				}
+
+				structs = append(structs, parsedStruct)
+			}
+		}
 	}
+	return structs, nil
+}
 
-	for _, pkg := range packages {
-		outPkg := Package{
-			Structs:   make([]Struct, 0),
-			Functions: make([]Function, 0),
-			Variables: make([]Variable, 0),
-			Constants: make([]Constant, 0),
-			Imports:   make([]string, 0),
+// extractInterfaces extracts interfaces from the provided documentation package.
+func extractInterfaces(docPkg *doc.Package) ([]Interface, error) {
+	var interfaces []Interface
+	for _, t := range docPkg.Types {
+		if t == nil || t.Decl == nil {
+			return nil, errors.New("t or t.Decl is nil")
 		}
 
-		docPkg := doc.New(pkg, "", doc.AllDecls|doc.AllMethods|doc.PreserveAST)
-		outPkg.Package = pkg.Name // Set package name
-
-		// Extract structs and other types
-		for _, t := range docPkg.Types {
-			if t == nil || t.Decl == nil {
-				return nil, errors.New("t or t.Decl is nil")
+		for _, spec := range t.Decl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				return nil, errors.New("not a *ast.TypeSpec")
 			}
 
-			// Extract structs
-			for _, spec := range t.Decl.Specs {
-				typeSpec, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					return nil, errors.New("not a *ast.TypeSpec")
+			interfaceType, ok := typeSpec.Type.(*ast.InterfaceType)
+			if ok {
+				parsedInterface := Interface{
+					Name:    t.Name,
+					Methods: make([]Method, 0),
+					Docs:    getDocsForStruct(t.Doc),
 				}
 
-				structType, ok := typeSpec.Type.(*ast.StructType)
-				if ok {
-					parsedStruct := Struct{
-						Name:    t.Name,
-						Fields:  make([]Field, 0, len(structType.Fields.List)),
-						Docs:    getDocsForStruct(t.Doc),
-						Methods: make([]Method, 0),
-					}
-
-					for _, fvalue := range structType.Fields.List {
-						name := ""
-						if len(fvalue.Names) > 0 {
-							name = fvalue.Names[0].Obj.Name
+				for _, m := range interfaceType.Methods.List {
+					if funcType, ok := m.Type.(*ast.FuncType); ok {
+						method := Method{
+							Name:    m.Names[0].Name,
+							Params:  extractParams(funcType.Params),
+							Returns: extractParams(funcType.Results),
+							Docs:    getDocsForFieldAst(m.Doc),
+							Signature: fmt.Sprintf("%s(%s) (%s)", m.Names[0].Name,
+								formatParams(funcType.Params), formatParams(funcType.Results)),
 						}
-
-						field := Field{
-							Name:    name,
-							Type:    "",
-							Tag:     "",
-							Pointer: false,
-							Slice:   false,
-						}
-
-						if len(field.Name) > 0 {
-							field.Private = strings.ToLower(string(field.Name[0])) == string(field.Name[0])
-						}
-
-						if fvalue.Doc != nil {
-							field.Docs = getDocsForFieldAst(fvalue.Doc)
-						}
-
-						if fvalue.Comment != nil {
-							field.Comment = cleanDocText(fvalue.Comment.Text())
-						}
-
-						if fvalue.Tag != nil {
-							field.Tag = strings.Trim(fvalue.Tag.Value, "`")
-						}
-
-						var err error
-						field.Type, field.Pointer, field.Slice, err = getType(fvalue.Type)
-						if err != nil {
-							return nil, err
-						}
-
-						parsedStruct.Fields = append(parsedStruct.Fields, field)
-					}
-
-					outPkg.Structs = append(outPkg.Structs, parsedStruct)
-				}
-				// Extract interfaces
-				if interfaceType, ok := typeSpec.Type.(*ast.InterfaceType); ok {
-					parsedInterface := Interface{
-						Name:    t.Name,
-						Methods: make([]Method, 0),
-						Docs:    getDocsForStruct(t.Doc),
-					}
-
-					for _, m := range interfaceType.Methods.List {
-						if funcType, ok := m.Type.(*ast.FuncType); ok {
-							method := Method{
-								Name:    m.Names[0].Name,
-								Params:  extractParams(funcType.Params),
-								Returns: extractParams(funcType.Results),
-								Docs:    getDocsForFieldAst(m.Doc),
-								Signature: fmt.Sprintf("%s(%s) (%s)", m.Names[0].Name,
-									formatParams(funcType.Params), formatParams(funcType.Results)),
-							}
-							parsedInterface.Methods = append(parsedInterface.Methods, method)
-						}
-					}
-
-					outPkg.Interfaces = append(outPkg.Interfaces, parsedInterface)
-				}
-			}
-
-			// Extract methods associated with the struct
-			for _, spec := range t.Methods {
-				funcDecl := spec.Decl
-				receiver, _, _, _ := getType(funcDecl.Recv.List[0].Type)
-
-				method := Method{
-					Name:     funcDecl.Name.Name,
-					Receiver: receiver,
-					Docs:     getDocsForField([]string{spec.Doc}),
-				}
-
-				// Parse function parameters
-				params := []Param{}
-				for _, param := range funcDecl.Type.Params.List {
-					paramType, _, _, err := getType(param.Type)
-					if err != nil {
-						return nil, err
-					}
-
-					for _, name := range param.Names {
-						params = append(params, Param{
-							Name: name.Name,
-							Type: paramType,
-						})
-					}
-				}
-				method.Params = params
-
-				// Parse return types
-				returns := []Param{}
-				if funcDecl.Type.Results != nil {
-					for _, result := range funcDecl.Type.Results.List {
-						returnType, _, _, err := getType(result.Type)
-						if err != nil {
-							return nil, err
-						}
-
-						if len(result.Names) > 0 {
-							for _, name := range result.Names {
-								returns = append(returns, Param{
-									Name: name.Name,
-									Type: returnType,
-								})
-							}
-						} else {
-							returns = append(returns, Param{
-								Name: "",
-								Type: returnType,
-							})
-						}
-					}
-				}
-				method.Returns = returns
-
-				// Extract the function body as a string
-				var bodyBuf bytes.Buffer
-				if funcDecl.Body != nil {
-					err := format.Node(&bodyBuf, token.NewFileSet(), funcDecl.Body)
-					if err != nil {
-						return nil, err
-					}
-					method.Body = bodyBuf.String()
-				}
-
-				// Construct the full method signature for easy comparison
-				paramStrings := []string{}
-				for _, param := range method.Params {
-					if param.Name != "" {
-						paramStrings = append(paramStrings, param.Name+" "+param.Type)
-					} else {
-						paramStrings = append(paramStrings, param.Type)
+						parsedInterface.Methods = append(parsedInterface.Methods, method)
 					}
 				}
 
-				returnStrings := []string{}
-				for _, ret := range method.Returns {
-					if ret.Name != "" {
-						returnStrings = append(returnStrings, ret.Name+" "+ret.Type)
-					} else {
-						returnStrings = append(returnStrings, ret.Type)
-					}
-				}
-
-				method.Signature = fmt.Sprintf("%s(%s) (%s)",
-					method.Name,
-					strings.Join(paramStrings, ", "),
-					strings.Join(returnStrings, ", "),
-				)
-
-				// Find the struct and add the method
-				for k, v := range outPkg.Structs {
-					if strings.Trim(method.Receiver, "*") == v.Name {
-						outPkg.Structs[k].Methods = append(outPkg.Structs[k].Methods, method)
-					}
-				}
+				interfaces = append(interfaces, parsedInterface)
 			}
 		}
+	}
+	return interfaces, nil
+}
 
-		// Extract functions
-		for _, t := range docPkg.Funcs {
-			if t == nil || t.Decl == nil {
-				return nil, errors.New("t or t.Decl is nil")
-			}
+// extractMethods extracts methods associated with the provided structs.
+func extractMethods(docPkg *doc.Package, structs []Struct) error {
+	for _, t := range docPkg.Types {
+		if t == nil || t.Decl == nil {
+			return errors.New("t or t.Decl is nil")
+		}
 
-			funcDecl := t.Decl
-			function := Function{
-				Name: t.Name,
-				Docs: getDocsForField([]string{t.Doc}),
+		for _, m := range t.Methods {
+			funcDecl := m.Decl
+			receiverType, _, _, _ := getType(funcDecl.Recv.List[0].Type)
+
+			method := Method{
+				Name:     funcDecl.Name.Name,
+				Receiver: receiverType,
+				Docs:     getDocsForField([]string{m.Doc}),
 			}
 
 			// Parse function parameters
@@ -445,7 +356,7 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 			for _, param := range funcDecl.Type.Params.List {
 				paramType, _, _, err := getType(param.Type)
 				if err != nil {
-					return nil, err
+					return err
 				}
 
 				for _, name := range param.Names {
@@ -455,7 +366,7 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 					})
 				}
 			}
-			function.Params = params
+			method.Params = params
 
 			// Parse return types
 			returns := []Param{}
@@ -463,7 +374,7 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 				for _, result := range funcDecl.Type.Results.List {
 					returnType, _, _, err := getType(result.Type)
 					if err != nil {
-						return nil, err
+						return err
 					}
 
 					if len(result.Names) > 0 {
@@ -481,21 +392,21 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 					}
 				}
 			}
-			function.Returns = returns
+			method.Returns = returns
 
 			// Extract the function body as a string
 			var bodyBuf bytes.Buffer
 			if funcDecl.Body != nil {
 				err := format.Node(&bodyBuf, token.NewFileSet(), funcDecl.Body)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				function.Body = bodyBuf.String()
+				method.Body = bodyBuf.String()
 			}
 
-			// Construct the full function signature for easy comparison
+			// Construct the full method signature for easy comparison
 			paramStrings := []string{}
-			for _, param := range function.Params {
+			for _, param := range method.Params {
 				if param.Name != "" {
 					paramStrings = append(paramStrings, param.Name+" "+param.Type)
 				} else {
@@ -504,7 +415,7 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 			}
 
 			returnStrings := []string{}
-			for _, ret := range function.Returns {
+			for _, ret := range method.Returns {
 				if ret.Name != "" {
 					returnStrings = append(returnStrings, ret.Name+" "+ret.Type)
 				} else {
@@ -512,84 +423,193 @@ func extractStructsFromPackages(packages map[string]*ast.Package) (*ParsedInfo, 
 				}
 			}
 
-			function.Signature = fmt.Sprintf("%s(%s) (%s)",
-				function.Name,
+			method.Signature = fmt.Sprintf("%s(%s) (%s)",
+				method.Name,
 				strings.Join(paramStrings, ", "),
 				strings.Join(returnStrings, ", "),
 			)
 
-			outPkg.Functions = append(outPkg.Functions, function)
-		}
-
-		// Extract imports
-		for _, file := range pkg.Files {
-			for _, importSpec := range file.Imports {
-				importPath := strings.Trim(importSpec.Path.Value, "\"")
-				outPkg.Imports = append(outPkg.Imports, importPath)
+			// Find and update the corresponding struct
+			for i := range structs {
+				if structs[i].Name == strings.TrimPrefix(receiverType, "*") {
+					structs[i].Methods = append(structs[i].Methods, method)
+					break
+				}
 			}
 		}
-		// unique imports
-		uniqueImports := make(map[string]struct{})
-		for _, v := range outPkg.Imports {
-			uniqueImports[v] = struct{}{}
-		}
-		outPkg.Imports = make([]string, 0, len(uniqueImports))
-		for k := range uniqueImports {
-			outPkg.Imports = append(outPkg.Imports, k)
+	}
+	return nil
+}
+
+// extractFunctions extracts functions from the provided documentation package.
+func extractFunctions(docPkg *doc.Package) ([]Function, error) {
+	var functions []Function
+	for _, t := range docPkg.Funcs {
+		if t == nil || t.Decl == nil {
+			return nil, errors.New("t or t.Decl is nil")
 		}
 
-		// Extract constants and variables
-		for _, file := range pkg.Files {
-			for _, decl := range file.Decls {
-				switch decl := decl.(type) {
-				case *ast.GenDecl:
-					if decl.Tok == token.CONST {
-						// Extract constants
-						for _, spec := range decl.Specs {
-							valSpec, ok := spec.(*ast.ValueSpec)
-							if !ok {
-								continue
-							}
-							for i, name := range valSpec.Names {
-								constant := Constant{
-									Name:  name.Name,
-									Value: "",
-									Docs:  getDocsForFieldAst(valSpec.Doc),
-								}
-								if i < len(valSpec.Values) {
-									constant.Value = exprToString(valSpec.Values[i])
-								}
-								outPkg.Constants = append(outPkg.Constants, constant)
-							}
+		funcDecl := t.Decl
+		function := Function{
+			Name: t.Name,
+			Docs: getDocsForField([]string{t.Doc}),
+		}
+
+		// Parse function parameters
+		params := []Param{}
+		for _, param := range funcDecl.Type.Params.List {
+			paramType, _, _, err := getType(param.Type)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, name := range param.Names {
+				params = append(params, Param{
+					Name: name.Name,
+					Type: paramType,
+				})
+			}
+		}
+		function.Params = params
+
+		// Parse return types
+		returns := []Param{}
+		if funcDecl.Type.Results != nil {
+			for _, result := range funcDecl.Type.Results.List {
+				returnType, _, _, err := getType(result.Type)
+				if err != nil {
+					return nil, err
+				}
+
+				if len(result.Names) > 0 {
+					for _, name := range result.Names {
+						returns = append(returns, Param{
+							Name: name.Name,
+							Type: returnType,
+						})
+					}
+				} else {
+					returns = append(returns, Param{
+						Name: "",
+						Type: returnType,
+					})
+				}
+			}
+		}
+		function.Returns = returns
+
+		// Extract the function body as a string
+		var bodyBuf bytes.Buffer
+		if funcDecl.Body != nil {
+			err := format.Node(&bodyBuf, token.NewFileSet(), funcDecl.Body)
+			if err != nil {
+				return nil, err
+			}
+			function.Body = bodyBuf.String()
+		}
+
+		// Construct the full function signature for easy comparison
+		paramStrings := []string{}
+		for _, param := range function.Params {
+			if param.Name != "" {
+				paramStrings = append(paramStrings, param.Name+" "+param.Type)
+			} else {
+				paramStrings = append(paramStrings, param.Type)
+			}
+		}
+
+		returnStrings := []string{}
+		for _, ret := range function.Returns {
+			if ret.Name != "" {
+				returnStrings = append(returnStrings, ret.Name+" "+ret.Type)
+			} else {
+				returnStrings = append(returnStrings, ret.Type)
+			}
+		}
+
+		function.Signature = fmt.Sprintf("%s(%s) (%s)",
+			function.Name,
+			strings.Join(paramStrings, ", "),
+			strings.Join(returnStrings, ", "),
+		)
+
+		functions = append(functions, function)
+	}
+	return functions, nil
+}
+
+// extractImports extracts unique imports from the provided package.
+func extractImports(pkg *ast.Package) ([]string, error) {
+	importSet := make(map[string]struct{})
+	for _, file := range pkg.Files {
+		for _, importSpec := range file.Imports {
+			importPath := strings.Trim(importSpec.Path.Value, "\"")
+			importSet[importPath] = struct{}{}
+		}
+	}
+
+	var imports []string
+	for imp := range importSet {
+		imports = append(imports, imp)
+	}
+	return imports, nil
+}
+
+// extractConstantsVariables extracts constants and variables from the provided package.
+func extractConstantsVariables(pkg *ast.Package) ([]Constant, []Variable, error) {
+	var constants []Constant
+	var variables []Variable
+
+	for _, file := range pkg.Files {
+		for _, decl := range file.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+
+			switch genDecl.Tok {
+			case token.CONST:
+				for _, spec := range genDecl.Specs {
+					valSpec, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for i, name := range valSpec.Names {
+						constant := Constant{
+							Name:  name.Name,
+							Value: "",
+							Docs:  getDocsForFieldAst(valSpec.Doc),
 						}
-					} else if decl.Tok == token.VAR {
-						// Extract variables
-						for _, spec := range decl.Specs {
-							valSpec, ok := spec.(*ast.ValueSpec)
-							if !ok {
-								continue
-							}
-							for _, name := range valSpec.Names {
-								varType := ""
-								if valSpec.Type != nil {
-									varType, _, _, _ = getType(valSpec.Type)
-								}
-								variable := Variable{
-									Name: name.Name,
-									Type: varType,
-									Docs: getDocsForFieldAst(valSpec.Doc),
-								}
-								outPkg.Variables = append(outPkg.Variables, variable)
-							}
+						if i < len(valSpec.Values) {
+							constant.Value = exprToString(valSpec.Values[i])
 						}
+						constants = append(constants, constant)
+					}
+				}
+			case token.VAR:
+				for _, spec := range genDecl.Specs {
+					valSpec, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for _, name := range valSpec.Names {
+						varType := ""
+						if valSpec.Type != nil {
+							varType, _, _, _ = getType(valSpec.Type)
+						}
+						variable := Variable{
+							Name: name.Name,
+							Type: varType,
+							Docs: getDocsForFieldAst(valSpec.Doc),
+						}
+						variables = append(variables, variable)
 					}
 				}
 			}
 		}
-		output.Packages = append(output.Packages, outPkg)
 	}
 
-	return output, nil
+	return constants, variables, nil
 }
 
 func extractParams(fieldList *ast.FieldList) []Param {

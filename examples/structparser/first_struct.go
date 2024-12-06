@@ -66,6 +66,7 @@ type FirstStruct struct {
 	ChanPackagePointerStruct             chan *other.Struct
 }
 
+// MyTestMethod this is the comment for the MyTestMethod method.
 func (s *FirstStruct) MyTestMethod(ctx context.Context, x, y []string, z int) (a, b string, c int) {
 	return "", "", 0
 }
@@ -80,7 +81,7 @@ type CommentsAndDocs struct {
 	MultiLineDoc int
 
 	// this is line 1 of comment 003
-	//this is line 2 of comment 004
+	// this is line 2 of comment 004
 	MixedSpacesDoc int
 
 	// this is line 1 of comment 005
@@ -92,7 +93,7 @@ type CommentsAndDocs struct {
 
 	// this should be ignored
 
-	CommentNoSpaces int //comment abc
+	CommentNoSpaces int // comment abc
 
 	/* this is line 1 of comment 009*/
 	StarDoc int /*comment 010 */

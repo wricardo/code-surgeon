@@ -25,6 +25,7 @@ func (s *privateStruct) MyPrivateStructMethod(ctx context.Context, x string) (st
 	return "", nil
 }
 
+// MyOtherTestMethod this is the comment for the MyOtherTestMethod method.
 func (s *FirstStruct) MyOtherTestMethod(ctx context.Context, x string) (string, error) {
 	return "", nil
 }
