@@ -907,3 +907,41 @@ func TestParseGenericMethod(t *testing.T) {
 	require.Equal(t, "*connect.Request[FirstStruct]", structInfo.Methods[0].Params[1].Type)
 	require.Equal(t, "*connect.Response[FirstStruct]", structInfo.Methods[0].Returns[0].Type)
 }
+
+/*
+	package test
+
+	type Person struct {
+		Name string
+	}
+
+	func SomeFunc(strParam string, strPointer *string, p Person) (error, *Person) {
+		return nil, nil
+	}
+*/
+
+// test parsing the returns of SomeFunc
+func TestSomeFuncReturns(t *testing.T) {
+	code := `
+	package test
+
+	type Person struct {
+		Name string
+	}
+
+	func SomeFunc(strParam string, strPointer *string, p Person) (error, *Person) {
+		return nil, nil
+	}
+	`
+	output, err := ParseString(code)
+	require.NoError(t, err)
+	require.NotNil(t, output)
+
+	parsed := newHelper(&output.Packages[0])
+	someFunc := parsed.Function("SomeFunc")
+
+	require.Len(t, someFunc.Returns, 2)
+
+	require.Equal(t, "error", someFunc.Returns[0].Type)
+	require.Equal(t, "*Person", someFunc.Returns[1].Type)
+}

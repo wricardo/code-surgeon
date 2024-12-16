@@ -10,9 +10,19 @@ import (
 	"strings"
 )
 
-func extractParsedInfo(packages map[string]*ast.Package) (*ParsedInfo, error) {
+// extractParsedInfo extracts parsed information from the AST.
+// moduleName is the name of the module being parsed, as seen on the go.mod file.
+func extractParsedInfo(packages map[string]*ast.Package, moduleName string, relModPath string) (*ParsedInfo, error) {
 	output := &ParsedInfo{
-		Packages: make([]Package, 0, len(packages)),
+		// Packages: make([]Package, 0, len(packages)),
+		Modules: make([]Module, 0, len(packages)),
+	}
+
+	m := &Module{
+		RootModuleName:    moduleName,
+		RelativeDirectory: relModPath,
+		FullName:          moduleName + "/" + strings.TrimLeft(relModPath, "./"),
+		Packages:          make([]Package, 0, len(packages)),
 	}
 
 	for _, pkg := range packages {
@@ -21,20 +31,27 @@ func extractParsedInfo(packages map[string]*ast.Package) (*ParsedInfo, error) {
 			Functions: make([]Function, 0),
 			Variables: make([]Variable, 0),
 			Constants: make([]Constant, 0),
-			Imports:   make([]string, 0),
+			Imports:   make([]Import, 0),
 		}
 
 		docPkg := doc.New(pkg, "", doc.AllDecls|doc.AllMethods|doc.PreserveAST)
 		outPkg.Package = pkg.Name // Set package name
 
+		// Extract imports
+		imports, err := extractImports(pkg)
+		if err != nil {
+			return nil, err
+		}
+		outPkg.Imports = imports
+
 		// Extract types (structs and interfaces)
-		structs, err := extractStructs(docPkg)
+		structs, err := extractStructs(docPkg, outPkg)
 		if err != nil {
 			return nil, err
 		}
 		outPkg.Structs = append(outPkg.Structs, structs...)
 
-		interfaces, err := extractInterfaces(docPkg)
+		interfaces, err := extractInterfaces(docPkg, outPkg)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +64,7 @@ func extractParsedInfo(packages map[string]*ast.Package) (*ParsedInfo, error) {
 		}
 
 		// Extract functions and methods
-		functions, methods, err := extractFunctionsAndMethods(pkg)
+		functions, methods, err := extractFunctionsAndMethods(pkg, outPkg)
 		if err != nil {
 			return nil, err
 		}
@@ -58,6 +75,7 @@ func extractParsedInfo(packages map[string]*ast.Package) (*ParsedInfo, error) {
 			receiverName := strings.TrimPrefix(method.Receiver, "*")
 			if structPtr, ok := structMap[receiverName]; ok {
 				// Append to struct's methods
+				method.PtrStruct = structPtr
 				structPtr.Methods = append(structPtr.Methods, method)
 			} else {
 				// Optionally, handle methods for types not defined in this package
@@ -65,29 +83,24 @@ func extractParsedInfo(packages map[string]*ast.Package) (*ParsedInfo, error) {
 			}
 		}
 
-		// Extract imports
-		imports, err := extractImports(pkg)
-		if err != nil {
-			return nil, err
-		}
-		outPkg.Imports = imports
-
 		// Extract constants and variables
-		constants, variables, err := extractConstantsVariables(pkg)
+		constants, variables, err := extractConstantsVariables(pkg, outPkg)
 		if err != nil {
 			return nil, err
 		}
 		outPkg.Constants = append(outPkg.Constants, constants...)
 		outPkg.Variables = append(outPkg.Variables, variables...)
 
-		output.Packages = append(output.Packages, outPkg)
+		m.Packages = append(m.Packages, outPkg)
 	}
+	output.Modules = append(output.Modules, *m)
+	output.Packages = m.Packages
 
 	return output, nil
 }
 
 // parseFunctionDecl extracts function details from an *ast.FuncDecl node.
-func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string) (Function, error) {
+func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string, pkg Package) (Function, error) {
 	function := Function{
 		Name: funcDecl.Name.Name,
 		Docs: getDocsForField([]string{docs}),
@@ -97,24 +110,33 @@ func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string) (Function, error) {
 	params := []Param{}
 	if funcDecl.Type.Params != nil {
 		for _, param := range funcDecl.Type.Params.List {
-			paramType, _, _, err := getType(param.Type)
+			paramType, err := getFullType(param.Type, pkg)
 			if err != nil {
 				return function, err
 			}
 
 			if len(param.Names) > 0 {
 				for _, name := range param.Names {
-					params = append(params, Param{
-						Name: name.Name,
-						Type: paramType,
-					})
+					p := &Param{
+						Name:        name.Name,
+						Type:        paramType.TypeName,
+						TypeDetails: *paramType,
+
+						PtrFunc: &function,
+					}
+					// p.FillTypeDetails()
+					params = append(params, *p)
+
 				}
 			} else {
 				// Handle anonymous parameters
-				params = append(params, Param{
-					Name: "",
-					Type: paramType,
-				})
+				p := &Param{
+					Type:        paramType.TypeName,
+					TypeDetails: *paramType,
+					PtrFunc:     &function,
+				}
+				// p.FillTypeDetails()
+				params = append(params, *p)
 			}
 		}
 	}
@@ -124,7 +146,7 @@ func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string) (Function, error) {
 	returns := []Param{}
 	if funcDecl.Type.Results != nil {
 		for _, result := range funcDecl.Type.Results.List {
-			returnType, _, _, err := getType(result.Type)
+			returnType, err := getFullType(result.Type, pkg)
 			if err != nil {
 				return function, err
 			}
@@ -133,13 +155,16 @@ func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string) (Function, error) {
 				for _, name := range result.Names {
 					returns = append(returns, Param{
 						Name: name.Name,
-						Type: returnType,
+						Type: returnType.TypeName,
+
+						PtrFunc: &function,
 					})
 				}
 			} else {
 				returns = append(returns, Param{
-					Name: "",
-					Type: returnType,
+					Type: returnType.TypeName,
+
+					PtrFunc: &function,
 				})
 			}
 		}
@@ -191,11 +216,11 @@ func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string) (Function, error) {
 }
 
 // parseMethodDecl extracts method details from an *ast.FuncDecl node.
-func parseMethodDecl(funcDecl *ast.FuncDecl, docs string) (Method, error) {
-	receiverType, _, _, _ := getType(funcDecl.Recv.List[0].Type)
+func parseMethodDecl(funcDecl *ast.FuncDecl, docs string, ourPkg Package) (Method, error) {
+	receiverType, _ := getFullType(funcDecl.Recv.List[0].Type, ourPkg)
 	method := Method{
 		Name:     funcDecl.Name.Name,
-		Receiver: receiverType,
+		Receiver: receiverType.TypeName,
 		Docs:     getDocsForField([]string{docs}),
 	}
 
@@ -203,23 +228,37 @@ func parseMethodDecl(funcDecl *ast.FuncDecl, docs string) (Method, error) {
 	params := []Param{}
 	if funcDecl.Type.Params != nil {
 		for _, param := range funcDecl.Type.Params.List {
-			paramType, _, _, err := getType(param.Type)
+			paramType, err := getFullType(param.Type, ourPkg)
 			if err != nil {
 				return method, err
+			}
+			if (paramType.PackageName == nil || *paramType.PackageName == "") && ourPkg.Package != "" {
+				paramType.PackageName = &ourPkg.Package
 			}
 
 			if len(param.Names) > 0 {
 				for _, name := range param.Names {
-					params = append(params, Param{
-						Name: name.Name,
-						Type: paramType,
-					})
+					p := &Param{
+						Name:        name.Name,
+						Type:        paramType.TypeName,
+						TypeDetails: *paramType,
+
+						PtrMethod: &method,
+					}
+					// p.FillTypeDetails()
+					params = append(params, *p)
+
 				}
 			} else {
-				params = append(params, Param{
-					Name: "",
-					Type: paramType,
-				})
+				p := &Param{
+					Name:        "",
+					Type:        paramType.TypeName,
+					TypeDetails: *paramType,
+
+					PtrMethod: &method,
+				}
+				// p.FillTypeDetails()
+				params = append(params, *p)
 			}
 		}
 	}
@@ -229,23 +268,33 @@ func parseMethodDecl(funcDecl *ast.FuncDecl, docs string) (Method, error) {
 	returns := []Param{}
 	if funcDecl.Type.Results != nil {
 		for _, result := range funcDecl.Type.Results.List {
-			returnType, _, _, err := getType(result.Type)
+			returnType, err := getFullType(result.Type, ourPkg)
 			if err != nil {
 				return method, err
 			}
 
 			if len(result.Names) > 0 {
 				for _, name := range result.Names {
-					returns = append(returns, Param{
-						Name: name.Name,
-						Type: returnType,
-					})
+					p := &Param{
+						Name:        name.Name,
+						Type:        returnType.TypeName,
+						TypeDetails: *returnType,
+
+						PtrMethod: &method,
+					}
+					// p.FillTypeDetails()
+					returns = append(returns, *p)
 				}
 			} else {
-				returns = append(returns, Param{
-					Name: "",
-					Type: returnType,
-				})
+				p := &Param{
+					Name:        "",
+					Type:        returnType.TypeName,
+					TypeDetails: *returnType,
+
+					PtrMethod: &method,
+				}
+				// p.FillTypeDetails()
+				returns = append(returns, *p)
 			}
 		}
 	}
@@ -296,7 +345,7 @@ func parseMethodDecl(funcDecl *ast.FuncDecl, docs string) (Method, error) {
 }
 
 // extractFunctionsAndMethods traverses the AST to extract all functions and methods.
-func extractFunctionsAndMethods(pkg *ast.Package) ([]Function, []Method, error) {
+func extractFunctionsAndMethods(pkg *ast.Package, ourPkg Package) ([]Function, []Method, error) {
 	var functions []Function
 	var methods []Method
 
@@ -305,14 +354,14 @@ func extractFunctionsAndMethods(pkg *ast.Package) ([]Function, []Method, error) 
 			if funcDecl, ok := decl.(*ast.FuncDecl); ok {
 				if funcDecl.Recv == nil {
 					// Package-level function
-					function, err := parseFunctionDecl(funcDecl, funcDecl.Doc.Text())
+					function, err := parseFunctionDecl(funcDecl, funcDecl.Doc.Text(), ourPkg)
 					if err != nil {
 						return nil, nil, err
 					}
 					functions = append(functions, function)
 				} else {
 					// Method
-					method, err := parseMethodDecl(funcDecl, funcDecl.Doc.Text())
+					method, err := parseMethodDecl(funcDecl, funcDecl.Doc.Text(), ourPkg)
 					if err != nil {
 						return nil, nil, err
 					}

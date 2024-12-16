@@ -2,759 +2,497 @@ package neo4j2
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/rs/zerolog/log"
-
-	"github.com/google/uuid"
+	codesurgeon "bitbucket.org/zetaactions/code-surgeon"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/rs/zerolog/log"
 )
 
-func UpsertStructInfo(ctx context.Context, driver neo4j.DriverWithContext, name string, documentation string, packageName string, package_ string) error {
+func MergePackage(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package) MergeQuery {
+	return MergeQuery{
+		NodeType: "Package",
+		Alias:    alias,
+		Properties: map[string]any{
+			"module_full_name": mod.FullName,
+			"name":             pkg.Package,
+		},
+	}
+}
+
+func MergeStruct(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct) MergeQuery {
+	return MergeQuery{
+		NodeType: "Struct",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name":    strct.Name,
+			"package": pkg.Package,
+		},
+		SetFields: map[string]string{
+			"documentation": strings.Join(strct.Docs, "\n"),
+			"packageName":   pkg.Package,
+		},
+	}
+}
+
+func MergeModule(ctx context.Context, alias string, mod codesurgeon.Module) MergeQuery {
+	return MergeQuery{
+		NodeType: "Module",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name": mod.RootModuleName,
+		},
+	}
+}
+
+func UpsertPackage(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package) error {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, `
-		MERGE (f:Struct {package: $package, name: $name})
-		SET f.documentation = $documentation, f.packageName = $packageName, f.name = $name
-		with f
-		MERGE (p:Package {package: $package})
-		SET p.name = $packageName, p.packageName = $packageName
-		MERGE (f)-[:BELONGS_TO]->(p)
-		RETURN id(f) as nodeID
-		`, map[string]interface{}{
-			"name":          name,
-			"documentation": documentation,
-			"packageName":   packageName,
-			"package":       package_,
-		})
-		if err != nil {
-			return nil, err
-		}
 
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, fmt.Errorf("no records returned")
-		}
+	query := CypherQuery{}.
+		Merge(MergePackage(ctx, "p", mod, pkg)).
+		Merge(MergeModule(ctx, "m", mod)).
+		MergeRel("p", "BELONGS_TO", "m", nil).
+		Return("id(p) as nodeID")
 
-		return nil, nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-
+	return query.Execute(ctx, session)
 }
 
-type ReceiverInfo struct {
-}
-
-func GetReceiverInfo(ctx context.Context, driver neo4j.DriverWithContext, receiver string) ReceiverInfo {
-	return ReceiverInfo{}
-}
-
-func UpsertFunctionInfo(ctx context.Context, driver neo4j.DriverWithContext, file string, receiver, function string, documentation string, packageName string, package_ string) error {
+func UpsertStruct(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct) error {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		name := fmt.Sprintf("%s.%s", receiver, function)
-		if receiver == "" {
-			name = function
-		}
-		extra := ""
-		if receiver != "" {
-			extra = `
-			MERGE (r:Struct {package: $package, name: $receiver})
-			SET r.name = $receiver, r.packageName = $packageName
-			MERGE (f)-[:RECEIVER]->(r)
-			`
-		}
 
-		cypher := `
-		MERGE (f:Function {package: $package, receiver: $receiver, function: $function})
-		SET f.documentation = $documentation, f.packageName = $packageName, f.file = $file, f.name = $name
-		with f
-		` + extra + `
-		MERGE (p:Package {package: $package})
-		SET p.name = $packageName, p.packageName = $packageName
-		`
+	query := CypherQuery{}.
+		Merge(MergeBaseType(ctx, "bs", codesurgeon.TypeDetails{
+			Package:        &pkg.Package,
+			PackageName:    &pkg.Package,
+			Type:           &strct.Name,
+			TypeName:       strct.Name,
+			IsPointer:      false,
+			IsSlice:        false,
+			IsMap:          false,
+			IsBuiltin:      false,
+			IsExternal:     false,
+			TypeReferences: []codesurgeon.TypeReference{},
+		})).
+		Merge(MergeStruct(ctx, "f", mod, pkg, strct)).
+		Merge(MergePackage(ctx, "p", mod, pkg)).
+		MergeRel("f", "BELONGS_TO", "p", nil).
+		MergeRel("f", "OF_TYPE", "bs", nil).
+		Return("id(f) as nodeID")
 
-		if receiver == "" {
-			cypher += `
-			MERGE (f)-[:BELONGS_TO]->(p)
-			`
-		}
-
-		cypher += `
-		RETURN id(f) as nodeID
-		`
-
-		result, err := tx.Run(ctx, cypher, map[string]interface{}{
-			"file":          file,
-			"name":          name,
-			"documentation": documentation,
-			"receiver":      receiver,
-			"function":      function,
-			"packageName":   packageName,
-			"package":       package_,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, fmt.Errorf("no records returned")
-		}
-
-		return nil, nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-
+	return query.Execute(ctx, session)
 }
 
-func UpsertInterfaceInfo(ctx context.Context, driver neo4j.DriverWithContext, name string, documentation string, packageName string, package_ string) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, `
-		MERGE (i:Interface {package: $package, name: $name})
-		SET i.documentation = $documentation, i.packageName = $packageName, i.name = $name
-		WITH i
-		MERGE (p:Package {package: $package})
-		SET p.name = $packageName, p.packageName = $packageName
-		MERGE (i)-[:BELONGS_TO]->(p)
-		RETURN id(i) as nodeID
-		`, map[string]interface{}{
-			"name":          name,
+// Helper function to merge a Field node
+func MergeField(ctx context.Context, alias string, pkg codesurgeon.Package, fieldName, fieldType, documentation string) MergeQuery {
+	return MergeQuery{
+		NodeType: "Field",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name":    fieldName,
+			"package": pkg.Package,
+		},
+		SetFields: map[string]string{
 			"documentation": documentation,
-			"packageName":   packageName,
-			"package":       package_,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, errors.New("no records returned")
-		}
-
-		return nil, nil
-	})
-	if err != nil {
-		return err
+			"packageName":   pkg.Package,
+			"type":          fieldType,
+		},
 	}
-	return nil
 }
 
-func UpsertMethodReturn(ctx context.Context, driver neo4j.DriverWithContext, methodName string, paramName string, paramType string, documentation string, methodPackageName string, methodPackage_ string, receiver string) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		cypher := `
-		MERGE (t:Type {type: $paramType})
-		SET  t.type = $paramType
-		WITH t
-		MERGE (p:Return {name: $paramName, type: $paramType, package: $package, methodName: $methodName})
-		SET  p.name = $paramName, p.type = $paramType
-		WITH p, t
-		MERGE (m:Function {package: $package, receiver: $receiver, function: $methodName})
-		SET m.name = $methodName
-`
-
-		cypher += `
-		WITH m, p, t
-		MERGE (p)-[:BELONGS_TO]->(m)
-		MERGE (p)-[:OF_TYPE]->(t)
-		RETURN id(p) as nodeID
-		`
-		result, err := tx.Run(ctx, cypher, map[string]interface{}{
-			"methodName":    methodName,
-			"paramName":     paramName,
-			"paramType":     paramType,
-			"documentation": documentation,
-			"packageName":   methodPackageName,
-			"package":       methodPackage_,
-			"receiver":      receiver,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, errors.New("no records returned")
-		}
-
-		return nil, nil
-	})
-	if err != nil {
-		return err
+func MergeType2(ctx context.Context, alias string, paramType string) MergeQuery {
+	normalizedType := normalizeType(paramType)
+	return MergeQuery{
+		NodeType: "Type",
+		Alias:    alias,
+		Properties: map[string]any{
+			"type": normalizedType,
+		},
 	}
-	return nil
 }
 
-func UpsertMethodParam(ctx context.Context, driver neo4j.DriverWithContext, methodName string, paramName string, paramType string, documentation string, methodPackageName string, methodPackage_ string, receiver string) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		cypher := `
-		MERGE (t:Type {type: $paramType})
-		SET  t.type = $paramType
-		WITH t
-		MERGE (p:Param {name: $paramName, type: $paramType, package: $package, methodName: $methodName})
-		SET  p.name = $paramName, p.type = $paramType
-		WITH p, t
-		MERGE (m:Function {package: $package,  receiver: $receiver, function: $methodName})
-		SET m.name = $methodName
-`
-
-		cypher += `
-		WITH m, p, t
-		MERGE (p)-[:BELONGS_TO]->(m)
-		MERGE (p)-[:OF_TYPE]->(t)
-		RETURN id(p) as nodeID
-		`
-		result, err := tx.Run(ctx, cypher, map[string]interface{}{
-			"methodName":    methodName,
-			"paramName":     paramName,
-			"paramType":     paramType,
-			"documentation": documentation,
-			"packageName":   methodPackageName,
-			"package":       methodPackage_,
-			"receiver":      receiver,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, errors.New("no records returned")
-		}
-
-		return nil, nil
-	})
-	if err != nil {
-		return err
+// Helper to merge a Type node
+func MergeType(ctx context.Context, alias string, paramType codesurgeon.TypeDetails) MergeQuery {
+	normalizedType := normalizeType(paramType.TypeName)
+	return MergeQuery{
+		NodeType: "Type",
+		Alias:    alias,
+		Properties: map[string]any{
+			"type": normalizedType,
+		},
 	}
-	return nil
 }
 
-func UpsertInterfaceMethodParam(ctx context.Context, driver neo4j.DriverWithContext, interfaceName string, methodName string, paramName string, paramType string, documentation string, methodPackageName string, methodPackage_ string) error {
+func normalizeType(n string) string {
+	return n
+}
+
+// A simpler BaseType merge for when we only have a "type" property
+func MergeBaseType(ctx context.Context, alias string, td codesurgeon.TypeDetails) MergeQuery {
+	packageName := ""
+	baseType := "UNKNOWN"
+	if td.Type != nil && len(*td.Type) > 0 {
+		// baseType = field.TypeDetails.TypeReferences[0].Name
+		baseType = *td.Type
+		if len(td.TypeReferences) > 0 {
+			packageName = *td.TypeReferences[0].PackageName
+		}
+	}
+	if td.PackageName != nil {
+		packageName = *td.PackageName
+	}
+
+	if packageName == "" {
+		packageName = "builtin"
+	}
+
+	return MergeQuery{
+		NodeType: "BaseType",
+		Alias:    alias,
+		Properties: map[string]any{
+			"type":        baseType,
+			"packageName": packageName,
+		},
+	}
+}
+
+// UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
+func UpsertStructField(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) error {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, `
-		MERGE (p:Param {name: $paramName, type: $paramType})
-		SET  p.name = $paramName, p.type = $paramType
-		WITH p
-		MERGE (m:Function {package: $package, interfaceName: $interfaceName, name: $methodName})
-		SET m.name = $methodName
-		WITH m, p
-		MERGE (p)-[:BELONGS_TO]->(m)
-		RETURN id(p) as nodeID
-		`, map[string]interface{}{
-			"interfaceName": interfaceName,
-			"methodName":    methodName,
-			"paramName":     paramName,
-			"paramType":     paramType,
-			"documentation": documentation,
-			"packageName":   methodPackageName,
-			"package":       methodPackage_,
-		})
-		if err != nil {
-			return nil, err
-		}
 
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, errors.New("no records returned")
-		}
+	// packageName := ""
+	// baseType := "UNKNOWN"
+	// if field.TypeDetails.Type != nil && len(*field.TypeDetails.Type) > 0 {
+	// 	// baseType = field.TypeDetails.TypeReferences[0].Name
+	// 	baseType = *field.TypeDetails.Type
+	// 	if len(field.TypeDetails.TypeReferences) > 0 {
+	// 		packageName = *field.TypeDetails.TypeReferences[0].PackageName
+	// 	}
+	// }
 
-		return nil, nil
-	})
-	if err != nil {
-		return err
+	query := CypherQuery{}.
+		Merge(MergeField(ctx, "f", pkg, field.Name, field.Type, strings.Join(field.Docs, "\n"))).
+		Merge(MergeType(ctx, "t", field.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", field.TypeDetails)).
+		Merge(MergeStruct(ctx, "s", mod, pkg, strct)).
+		Merge(MergePackage(ctx, "p", mod, pkg)).
+		MergeRel("f", "OF_TYPE", "t", nil).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		MergeRel("s", "HAS_FIELD", "f", nil).
+		Return("id(f) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+// We need to handle UpsertMethodParam and others similarly:
+// For UpsertMethodParam, we have a Function node with receiver. Let's define MergeFunctionWithReceiver.
+// func MergeMethod(ctx context.Context, alias string, package_, receiver, methodName, documentation, packageName string) MergeQuery {
+// 	return MergeQuery{
+// 		NodeType: "Method",
+// 		Alias:    alias,
+// 		Properties: map[string]interface{}{
+// 			"package":  package_,
+// 			"receiver": receiver,
+// 			"function": methodName,
+// 		},
+// 		SetFields: map[string]string{
+// 			"name":          methodName,
+// 			"documentation": documentation,
+// 			"packageName":   packageName,
+// 		},
+// 	}
+// }
+
+func MergeMethod(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Method) MergeQuery {
+	return MergeQuery{
+		NodeType: "Method",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name":     fn.Name,
+			"receiver": fn.Receiver,
+			"package":  pkg.Package,
+		},
+		SetFields: map[string]string{
+			"documentation": strings.Join(fn.Docs, "\n"),
+		},
 	}
-	return nil
+}
+
+func UpsertMethod(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, method codesurgeon.Method, receiver codesurgeon.Struct) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeMethod(ctx, "m", mod, pkg, method)).
+		Merge(MergeStruct(ctx, "s", mod, pkg, receiver)). // Ensure the receiver Struct is merged
+		MergeRel("s", "HAS_METHOD", "m", nil).            // Create a relationship between the receiver Struct and the Method
+		Return("id(m) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func MergeFunction(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function) MergeQuery {
+	return MergeQuery{
+		NodeType: "Function",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name":    fn.Name,
+			"package": pkg.Package,
+		},
+		SetFields: map[string]string{
+			"documentation": strings.Join(fn.Docs, "\n"),
+		},
+	}
+}
+
+func UpsertFunction(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
+		Merge(MergePackage(ctx, "p", mod, pkg)).
+		MergeRel("f", "BELONGS_TO", "p", nil).
+		Return("id(f) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func UpsertInterface(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeBaseType(ctx, "bs", codesurgeon.TypeDetails{
+			Package:        &pkg.Package,
+			PackageName:    &pkg.Package,
+			Type:           &iface.Name,
+			TypeName:       iface.Name,
+			IsPointer:      false,
+			IsSlice:        false,
+			IsMap:          false,
+			IsBuiltin:      false,
+			IsExternal:     false,
+			TypeReferences: []codesurgeon.TypeReference{},
+		})).
+		Merge(MergeInterface(ctx, "f", mod, pkg, iface)).
+		Merge(MergePackage(ctx, "p", mod, pkg)).
+		MergeRel("f", "BELONGS_TO", "p", nil).
+		MergeRel("f", "OF_TYPE", "bs", nil).
+		Return("id(f) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func MergeInterface(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface) MergeQuery {
+	return MergeQuery{
+		NodeType: "Interface",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name":    iface.Name,
+			"package": pkg.Package,
+		},
+		SetFields: map[string]string{
+			"documentation": strings.Join(iface.Docs, "\n"),
+		},
+	}
+}
+
+func MergeReturn(ctx context.Context, alias string, ret codesurgeon.Param) MergeQuery {
+	return MergeQuery{
+		NodeType: "Return",
+		Alias:    alias,
+		Properties: map[string]any{
+			"name": ret.Name,
+			"type": ret.Type,
+		},
+	}
+}
+
+func UpsertFunctionReturn(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, ret codesurgeon.Param) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
+		Merge(MergeReturn(ctx, "r", ret)).
+		MergeRel("f", "RETURNS", "r", nil).
+		Merge(MergeType(ctx, "t", ret.TypeDetails)).
+		MergeRel("r", "OF_TYPE", "t", nil).
+		Merge(MergeBaseType(ctx, "b", ret.TypeDetails)).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		Return("id(r) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func UpsertMethodReturn(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Method, ret codesurgeon.Param) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeMethod(ctx, "m", mod, pkg, fn)).
+		Merge(MergeReturn(ctx, "r", ret)).
+		MergeRel("m", "RETURNS", "r", nil).
+		Merge(MergeType(ctx, "t", ret.TypeDetails)).
+		MergeRel("r", "OF_TYPE", "t", nil).
+		Merge(MergeBaseType(ctx, "b", ret.TypeDetails)).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		Return("id(r) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func MergeFuncParam(ctx context.Context, alias string, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) MergeQuery {
+	return MergeQuery{
+		NodeType: "Param",
+		Alias:    alias,
+		Properties: map[string]interface{}{
+			"name":       param.Name,
+			"type":       param.Type,
+			"package":    pkg.Package,
+			"methodName": fn.Name,
+		},
+		SetFields: map[string]string{},
+	}
+}
+
+func MergeInterfaceMethodParam(ctx context.Context, alias string, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) MergeQuery {
+	return MergeQuery{
+		NodeType: "Param",
+		Alias:    alias,
+		Properties: map[string]interface{}{
+			"name":    param.Name,
+			"type":    param.Type,
+			"package": pkg.Package,
+			"iface":   iface.Name,
+			"method":  method.Name,
+		},
+		SetFields: map[string]string{
+			"name": param.Name,
+			"type": param.Type,
+		},
+	}
+}
+
+func MergeMethodParam(ctx context.Context, alias string, pkg codesurgeon.Package, method codesurgeon.Method, param codesurgeon.Param) MergeQuery {
+	return MergeQuery{
+		NodeType: "Param",
+		Alias:    alias,
+		Properties: map[string]interface{}{
+			"name":       param.Name,
+			"type":       param.Type,
+			"package":    pkg.Package,
+			"methodName": method.Name,
+		},
+		SetFields: map[string]string{
+			"name": param.Name,
+			"type": param.Type,
+		},
+	}
+}
+
+func UpsertFunctionParam(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeFuncParam(ctx, "p", pkg, fn, param)).
+		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
+		Merge(MergeType(ctx, "t", param.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", param.TypeDetails)).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		MergeRel("f", "HAS_PARAM", "p", nil).
+		MergeRel("p", "OF_TYPE", "t", nil).
+		Return("id(p) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func UpsertMethodParam(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, method codesurgeon.Method, param codesurgeon.Param) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeMethodParam(ctx, "p", pkg, method, param)).
+		Merge(MergeMethod(ctx, "m", mod, pkg, method)).
+		Merge(MergeType(ctx, "t", param.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", param.TypeDetails)).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		MergeRel("m", "HAS_PARAM", "p", nil).
+		MergeRel("p", "OF_TYPE", "t", nil).
+		Return("id(p) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+// For UpsertInterfaceMethodParam, we have interfaceName, methodName, etc.
+// We can reuse MergeParam and define a special MergeFunction variant for interface methods.
+func MergeInterfaceMethodFunction(ctx context.Context, alias string, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method) MergeQuery {
+	return MergeQuery{
+		NodeType: "Function",
+		Alias:    alias,
+		Properties: map[string]interface{}{
+			"package":       pkg.ModuleName,
+			"interfaceName": iface.Name,
+			"name":          method.Name,
+		},
+		SetFields: map[string]string{
+			"documentation": strings.Join(method.Docs, "\n"),
+		},
+	}
+}
+
+func UpsertInterfaceMethodParam(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeInterfaceMethodParam(ctx, "p", pkg, iface, method, param)).
+		Merge(MergeInterfaceMethodFunction(ctx, "m", pkg, iface, method)).
+		MergeRel("m", "HAS_PARAM", "p", nil).
+		Merge(MergeType(ctx, "t", param.TypeDetails)).
+		MergeRel("p", "OF_TYPE", "t", nil).
+		Merge(MergeBaseType(ctx, "b", param.TypeDetails)).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		Return("id(p) as nodeID")
+
+	return query.Execute(ctx, session)
+}
+
+func UpsertInterfaceMethodReturn(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, ret codesurgeon.Param) error {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	defer session.Close(ctx)
+
+	query := CypherQuery{}.
+		Merge(MergeInterfaceMethodFunction(ctx, "m", pkg, iface, method)).
+		Merge(MergeReturn(ctx, "r", ret)).
+		MergeRel("m", "RETURNS", "r", nil).
+		Merge(MergeType(ctx, "t", ret.TypeDetails)).
+		MergeRel("r", "OF_TYPE", "t", nil).
+		Merge(MergeBaseType(ctx, "b", ret.TypeDetails)).
+		MergeRel("t", "BASE_TYPE", "b", nil).
+		Return("id(r) as nodeID")
+
+	return query.Execute(ctx, session)
 }
 
 // UpsertInterfaceMethod creates or updates a method node in Neo4j and links it to its interface and package.
-func UpsertInterfaceMethod(ctx context.Context, driver neo4j.DriverWithContext, interfaceName string, methodName string, documentation string, packageName string, package_ string) error {
+func UpsertInterfaceMethod(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method) error {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, `
-		MERGE (m:Function {package: $package, interfaceName: $interfaceName, name: $methodName})
-		SET m.documentation = $documentation, m.packageName = $packageName, m.name = $methodName
-		WITH m
-		MERGE (i:Interface {package: $package, name: $interfaceName})
-		SET i.name = $interfaceName, i.packageName = $packageName
-		MERGE (m)-[:BELONGS_TO]->(i)
-		MERGE (p:Package {package: $package})
-		SET p.name = $packageName, p.packageName = $packageName
-		MERGE (m)-[:BELONGS_TO]->(p)
-		RETURN id(m) as nodeID
-		`, map[string]interface{}{
-			"interfaceName": interfaceName,
-			"methodName":    methodName,
-			"documentation": documentation,
-			"packageName":   packageName,
-			"package":       package_,
-		})
-		if err != nil {
-			return nil, err
-		}
 
-		records, err := result.Collect(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(records) == 0 {
-			return nil, errors.New("no records returned")
-		}
+	query := CypherQuery{}.
+		Merge(MergeInterfaceMethodFunction(ctx, "m", pkg, iface, method)).
+		Merge(MergeInterface(ctx, "i", mod, pkg, iface)).
+		Merge(MergePackage(ctx, "p", mod, pkg)).
+		MergeRel("i", "HAS_FUNCTION", "m", nil).
+		Return("id(m) as nodeID")
 
-		return nil, nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ListFileFromFunctions(ctx context.Context, driver neo4j.DriverWithContext) ([]string, error) {
-	// MATCH (f:Function) return distinct f.file
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	var files []string
-	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, "MATCH (f:Function) return distinct f.file", nil)
-		if err != nil {
-			return nil, err
-		}
-		for result.Next(ctx) {
-			files = append(files, result.Record().Values[0].(string))
-		}
-		return nil, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
-}
-
-// GetSchema retrieves the database schema, including labels, properties, and relationships.
-func GetSchema(ctx context.Context, driver neo4j.DriverWithContext) (*Schema, error) {
-	if driver == nil {
-		return nil, fmt.Errorf("driver is nil")
-	}
-
-	// Define the Cypher query to retrieve the schema for labels and properties.
-	const cypherQueryLabels = `
-        CALL apoc.meta.schema() YIELD value as schemaMap
-        UNWIND keys(schemaMap) as label
-        WITH label, schemaMap[label] as data
-        WHERE data.type = "node"
-        UNWIND keys(data.properties) as property
-        WITH label, property, data.properties[property] as propData
-        RETURN label,
-               property,
-               propData.type as type,
-               propData.indexed as isIndexed,
-               propData.unique as uniqueConstraint,
-               propData.existence as existenceConstraint
-    `
-
-	// Define the Cypher query to retrieve relationship schema using the new format.
-	const cypherQueryRelationships = `
-        MATCH (start)-[r]->(end)
-        UNWIND r AS rel
-        WITH DISTINCT labels(start) AS startLabels, type(rel) AS relType, labels(end) AS endLabels
-        RETURN startLabels, relType, endLabels
-        ORDER BY startLabels, relType, endLabels
-    `
-
-	// Initialize a new session.
-	session := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
-	defer session.Close(ctx)
-
-	// Execute the read transaction.
-	result, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		// -------------------
-		// Process Labels and Properties
-		// -------------------
-		labelRecords, err := tx.Run(ctx, cypherQueryLabels, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute schema query for labels: %w", err)
-		}
-
-		// Initialize a map to hold label schemas.
-		labelMap := make(map[string]*LabelSchema)
-
-		// Iterate over the label records.
-		for labelRecords.Next(ctx) {
-			record := labelRecords.Record()
-			label, _ := record.Get("label")
-			property, _ := record.Get("property")
-			propType, _ := record.Get("type")
-			isIndexed, _ := record.Get("isIndexed")
-			uniqueConstraint, _ := record.Get("uniqueConstraint")
-			existenceConstraint, _ := record.Get("existenceConstraint")
-
-			lbl := label.(string)
-			prop := property.(string)
-			pType := propType.(string)
-			idx := isIndexed.(bool)
-			unique := uniqueConstraint.(bool)
-			existence := existenceConstraint.(bool)
-
-			// If the label is not yet in the map, add it.
-			if _, exists := labelMap[lbl]; !exists {
-				labelMap[lbl] = &LabelSchema{
-					Label:      lbl,
-					Properties: []PropertySchema{},
-				}
-			}
-
-			// Append the property schema to the label.
-			labelMap[lbl].Properties = append(labelMap[lbl].Properties, PropertySchema{
-				Property:            prop,
-				Type:                pType,
-				IsIndexed:           idx,
-				UniqueConstraint:    unique,
-				ExistenceConstraint: existence,
-			})
-		}
-
-		// Check for errors during label iteration.
-		if err = labelRecords.Err(); err != nil {
-			return nil, fmt.Errorf("error iterating label records: %w", err)
-		}
-
-		// Convert the label map to a slice.
-		labels := make([]LabelSchema, 0, len(labelMap))
-		for _, lblSchema := range labelMap {
-			labels = append(labels, *lblSchema)
-		}
-
-		// -------------------
-		// Process Relationships
-		// -------------------
-		relRecords, err := tx.Run(ctx, cypherQueryRelationships, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute schema query for relationships: %w", err)
-		}
-
-		// Initialize a slice to hold relationships.
-		relationships := []RelationshipSchema{}
-
-		// Iterate over the relationship records.
-		for relRecords.Next(ctx) {
-			record := relRecords.Record()
-			startLabels, _ := record.Get("startLabels")
-			relType, _ := record.Get("relType")
-			endLabels, _ := record.Get("endLabels")
-
-			startLbls, ok1 := startLabels.([]interface{})
-			relStr, ok2 := relType.(string)
-			endLbls, ok3 := endLabels.([]interface{})
-
-			if !ok1 || !ok2 || !ok3 {
-				return nil, fmt.Errorf("unexpected data types in relationship record")
-			}
-
-			// Convert labels from []interface{} to string
-			fromLabel := labelsToString(startLbls)
-			toLabel := labelsToString(endLbls)
-
-			rel := RelationshipSchema{
-				Relationship: relStr,
-				FromLabel:    fromLabel,
-				ToLabel:      toLabel,
-			}
-
-			relationships = append(relationships, rel)
-		}
-
-		// Check for errors during relationship iteration.
-		if err = relRecords.Err(); err != nil {
-			return nil, fmt.Errorf("error iterating relationship records: %w", err)
-		}
-
-		// -------------------
-		// Construct and Return Schema
-		// -------------------
-		encodedLabels, err := json.MarshalIndent(labels, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal labels: %w", err)
-		}
-		log.Printf("Labels: %s", encodedLabels)
-
-		encodedRelationships, err := json.MarshalIndent(relationships, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal relationships: %w", err)
-		}
-		log.Printf("Relationships: %s", encodedRelationships)
-
-		return &Schema{
-			Labels:        labels,
-			Relationships: relationships,
-		}, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Type assertion to *Schema.
-	schema, ok := result.(*Schema)
-	if !ok {
-		return nil, fmt.Errorf("unexpected result type")
-	}
-
-	encodedSchema, err := json.MarshalIndent(schema, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal schema: %w", err)
-	}
-	log.Printf("Schema: %s", encodedSchema)
-	return schema, nil
-}
-
-// labelsToString converts a slice of interface{} to a comma-separated string of labels.
-func labelsToString(labels []interface{}) string {
-	labelStrings := make([]string, len(labels))
-	for i, label := range labels {
-		labelStrings[i] = label.(string)
-	}
-	return strings.Join(labelStrings, ",")
-}
-
-/*
-// GetSchema retrieves the database schema from Neo4j and returns it as a Schema struct.
-func GetSchema(ctx context.Context, driver neo4j.DriverWithContext) (*Schema, error) {
-	if driver == nil {
-		return nil, fmt.Errorf("driver is nil")
-	}
-	// Define the Cypher query to retrieve the schema.
-	const cypherQuery = `
-        CALL apoc.meta.schema() YIELD value as schemaMap
-        UNWIND keys(schemaMap) as label
-        WITH label, schemaMap[label] as data
-        WHERE data.type = "node"
-        UNWIND keys(data.properties) as property
-        WITH label, property, data.properties[property] as propData
-        RETURN label,
-               property,
-               propData.type as type,
-               propData.indexed as isIndexed,
-               propData.unique as uniqueConstraint,
-               propData.existence as existenceConstraint
-    `
-
-	// Initialize a new session.
-	session := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
-	defer session.Close(ctx)
-
-	// Execute the read transaction.
-	result, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		// Run the Cypher query.
-		records, err := tx.Run(ctx, cypherQuery, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute schema query: %w", err)
-		}
-
-		// Initialize a map to hold label schemas.
-		labelMap := make(map[string]*LabelSchema)
-
-		// Iterate over the results.
-		for records.Next(ctx) {
-			record := records.Record()
-			label, _ := record.Get("label")
-			property, _ := record.Get("property")
-			propType, _ := record.Get("type")
-			isIndexed, _ := record.Get("isIndexed")
-			uniqueConstraint, _ := record.Get("uniqueConstraint")
-			existenceConstraint, _ := record.Get("existenceConstraint")
-
-			lbl := label.(string)
-			prop := property.(string)
-			pType := propType.(string)
-			idx := isIndexed.(bool)
-			unique := uniqueConstraint.(bool)
-			existence := existenceConstraint.(bool)
-
-			// If the label is not yet in the map, add it.
-			if _, exists := labelMap[lbl]; !exists {
-				labelMap[lbl] = &LabelSchema{
-					Label:      lbl,
-					Properties: []PropertySchema{},
-				}
-			}
-
-			// Append the property schema to the label.
-			labelMap[lbl].Properties = append(labelMap[lbl].Properties, PropertySchema{
-				Property:            prop,
-				Type:                pType,
-				IsIndexed:           idx,
-				UniqueConstraint:    unique,
-				ExistenceConstraint: existence,
-			})
-		}
-
-		// Check for errors during iteration.
-		if err = records.Err(); err != nil {
-			return nil, fmt.Errorf("error iterating schema records: %w", err)
-		}
-
-		// Convert the map to a slice.
-		labels := make([]LabelSchema, 0, len(labelMap))
-		for _, lblSchema := range labelMap {
-			labels = append(labels, *lblSchema)
-		}
-
-		// Return the populated Schema.
-		return &Schema{
-			Labels: labels,
-		}, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Type assertion to *Schema.
-	schema, ok := result.(*Schema)
-	if !ok {
-		return nil, fmt.Errorf("unexpected result type")
-	}
-
-	return schema, nil
-}
-*/
-
-func CreateQuestionAndAnswers(ctx context.Context, driver neo4j.DriverWithContext, questionText string, questionEmbedding []float32, answers []string) error { // CreateQuestionAndAnswers creates a question node and its corresponding answer nodes in Neo4j.
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		var questionId string
-
-		// Step 1: Attempt to match an existing Question node
-		existingQuestionResult, err := tx.Run(ctx, "MATCH (q:Question {text: $text}) RETURN q.id", map[string]interface{}{
-			"text": questionText,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		// Step 2: Use the existing Question node if found
-		if existingQuestionResult.Next(ctx) {
-			questionId = existingQuestionResult.Record().Values[0].(string)
-		} else {
-			// Step 3: Create a new Question node if none is found
-			newQuestionResult, err := tx.Run(ctx, "CREATE (q:Question {id: $id, text: $text, embedding: $embedding, created_at: datetime($createdAt)}) RETURN q.id", map[string]interface{}{
-				"text":      questionText,
-				"id":        uuid.New().String(),
-				"embedding": questionEmbedding,
-				"createdAt": time.Now().Format(time.RFC3339),
-			})
-			if err != nil {
-				return nil, err
-			}
-			if newQuestionResult.Next(ctx) {
-				questionId = newQuestionResult.Record().Values[0].(string)
-			}
-		}
-
-		// Step 4: Create Answer nodes and relationships
-		for _, answerText := range answers {
-			answerResult, err := tx.Run(ctx, "CREATE (a:Answer {id: $id, text: $text, created_at: datetime($createdAt) }) RETURN a.id", map[string]interface{}{
-				"text":      answerText,
-				"id":        uuid.New().String(),
-				"createdAt": time.Now().Format(time.RFC3339),
-			})
-			if err != nil {
-				return nil, err
-			}
-			var answerId string
-			if answerResult.Next(ctx) {
-				answerId = answerResult.Record().Values[0].(string)
-			}
-			_, err = tx.Run(ctx, "MATCH (q:Question {id: $questionId}), (a:Answer {id: $answerId}) CREATE (q)-[:ANSWERED_BY]->(a)", map[string]interface{}{
-				"questionId": questionId,
-				"answerId":   answerId,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-		log.Printf("Processed question with ID: %s", questionId)
-		return nil, nil
-	})
-	return err
-}
-
-func PageQuestions(ctx context.Context, driver neo4j.DriverWithContext, page, limit int) ([]Question, error) {
-	// set default limit to 10
-	if limit == 0 {
-		limit = 10
-	}
-
-	// set default page to 1
-	if page == 0 {
-		page = 1
-	}
-
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	var questions []Question
-	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, "MATCH (q:Question) RETURN q.id, q.text, q.embedding, q.created_at SKIP $skip LIMIT $limit", map[string]interface{}{"skip": (page - 1) * limit, "limit": limit})
-		if err != nil {
-			return nil, err
-		}
-		for result.Next(ctx) {
-			record := result.Record()
-			questions = append(questions, Question{
-				ID:        toString(record.Values[0]),
-				Text:      toString(record.Values[1]),
-				CreatedAt: toString(record.Values[3]),
-			})
-		}
-		return nil, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return questions, nil
+	return query.Execute(ctx, session)
 }
 
 func toString(v interface{}) string {
@@ -790,146 +528,6 @@ func toFloat64(v interface{}) float64 {
 	return f
 }
 
-// GetTopAnswersForQuestions retrieves the top answers for a list of question IDs from Neo4j.
-func GetTopAnswersForQuestions(ctx context.Context, driver neo4j.DriverWithContext, questionIds []string) ([]QuestionAnswer, error) {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	var allAnswers []QuestionAnswer
-	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		for _, questionId := range questionIds {
-			result, err := tx.Run(ctx, "MATCH (q:Question {id: $questionId})-[:ANSWERED_BY]->(a:Answer) "+"RETURN q.text, a.text ORDER BY a.score DESC LIMIT 1", map[string]interface{}{"questionId": questionId})
-			if err != nil {
-				return nil, err
-			}
-			for result.Next(ctx) {
-				record := result.Record()
-				allAnswers = append(allAnswers, QuestionAnswer{
-					Question: toString(record.Values[0]),
-					Answer:   toString(record.Values[1]),
-				})
-			}
-		}
-		return nil, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return allAnswers, nil
-}
-
-// VectorSearchQuestions performs a vector search in Neo4j to find the top similar questions to the user's input.
-func VectorSearchQuestions(ctx context.Context, driver neo4j.DriverWithContext, userEmbedding []float32, limit int) ([]Question, error) {
-	if len(userEmbedding) == 0 {
-		return nil, fmt.Errorf("user embedding is empty")
-	}
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-	var questions []Question
-	mapSeen := make(map[string]bool)
-	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx,
-			"MATCH (q:Question) "+
-				"WHERE q.embedding IS NOT NULL AND q.embedding <> []"+
-				"RETURN q.id, q.text, gds.similarity.cosine(q.embedding, $userEmbedding) AS similarity "+
-				"ORDER BY similarity DESC LIMIT $limit",
-			map[string]interface{}{
-				"userEmbedding": userEmbedding,
-				"limit":         limit,
-			})
-		if err != nil {
-			return nil, err
-		}
-		for result.Next(ctx) {
-			record := result.Record()
-			if _, seen := mapSeen[toString(record.Values[1])]; seen {
-				continue
-			}
-			mapSeen[toString(record.Values[1])] = true
-			questions = append(questions, Question{
-				ID:         toString(record.Values[0]),
-				Text:       toString(record.Values[1]),
-				Similarity: toFloat64(record.Values[2]),
-			})
-		}
-		return nil, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return questions, nil
-}
-
-func SaveConversationSummary(ctx context.Context, driver neo4j.DriverWithContext, conversationSummary, dateISO string) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
-	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface {
-	}, error) {
-		query := `
-			CREATE (cs:ConversationSummary {
-				summary: $summary,
-				date: $date
-			})
-		`
-		_, err := tx.Run(ctx, query, map[string]interface{}{"summary": conversationSummary,
-
-			"date": dateISO,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return nil, nil
-	})
-	if err != nil {
-		log.
-			Printf("Error saving conversation summary to database: %v",
-				err)
-		return err
-	}
-	return nil
-}
-
-type QuestionAnswer struct {
-	Question string
-	Answer   string
-}
-
-type Question struct {
-	ID         string
-	Text       string
-	Embedding  []float32
-	Similarity float64 // not part of the node
-	CreatedAt  string
-}
-
-// Schema represents the entire database schema.
-type Schema struct {
-	Labels        []LabelSchema        `json:"labels"`
-	Relationships []RelationshipSchema `json:"relationships"`
-}
-
-// RelationshipSchema represents the schema for a single relationship.
-type RelationshipSchema struct {
-	Relationship string `json:"relationship"`
-	FromLabel    string `json:"fromLabel"`
-	ToLabel      string `json:"toLabel"`
-}
-
-// LabelSchema represents the schema for a single label.
-type LabelSchema struct {
-	Label      string           `json:"label"`
-	Properties []PropertySchema `json:"properties"`
-}
-
-// PropertySchema represents the schema for a single property.
-type PropertySchema struct {
-	Property            string `json:"property"`
-	Type                string `json:"type"`
-	IsIndexed           bool   `json:"isIndexed"`
-	UniqueConstraint    bool   `json:"uniqueConstraint"`
-	ExistenceConstraint bool   `json:"existenceConstraint"`
-}
-
 func QueryNeo4J(ctx context.Context, driver neo4j.DriverWithContext, query string, params map[string]interface{}) ([][]interface{}, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
@@ -945,7 +543,6 @@ func QueryNeo4J(ctx context.Context, driver neo4j.DriverWithContext, query strin
 		}
 		return nil, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -974,7 +571,6 @@ func Connect(ctx context.Context, uri, user, password string) (neo4j.DriverWithC
 	}
 
 	return driver, closefn, nil
-
 }
 
 func ClearAll(ctx context.Context, driver neo4j.DriverWithContext) error {
@@ -988,10 +584,117 @@ func ClearAll(ctx context.Context, driver neo4j.DriverWithContext) error {
 		}
 		return nil, nil
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+type MergeQuery struct {
+	NodeType   string
+	Alias      string
+	Properties map[string]interface{}
+	SetFields  map[string]string
+}
+
+func BuildMergeQuery(cq MergeQuery) QueryFragment {
+	if cq.Alias == "" {
+		cq.Alias = "n"
+	}
+
+	matchParts := make([]string, 0, len(cq.Properties))
+	params := make(map[string]interface{})
+	for key, value := range cq.Properties {
+		matchParts = append(matchParts, fmt.Sprintf("%s: $%s%s", key, cq.Alias, key))
+		params[cq.Alias+key] = value
+	}
+
+	query := fmt.Sprintf("MERGE (%s:%s {%s})", cq.Alias, cq.NodeType, strings.Join(matchParts, ", "))
+
+	if len(cq.SetFields) > 0 {
+		setParts := make([]string, 0, len(cq.SetFields))
+		for field, value := range cq.SetFields {
+			setParts = append(setParts, fmt.Sprintf("%s.%s = $%s%s", cq.Alias, field, cq.Alias, field))
+			params[cq.Alias+field] = value
+		}
+		query += "\nSET " + strings.Join(setParts, ", ")
+	}
+
+	return QueryFragment{
+		Fragment: query,
+		Params:   params,
+	}
+}
+
+type QueryFragment struct {
+	Fragment string
+	Params   map[string]interface{}
+}
+
+type CypherQuery struct {
+	query []string
+	Args  map[string]interface{}
+}
+
+func (cq CypherQuery) Merge(qf MergeQuery) CypherQuery {
+	if cq.Args == nil {
+		cq.Args = make(map[string]interface{})
+	}
+
+	bqf := BuildMergeQuery(qf)
+	for key, value := range bqf.Params {
+		cq.Args[key] = value
+	}
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, bqf.Fragment)
+	return cq
+}
+
+func (cq CypherQuery) MergeRel(from, rel, to string, properties map[string]interface{}) CypherQuery {
+	if properties != nil && len(properties) > 0 {
+		var propsList []string
+		for k, v := range properties {
+			paramKey := fmt.Sprintf("%s_%s_%s", from, rel, k)
+			cq.Args[paramKey] = v
+			propsList = append(propsList, fmt.Sprintf("%s: $%s", k, paramKey))
+		}
+		cq.query = append(cq.query, fmt.Sprintf("MERGE (%s)-[:%s {%s}]->(%s)", from, rel, strings.Join(propsList, ", "), to))
+	} else {
+		cq.query = append(cq.query, fmt.Sprintf("MERGE (%s)-[:%s]->(%s)", from, rel, to))
+	}
+	return cq
+}
+
+func (cq CypherQuery) Return(fields ...string) CypherQuery {
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	if len(fields) == 0 {
+		cq.query = append(cq.query, "RETURN 1")
+	} else {
+		cq.query = append(cq.query, "RETURN "+strings.Join(fields, ", "))
+	}
+	return cq
+}
+
+func (cq CypherQuery) Execute(ctx context.Context, session neo4j.SessionWithContext) error {
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		result, err := tx.Run(ctx, strings.Join(cq.query, "\n"), cq.Args)
+		if err != nil {
+			return nil, err
+		}
+
+		records, err := result.Collect(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(records) == 0 {
+			return nil, fmt.Errorf("no records returned")
+		}
+		return nil, nil
+	})
+	return err
 }

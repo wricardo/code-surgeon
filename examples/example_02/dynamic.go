@@ -1,7 +1,10 @@
 package main
 
+import "github.com/sashabaranov/go-openai"
+
 type Person struct {
-	Name string
+	Name    string
+	TestReq openai.ChatCompletionRequest
 }
 
 func reverseString(s string) string {
