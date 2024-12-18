@@ -1,4 +1,4 @@
-module bitbucket.org/zetaactions/code-surgeon
+module github.com/wricardo/code-surgeon
 
 go 1.23.0
 

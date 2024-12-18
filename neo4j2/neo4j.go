@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	codesurgeon "bitbucket.org/zetaactions/code-surgeon"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
+	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
 func MergePackage(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package) MergeQuery {

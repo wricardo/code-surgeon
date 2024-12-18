@@ -2,6 +2,7 @@ package neo4j2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -121,6 +122,28 @@ type Question struct {
 type Schema struct {
 	Labels        []LabelSchema        `json:"labels"`
 	Relationships []RelationshipSchema `json:"relationships"`
+}
+
+func (s *Schema) Format(format string) string {
+	if format == "json" {
+		encoded, _ := json.Marshal(s)
+		return string(encoded)
+	} else if format == "llm" {
+		var output []string
+		for _, label := range s.Labels {
+			var props []string
+			for _, prop := range label.Properties {
+				props = append(props, prop.Property)
+			}
+			output = append(output, fmt.Sprintf("%s:[%s]", label.Label, strings.Join(props, ",")))
+		}
+		for _, rel := range s.Relationships {
+			output = append(output, fmt.Sprintf("%s->%s->%s", rel.FromLabel, rel.Relationship, rel.ToLabel))
+		}
+		return strings.Join(output, ";")
+	}
+
+	return "unsupported schema format: " + format
 }
 
 type RelationshipSchema struct {

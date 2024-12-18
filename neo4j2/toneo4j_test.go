@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"testing"
 
-	codesurgeon "bitbucket.org/zetaactions/code-surgeon"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
+	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
 // getAllData retrieves all nodes and relationships from the Neo4j database

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -459,6 +458,15 @@ func main() {
 			{
 				Name:  "get-schema",
 				Usage: "get the schema of the neo4j database",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "format",
+						Aliases:  []string{"f"},
+						Usage:    "format to print the schema: json, llm",
+						Required: false,
+						Value:    "json",
+					},
+				},
 				Action: func(cCtx *cli.Context) error {
 					ctx := cCtx.Context
 					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
@@ -475,11 +483,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					encoded, err := json.MarshalIndent(schema, "", "  ")
-					if err != nil {
-						return err
-					}
-					fmt.Println(string(encoded))
+					fmt.Println(schema.Format(cCtx.String("format")))
 					return nil
 				},
 			},

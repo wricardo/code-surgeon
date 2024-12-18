@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"strings"
 
-	codesurgeon "bitbucket.org/zetaactions/code-surgeon"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
+	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
 func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]string, recursive bool) error {
