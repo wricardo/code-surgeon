@@ -1,6 +1,8 @@
 package neo4j2
 
 import (
+	"context"
+	"crypto/md5"
 	"fmt"
 	"log"
 	"regexp"
@@ -71,98 +73,127 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 	session := s.neo4jDriver.NewSession(neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close()
 
+	stackHash := getStackHash(stackTraceData)
+
+	stackQuery := CypherQuery{}
+	stackQuery = stackQuery.Merge(MergeQuery{
+		NodeType: "Stack",
+		Alias:    "s",
+		Properties: map[string]any{
+			"id": stackHash,
+		},
+		SetFields: map[string]string{},
+	})
+
 	// Execute a write transaction
 	_, err := session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
 
-		var previousNodeID interface{}
+		res, err := stackQuery.Return("s.id as id").ExecuteSession((context.Background()), session)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute stack query: %w", err)
+		}
+
+		tmp, ok := res[0].Get("id")
+		if !ok {
+			return nil, fmt.Errorf("failed to get id from result")
+		}
+		stackId := tmp.(string)
+
+		var previousNodeID string
 
 		// Reverse the stack to represent the top-down call flow
 		for i := len(stackTraceData) - 1; i >= 0; i-- {
 			frame := stackTraceData[i]
 
-			data := map[string]interface{}{
-				"name":                   frame.OriginalName,
-				"receiver":               frame.Receiver,
-				"function":               frame.Function,
-				"file":                   frame.File,
-				"line":                   frame.Line,
-				"package":                frame.Package,
-				"packageName":            frame.PackageName,
-				"repository":             frame.Repository,
-				"repositoryOrganization": frame.RepositoryOrganization,
-				"repositoryName":         frame.RepositoryName,
-				"folder":                 frame.Folder,
-				"folderName":             frame.FolderName,
+			if frame.Package == "" {
+				return nil, fmt.Errorf("validation error package is empty")
+			} else if frame.PackageName == "" {
+				return nil, fmt.Errorf("validation error packageName is empty")
 			}
-			// Merge node for each function call to avoid duplicates
-			result, err := tx.Run(`
-			MERGE (f:Function {receiver: $receiver, function: $function, package: $package})
-		    SET f.file = $file, f.line = $line, f.function = $function, f.receiver = $receiver, f.packageName = $packageName, f.repository = $repository, f.repositoryOrganization = $repositoryOrganization, f.repositoryName = $repositoryName, f.folder = $folder, f.folderName = $folderName, f.name = $name
-		    RETURN id(f) AS nodeID
-			`, data)
+			if frame.Function == "" {
+				frame.Function = "UNKNOWN"
+			}
+
+			// }
+			ctx := context.Background()
+
+			query := CypherQuery{}.
+				Merge(MergeCall(ctx, "mc", stackId, frame))
+
+			if previousNodeID != "" {
+				query = query.
+					With("mc").
+					Match(MatchQuery{
+						NodeType: "Call",
+						Alias:    "pn",
+						Properties: map[string]any{
+							"id": previousNodeID,
+						},
+					}).
+					MergeRel("mc", "has_parent", "pn", nil)
+			} else {
+				query = query.
+					With("mc").
+					Match(MatchQuery{
+						NodeType: "Stack",
+						Alias:    "s",
+						Properties: map[string]any{
+							"id": stackId,
+						},
+					}).
+					MergeRel("mc", "has_parent", "s", nil)
+			}
+
+			if frame.Receiver != "" {
+				if frame.Function == "SendMessage" {
+					log.Printf("frame: %v\n", frame)
+				}
+
+				query = query.
+					With("mc").
+					OptionalMatch(MatchQuery{
+						NodeType: "Method",
+						Alias:    "m",
+						Properties: map[string]any{
+							"name":     frame.Function,
+							"receiver": strings.Replace(frame.Receiver, "*", "", 1),
+							"package":  frame.PackageName,
+						},
+					}).
+					With("m", "mc").
+					Raw(`
+					FOREACH (_ IN CASE WHEN m IS NOT NULL THEN [1] ELSE [] END |
+						MERGE (mc)-[:RELATED]->(m)
+					)
+				`)
+
+			}
+			query = query.Return("mc.id as id")
+
+			res, err := query.ExecuteSession(ctx, session)
 			if err != nil {
 				return nil, fmt.Errorf("failed to execute merge function query: %w", err)
 			}
 
-			records, err := result.Collect()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get record: %w data:%v", err, map[string]interface{}{
-					"receiver": frame.Receiver,
-					"function": frame.Function,
-					"package":  frame.Package,
-				})
-			} else if len(records) == 0 {
-				return nil, fmt.Errorf("failed to get record, len=0: %w data:%v", err, map[string]interface{}{
-					"receiver": frame.Receiver,
-					"function": frame.Function,
-					"package":  frame.Package,
-				})
-			}
-			record := records[0]
-			currentNodeID := record.Values[0]
-
-			// Create "CALLS" relationship from the previous node to the current node
-			if previousNodeID != nil {
-				_, err = tx.Run(`
-					MATCH (caller), (callee)
-					WHERE id(caller) = $callerID AND id(callee) = $calleeID
-					MERGE (caller)-[:CALLS]->(callee)
-				`, map[string]interface{}{
-					"callerID": previousNodeID,
-					"calleeID": currentNodeID,
-				})
-				if err != nil {
-					return nil, fmt.Errorf("failed to execute create calls relationship query: %w", err)
+			// query.Args["mcid"]
+			tmp, ok := res[0].Get("id")
+			if !ok {
+				tmp, ok = query.Args["mcid"]
+				if !ok {
+					return nil, fmt.Errorf("failed to get id from result")
 				}
 			}
-
-			// Create BELOGNS_TO relationship from the current node to Package(create if not exists)
-			_, err = tx.Run(`
-			MATCH (f:Function)
-			WHERE id(f) = $nodeID
-			MERGE (p:Package{package: f.package})
-			ON CREATE SET p.name = f.packageName, p.package = f.package
-			MERGE (f)-[:BELONGS_TO]->(p)
-			`, map[string]interface{}{
-				"nodeID": currentNodeID,
-			})
-
-			// Create BELOGNS_TO relationship from the current node to Repository(create if not exists)
-			_, err = tx.Run(`
-			MATCH (f:Function)-[:BELONGS_TO]->(p:Package)
-			WHERE id(f) = $nodeID
-			WITH f, p
-			MERGE (r:Repository {repository: f.repository})
-			ON CREATE SET r.name = f.repositoryName, r.organization = f.repositoryOrganization, r.repository = f.repository
-			MERGE (p)-[:BELONGS_TO]->(r)
-			`, map[string]interface{}{
-				"nodeID": currentNodeID,
-			})
-			if err != nil {
-				return nil, err
+			previousNodeID, ok = tmp.(string)
+			if !ok {
+				tmp, ok = query.Args["mcid"]
+				if !ok {
+					return nil, fmt.Errorf("failed to get id from result")
+				}
+				previousNodeID, ok = tmp.(string)
+				if !ok {
+					return nil, fmt.Errorf("failed to get id from result, not a string")
+				}
 			}
-
-			previousNodeID = currentNodeID
 		}
 
 		return nil, nil
@@ -196,6 +227,15 @@ func captureStackTrace() string {
 	buf := make([]byte, 1<<16)
 	stackSize := runtime.Stack(buf, false)
 	return string(buf[:stackSize])
+}
+
+func getStackHash(parsedStack []ParsedStackEntry) string {
+	var stackHash string
+	for _, frame := range parsedStack {
+		stackHash += fmt.Sprintf("%s:%s:%s", frame.Package, frame.Function, frame.Line)
+	}
+	// return md5 of the stackHash
+	return fmt.Sprintf("%x", md5.Sum([]byte(stackHash)))
 }
 
 // parseStackTrace extracts function names, file paths, and line numbers from the stack trace.
@@ -433,4 +473,28 @@ type ParsedStackEntry struct {
 	Repository             string // github.com/x/y
 	RepositoryOrganization string // x
 	RepositoryName         string // y
+}
+
+func MergeCall(ctx context.Context, alias string, stack_id string, pe ParsedStackEntry) MergeQuery {
+	function := pe.Function
+	receiver := pe.Receiver
+	pkg := pe.Package
+	packageName := pe.PackageName
+	properties := map[string]any{
+		"stack_id":    stack_id,
+		"function":    function,
+		"receiver":    receiver,
+		"package":     pkg,
+		"packageName": packageName,
+	}
+	id := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%v", properties))))
+
+	return MergeQuery{
+		NodeType:   "Call",
+		Alias:      alias,
+		Properties: properties,
+		SetFields: map[string]string{
+			"id": id,
+		},
+	}
 }

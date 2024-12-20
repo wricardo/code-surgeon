@@ -212,7 +212,7 @@ func MergeMethod(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 		Alias:    alias,
 		Properties: map[string]any{
 			"name":     fn.Name,
-			"receiver": fn.Receiver,
+			"receiver": strings.Replace(fn.Receiver, "*", "", 1),
 			"package":  pkg.Package,
 		},
 		SetFields: map[string]string{
@@ -591,6 +591,50 @@ func ClearAll(ctx context.Context, driver neo4j.DriverWithContext) error {
 	return nil
 }
 
+type MatchQuery struct {
+	NodeType   string
+	Alias      string
+	Properties map[string]interface{}
+}
+
+func BuildOptionalMatchQuery(cq MatchQuery) QueryFragment {
+	if cq.Alias == "" {
+		cq.Alias = "n"
+	}
+
+	matchParts := make([]string, 0, len(cq.Properties))
+	params := make(map[string]interface{})
+	for key, value := range cq.Properties {
+		matchParts = append(matchParts, fmt.Sprintf("%s: $%s%s", key, cq.Alias, key))
+		params[cq.Alias+key] = value
+	}
+
+	query := fmt.Sprintf("OPTIONAL MATCH (%s:%s {%s})", cq.Alias, cq.NodeType, strings.Join(matchParts, ", "))
+	return QueryFragment{
+		Fragment: query,
+		Params:   params,
+	}
+}
+
+func BuildMatchQuery(cq MatchQuery) QueryFragment {
+	if cq.Alias == "" {
+		cq.Alias = "n"
+	}
+
+	matchParts := make([]string, 0, len(cq.Properties))
+	params := make(map[string]interface{})
+	for key, value := range cq.Properties {
+		matchParts = append(matchParts, fmt.Sprintf("%s: $%s%s", key, cq.Alias, key))
+		params[cq.Alias+key] = value
+	}
+
+	query := fmt.Sprintf("MATCH (%s:%s {%s})", cq.Alias, cq.NodeType, strings.Join(matchParts, ", "))
+	return QueryFragment{
+		Fragment: query,
+		Params:   params,
+	}
+}
+
 type MergeQuery struct {
 	NodeType   string
 	Alias      string
@@ -635,6 +679,62 @@ type QueryFragment struct {
 type CypherQuery struct {
 	query []string
 	Args  map[string]interface{}
+}
+
+func (cq CypherQuery) With(ws ...string) CypherQuery {
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, "WITH "+strings.Join(ws, ", "))
+	return cq
+}
+
+func (cq CypherQuery) Raw(q string) CypherQuery {
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, q)
+	return cq
+}
+
+func (cq CypherQuery) Where(ws ...string) CypherQuery {
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, "WHERE "+strings.Join(ws, " AND "))
+	return cq
+}
+
+func (cq CypherQuery) OptionalMatch(qf MatchQuery) CypherQuery {
+	if cq.Args == nil {
+		cq.Args = make(map[string]interface{})
+	}
+
+	bqf := BuildOptionalMatchQuery(qf)
+	for key, value := range bqf.Params {
+		cq.Args[key] = value
+	}
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, bqf.Fragment)
+	return cq
+}
+
+func (cq CypherQuery) Match(qf MatchQuery) CypherQuery {
+	if cq.Args == nil {
+		cq.Args = make(map[string]interface{})
+	}
+
+	bqf := BuildMatchQuery(qf)
+	for key, value := range bqf.Params {
+		cq.Args[key] = value
+	}
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, bqf.Fragment)
+	return cq
 }
 
 func (cq CypherQuery) Merge(qf MergeQuery) CypherQuery {
@@ -697,4 +797,21 @@ func (cq CypherQuery) Execute(ctx context.Context, session neo4j.SessionWithCont
 		return nil, nil
 	})
 	return err
+}
+
+func (cq CypherQuery) ExecuteSession(ctx context.Context, session neo4j.Session) ([]*neo4j.Record, error) {
+	result, err := session.Run(strings.Join(cq.query, "\n"), cq.Args)
+	if err != nil {
+		return nil, err
+	}
+
+	records, err := result.Collect()
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no records returned")
+	}
+	return records, nil
+
 }
