@@ -15,8 +15,9 @@ func MergePackage(ctx context.Context, alias string, mod codesurgeon.Module, pkg
 		NodeType: "Package",
 		Alias:    alias,
 		Properties: map[string]any{
-			"module_full_name": mod.FullName,
-			"name":             pkg.Package,
+			"rootPackageFullName": mod.RootModuleName,
+			"module_full_name":    mod.FullName,
+			"name":                pkg.Package,
 		},
 	}
 }
@@ -211,9 +212,11 @@ func MergeMethod(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 		NodeType: "Method",
 		Alias:    alias,
 		Properties: map[string]any{
-			"name":     fn.Name,
-			"receiver": strings.Replace(fn.Receiver, "*", "", 1),
-			"package":  pkg.Package,
+			"name":                fn.Name,
+			"receiver":            strings.Replace(fn.Receiver, "*", "", 1),
+			"packageName":         pkg.Package,        //short name of the package like "xyz"
+			"packageFullName":     mod.FullName,       //full name of the package like "github.com/wricardo/code-surgeon/examples/xyz"
+			"rootPackageFullName": mod.RootModuleName, //full name of the package like "github.com/wricardo/code-surgeon"
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(fn.Docs, "\n"),
@@ -239,8 +242,10 @@ func MergeFunction(ctx context.Context, alias string, mod codesurgeon.Module, pk
 		NodeType: "Function",
 		Alias:    alias,
 		Properties: map[string]any{
-			"name":    fn.Name,
-			"package": pkg.Package,
+			"name":                fn.Name,
+			"packageName":         pkg.Package,
+			"packageFullName":     mod.FullName,
+			"rootPackageFullName": mod.RootModuleName,
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(fn.Docs, "\n"),
@@ -292,8 +297,10 @@ func MergeInterface(ctx context.Context, alias string, mod codesurgeon.Module, p
 		NodeType: "Interface",
 		Alias:    alias,
 		Properties: map[string]any{
-			"name":    iface.Name,
-			"package": pkg.Package,
+			"name":                iface.Name,
+			"packageName":         pkg.Package,
+			"packageFullName":     mod.FullName,
+			"rootPackageFullName": mod.RootModuleName,
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(iface.Docs, "\n"),
@@ -431,14 +438,16 @@ func UpsertMethodParam(ctx context.Context, driver neo4j.DriverWithContext, mod 
 
 // For UpsertInterfaceMethodParam, we have interfaceName, methodName, etc.
 // We can reuse MergeParam and define a special MergeFunction variant for interface methods.
-func MergeInterfaceMethodFunction(ctx context.Context, alias string, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method) MergeQuery {
+func MergeInterfaceMethodFunction(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method) MergeQuery {
 	return MergeQuery{
 		NodeType: "Function",
 		Alias:    alias,
 		Properties: map[string]interface{}{
-			"package":       pkg.ModuleName,
-			"interfaceName": iface.Name,
-			"name":          method.Name,
+			"packageName":         pkg.Package,
+			"packageFullName":     mod.FullName,
+			"rootPackageFullName": mod.RootModuleName,
+			"interfaceName":       iface.Name,
+			"name":                method.Name,
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(method.Docs, "\n"),
@@ -452,7 +461,7 @@ func UpsertInterfaceMethodParam(ctx context.Context, driver neo4j.DriverWithCont
 
 	query := CypherQuery{}.
 		Merge(MergeInterfaceMethodParam(ctx, "p", pkg, iface, method, param)).
-		Merge(MergeInterfaceMethodFunction(ctx, "m", pkg, iface, method)).
+		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
 		MergeRel("m", "HAS_PARAM", "p", nil).
 		Merge(MergeType(ctx, "t", param.TypeDetails)).
 		MergeRel("p", "OF_TYPE", "t", nil).
@@ -468,7 +477,7 @@ func UpsertInterfaceMethodReturn(ctx context.Context, driver neo4j.DriverWithCon
 	defer session.Close(ctx)
 
 	query := CypherQuery{}.
-		Merge(MergeInterfaceMethodFunction(ctx, "m", pkg, iface, method)).
+		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
 		Merge(MergeReturn(ctx, "r", ret)).
 		MergeRel("m", "RETURNS", "r", nil).
 		Merge(MergeType(ctx, "t", ret.TypeDetails)).
@@ -486,7 +495,7 @@ func UpsertInterfaceMethod(ctx context.Context, driver neo4j.DriverWithContext, 
 	defer session.Close(ctx)
 
 	query := CypherQuery{}.
-		Merge(MergeInterfaceMethodFunction(ctx, "m", pkg, iface, method)).
+		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
 		Merge(MergeInterface(ctx, "i", mod, pkg, iface)).
 		Merge(MergePackage(ctx, "p", mod, pkg)).
 		MergeRel("i", "HAS_FUNCTION", "m", nil).

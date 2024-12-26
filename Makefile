@@ -33,3 +33,7 @@ test:
 	go build -o /dev/null ./cmd/code-surgeon/
 	go test -v ./grpc/
 	go test -v ./chatcli/
+
+build-delve:
+	go build -gcflags "all=-N -l" -o ./bin/code-surgeon ./cmd/code-surgeon
+

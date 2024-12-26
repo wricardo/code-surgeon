@@ -13,6 +13,8 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
+const PKG_TO_IGNORE_STACKTRACE = "github.com/wricardo/code-surgeon"
+
 var GLOBAL_STACK_TO_GRAPH *StackToGraph
 
 type StackToGraph struct {
@@ -104,6 +106,12 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 		// Reverse the stack to represent the top-down call flow
 		for i := len(stackTraceData) - 1; i >= 0; i-- {
 			frame := stackTraceData[i]
+			if strings.HasPrefix(frame.Package, PKG_TO_IGNORE_STACKTRACE) && frame.Function == "captureStackTrace" {
+				continue
+			}
+			if strings.HasPrefix(frame.Package, PKG_TO_IGNORE_STACKTRACE) && frame.Function == "ReportStacktrace" && frame.Receiver == "" {
+				continue
+			}
 
 			if frame.Package == "" {
 				return nil, fmt.Errorf("validation error package is empty")
@@ -130,7 +138,7 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 							"id": previousNodeID,
 						},
 					}).
-					MergeRel("mc", "has_parent", "pn", nil)
+					MergeRel("mc", "HAS_PARENT", "pn", nil)
 			} else {
 				query = query.
 					With("mc").
@@ -141,7 +149,7 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 							"id": stackId,
 						},
 					}).
-					MergeRel("mc", "has_parent", "s", nil)
+					MergeRel("mc", "HAS_PARENT", "s", nil)
 			}
 
 			if frame.Receiver != "" {
@@ -155,15 +163,32 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 						NodeType: "Method",
 						Alias:    "m",
 						Properties: map[string]any{
-							"name":     frame.Function,
-							"receiver": strings.Replace(frame.Receiver, "*", "", 1),
-							"package":  frame.PackageName,
+							"name":            frame.Function,
+							"receiver":        strings.Replace(frame.Receiver, "*", "", 1),
+							"packageFullName": frame.Package,
 						},
 					}).
 					With("m", "mc").
 					Raw(`
 					FOREACH (_ IN CASE WHEN m IS NOT NULL THEN [1] ELSE [] END |
 						MERGE (mc)-[:RELATED]->(m)
+					)
+				`)
+			} else {
+				query = query.
+					With("mc").
+					OptionalMatch(MatchQuery{
+						NodeType: "Function",
+						Alias:    "f",
+						Properties: map[string]any{
+							"name":            frame.Function,
+							"packageFullName": frame.Package,
+						},
+					}).
+					With("f", "mc").
+					Raw(`
+					FOREACH (_ IN CASE WHEN f IS NOT NULL THEN [1] ELSE [] END |
+						MERGE (mc)-[:RELATED]->(f)
 					)
 				`)
 
@@ -481,11 +506,11 @@ func MergeCall(ctx context.Context, alias string, stack_id string, pe ParsedStac
 	pkg := pe.Package
 	packageName := pe.PackageName
 	properties := map[string]any{
-		"stack_id":    stack_id,
-		"function":    function,
-		"receiver":    receiver,
-		"package":     pkg,
-		"packageName": packageName,
+		"stack_id":        stack_id,
+		"function":        function,
+		"receiver":        receiver,
+		"packageFullName": pkg,
+		"packageName":     packageName,
 	}
 	id := fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%v", properties))))
 
