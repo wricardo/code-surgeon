@@ -47,10 +47,8 @@ func MergeModule(ctx context.Context, alias string, mod codesurgeon.Module) Merg
 	}
 }
 
-func UpsertPackage(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertPackage creates or updates a package node in Neo4j and links it to its module.
+func UpsertPackage(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package) error {
 	query := CypherQuery{}.
 		Merge(MergePackage(ctx, "p", mod, pkg)).
 		Merge(MergeModule(ctx, "m", mod)).
@@ -60,10 +58,8 @@ func UpsertPackage(ctx context.Context, driver neo4j.DriverWithContext, mod code
 	return query.Execute(ctx, session)
 }
 
-func UpsertStruct(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertStruct creates or updates a struct node in Neo4j and links it to its package and base type.
+func UpsertStruct(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct) error {
 	query := CypherQuery{}.
 		Merge(MergeBaseType(ctx, "bs", codesurgeon.TypeDetails{
 			Package:        &pkg.Package,
@@ -160,20 +156,8 @@ func MergeBaseType(ctx context.Context, alias string, td codesurgeon.TypeDetails
 }
 
 // UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
-func UpsertStructField(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
-	// packageName := ""
-	// baseType := "UNKNOWN"
-	// if field.TypeDetails.Type != nil && len(*field.TypeDetails.Type) > 0 {
-	// 	// baseType = field.TypeDetails.TypeReferences[0].Name
-	// 	baseType = *field.TypeDetails.Type
-	// 	if len(field.TypeDetails.TypeReferences) > 0 {
-	// 		packageName = *field.TypeDetails.TypeReferences[0].PackageName
-	// 	}
-	// }
-
+// UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
+func UpsertStructField(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) error {
 	query := CypherQuery{}.
 		Merge(MergeField(ctx, "f", pkg, field.Name, field.Type, strings.Join(field.Docs, "\n"))).
 		Merge(MergeType(ctx, "t", field.TypeDetails)).
@@ -224,10 +208,8 @@ func MergeMethod(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 	}
 }
 
-func UpsertMethod(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, method codesurgeon.Method, receiver codesurgeon.Struct) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertMethod creates or updates a method node in Neo4j and links it to its receiver Struct.
+func UpsertMethod(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, method codesurgeon.Method, receiver codesurgeon.Struct) error {
 	query := CypherQuery{}.
 		Merge(MergeMethod(ctx, "m", mod, pkg, method)).
 		Merge(MergeStruct(ctx, "s", mod, pkg, receiver)). // Ensure the receiver Struct is merged
@@ -253,10 +235,8 @@ func MergeFunction(ctx context.Context, alias string, mod codesurgeon.Module, pk
 	}
 }
 
-func UpsertFunction(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertFunction creates or updates a function node in Neo4j and links it to its package.
+func UpsertFunction(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function) error {
 	query := CypherQuery{}.
 		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
 		Merge(MergePackage(ctx, "p", mod, pkg)).
@@ -266,10 +246,8 @@ func UpsertFunction(ctx context.Context, driver neo4j.DriverWithContext, mod cod
 	return query.Execute(ctx, session)
 }
 
-func UpsertInterface(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertInterface creates or updates an interface node in Neo4j and links it to its package.
+func UpsertInterface(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface) error {
 	query := CypherQuery{}.
 		Merge(MergeBaseType(ctx, "bs", codesurgeon.TypeDetails{
 			Package:        &pkg.Package,
@@ -319,10 +297,8 @@ func MergeReturn(ctx context.Context, alias string, ret codesurgeon.Param) Merge
 	}
 }
 
-func UpsertFunctionReturn(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, ret codesurgeon.Param) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertFunctionReturn creates or updates a function return node in Neo4j and links it appropriately.
+func UpsertFunctionReturn(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, ret codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
 		Merge(MergeReturn(ctx, "r", ret)).
@@ -336,10 +312,8 @@ func UpsertFunctionReturn(ctx context.Context, driver neo4j.DriverWithContext, m
 	return query.Execute(ctx, session)
 }
 
-func UpsertMethodReturn(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Method, ret codesurgeon.Param) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+// UpsertMethodReturn creates or updates a method return node in Neo4j and links it appropriately.
+func UpsertMethodReturn(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Method, ret codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeMethod(ctx, "m", mod, pkg, fn)).
 		Merge(MergeReturn(ctx, "r", ret)).
@@ -402,10 +376,7 @@ func MergeMethodParam(ctx context.Context, alias string, pkg codesurgeon.Package
 	}
 }
 
-func UpsertFunctionParam(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+func UpsertFunctionParam(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeFuncParam(ctx, "p", pkg, fn, param)).
 		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
@@ -419,10 +390,7 @@ func UpsertFunctionParam(ctx context.Context, driver neo4j.DriverWithContext, mo
 	return query.Execute(ctx, session)
 }
 
-func UpsertMethodParam(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, method codesurgeon.Method, param codesurgeon.Param) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+func UpsertMethodParam(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, method codesurgeon.Method, param codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeMethodParam(ctx, "p", pkg, method, param)).
 		Merge(MergeMethod(ctx, "m", mod, pkg, method)).
@@ -455,10 +423,7 @@ func MergeInterfaceMethodFunction(ctx context.Context, alias string, mod codesur
 	}
 }
 
-func UpsertInterfaceMethodParam(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+func UpsertInterfaceMethodParam(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeInterfaceMethodParam(ctx, "p", pkg, iface, method, param)).
 		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
@@ -472,10 +437,7 @@ func UpsertInterfaceMethodParam(ctx context.Context, driver neo4j.DriverWithCont
 	return query.Execute(ctx, session)
 }
 
-func UpsertInterfaceMethodReturn(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, ret codesurgeon.Param) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+func UpsertInterfaceMethodReturn(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, ret codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
 		Merge(MergeReturn(ctx, "r", ret)).
@@ -490,10 +452,7 @@ func UpsertInterfaceMethodReturn(ctx context.Context, driver neo4j.DriverWithCon
 }
 
 // UpsertInterfaceMethod creates or updates a method node in Neo4j and links it to its interface and package.
-func UpsertInterfaceMethod(ctx context.Context, driver neo4j.DriverWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method) error {
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
-	defer session.Close(ctx)
-
+func UpsertInterfaceMethod(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method) error {
 	query := CypherQuery{}.
 		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
 		Merge(MergeInterface(ctx, "i", mod, pkg, iface)).
@@ -688,6 +647,14 @@ type QueryFragment struct {
 type CypherQuery struct {
 	query []string
 	Args  map[string]interface{}
+}
+
+func (cq CypherQuery) Unwind(param string, alias string) CypherQuery {
+	if cq.query == nil {
+		cq.query = []string{}
+	}
+	cq.query = append(cq.query, fmt.Sprintf("UNWIND $%s as %s", param, alias))
+	return cq
 }
 
 func (cq CypherQuery) With(ws ...string) CypherQuery {

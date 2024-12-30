@@ -4,3 +4,4 @@
 .aider*
 chats.json
 *__debug_*
+bin/*

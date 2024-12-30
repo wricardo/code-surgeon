@@ -173,6 +173,10 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 					FOREACH (_ IN CASE WHEN m IS NOT NULL THEN [1] ELSE [] END |
 						MERGE (mc)-[:RELATED]->(m)
 					)
+					FOREACH (_ IN CASE WHEN m IS NULL THEN [1] ELSE [] END |
+		MERGE (mn:MissingNode {name: "` + frame.Function + ", packageFullName: " + frame.Package + `", receiver: "` + frame.Receiver + `"})
+		MERGE (mc)-[:NOT_RELATED]->(mn)
+				)
 				`)
 			} else {
 				query = query.
@@ -190,6 +194,10 @@ func (s *StackToGraph) reportStackTraceToNeo4j(stackTraceData []ParsedStackEntry
 					FOREACH (_ IN CASE WHEN f IS NOT NULL THEN [1] ELSE [] END |
 						MERGE (mc)-[:RELATED]->(f)
 					)
+					FOREACH (_ IN CASE WHEN f IS NULL THEN [1] ELSE [] END |
+		MERGE (mn:MissingNode {name: "` + frame.Function + ", packageFullName: " + frame.Package + `"})
+		MERGE (mc)-[:NOT_RELATED]->(mn)
+)
 				`)
 
 			}

@@ -23,6 +23,8 @@ func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]strin
 	} else {
 		defer closeFn()
 	}
+	sess := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer sess.Close(ctx)
 
 	// Execute the command to list Go modules in JSON format
 	cmd := exec.Command("go", "list", "-json", path)
@@ -52,7 +54,7 @@ func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]strin
 				return err
 			}
 			for _, info := range infos {
-				shouldContinue, err1 := toNeo4j(ctx, info, module.ImportPath, module.Dir, driver, deep)
+				shouldContinue, err1 := toNeo4j(ctx, info, module.ImportPath, module.Dir, sess, deep)
 				if err1 != nil {
 					if shouldContinue {
 						continue
@@ -68,7 +70,7 @@ func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]strin
 				log.Info().Err(err).Msgf("Error parsing file %s", module.Dir)
 			}
 
-			shouldContinue, err1 := toNeo4j(ctx, info, module.Dir, module.ImportPath, driver, deep)
+			shouldContinue, err1 := toNeo4j(ctx, info, module.Dir, module.ImportPath, sess, deep)
 			if err1 != nil {
 				if shouldContinue {
 					continue
@@ -82,11 +84,12 @@ func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]strin
 	return nil
 }
 
-func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, moduleImportPath string, driver neo4j.DriverWithContext, deep bool) (bool, error) {
+// toNeo4j processes parsed information and upserts it into Neo4j using the provided session.
+func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, moduleImportPath string, session neo4j.SessionWithContext, deep bool) (bool, error) {
 	var err error
 	for _, mod := range info.Modules {
 		for _, pkg := range mod.Packages {
-			err = UpsertPackage(ctx, driver, mod, pkg)
+			err = UpsertPackage(ctx, session, mod, pkg)
 			if err != nil {
 				log.Info().Err(err).Msgf("Error upserting package %s", pkg.Package)
 				return true, err
@@ -94,7 +97,7 @@ func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, modul
 
 			for k, struct_ := range pkg.Structs {
 				log.Info().Msgf("struct %d: %s", k, struct_.Name)
-				if err = UpsertStruct(ctx, driver, mod, info.Packages[0], struct_); err != nil {
+				if err = UpsertStruct(ctx, session, mod, info.Packages[0], struct_); err != nil {
 					log.Info().Err(err).Msgf("Error upserting struct %s", struct_.Name)
 					return true, err
 				}
@@ -109,22 +112,21 @@ func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, modul
 							log.Info().Msgf("funcFilePath: %s", funcFilePath)
 						}
 					}
-					// err = UpsertFunction(ctx, driver, funcFilePath, struct_.Name, method.Name, strings.Join(method.Docs, "\n"), info.Packages[0].Package, moduleImportPath)
-					err = UpsertMethod(ctx, driver, mod, pkg, method, struct_)
+					err = UpsertMethod(ctx, session, mod, pkg, method, struct_)
 					if err != nil {
 						log.Info().Err(err).Msgf("Error upserting function %s", method.Name)
 						return true, err
 					}
 					log.Info().Msgf("method %d %d: %s", k, k2, method.Name)
 					for _, param := range method.Params {
-						err = UpsertMethodParam(ctx, driver, mod, pkg, struct_, method, param)
+						err = UpsertMethodParam(ctx, session, mod, pkg, struct_, method, param)
 						if err != nil {
 							log.Info().Err(err).Msgf("Error upserting function param %s", param.Name)
 							return true, err
 						}
 					}
 					for _, result := range method.Returns {
-						err = UpsertMethodReturn(ctx, driver, mod, pkg, method, result)
+						err = UpsertMethodReturn(ctx, session, mod, pkg, method, result)
 						if err != nil {
 							log.Info().Err(err).Msgf("Error upserting function return %s", result.Name)
 							return true, err
@@ -135,7 +137,7 @@ func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, modul
 				// fields
 				for k2, field := range struct_.Fields {
 					// Upsert each field of the struct into Neo4j
-					err = UpsertStructField(ctx, driver, mod, pkg, struct_, field)
+					err = UpsertStructField(ctx, session, mod, pkg, struct_, field)
 					if err != nil {
 						log.Info().Err(err).Msgf("Error upserting struct field %s", field.Name)
 						return true, err
@@ -155,21 +157,21 @@ func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, modul
 						log.Info().Msgf("funcFilePath: %s", funcFilePath)
 					}
 				}
-				err = UpsertFunction(ctx, driver, mod, pkg, function)
+				err = UpsertFunction(ctx, session, mod, pkg, function)
 				if err != nil {
 					log.Info().Err(err).Msgf("Error upserting function %s", function.Name)
 					return true, err
 				}
 				log.Info().Msgf("function %d: %s", k, function.Name)
 				for _, param := range function.Params {
-					err = UpsertFunctionParam(ctx, driver, mod, pkg, function, param)
+					err = UpsertFunctionParam(ctx, session, mod, pkg, function, param)
 					if err != nil {
 						log.Info().Err(err).Msgf("Error upserting function param %s", param.Name)
 						return true, err
 					}
 				}
 				for _, ret := range function.Returns {
-					err = UpsertFunctionReturn(ctx, driver, mod, pkg, function, ret)
+					err = UpsertFunctionReturn(ctx, session, mod, pkg, function, ret)
 					if err != nil {
 						log.Info().Err(err).Msgf("Error upserting function return %s", ret.Name)
 						return true, err
@@ -178,27 +180,25 @@ func toNeo4j(ctx context.Context, info *codesurgeon.ParsedInfo, moduleDir, modul
 			}
 			for _, interface_ := range info.Packages[0].Interfaces {
 				log.Info().Msgf("interface: %s", interface_.Name)
-				if err = UpsertInterface(ctx, driver, mod, pkg, interface_); err != nil {
+				if err = UpsertInterface(ctx, session, mod, pkg, interface_); err != nil {
 					log.Info().Err(err).Msgf("Error upserting interface %s", interface_.Name)
 					return true, err
 				}
 				for _, method := range interface_.Methods {
-					err = UpsertInterfaceMethod(ctx, driver, mod, pkg, interface_, method)
-					// err = UpsertInterfaceMethod(ctx, driver, interface_.Name, method.Name, strings.Join(method.Docs, "\n"), info.Packages[0].Package, moduleImportPath)
+					err = UpsertInterfaceMethod(ctx, session, mod, pkg, interface_, method)
 					if err != nil {
 						log.Info().Err(err).Msgf("Error upserting function %s", method.Name)
 						return true, err
 					}
 					for _, param := range method.Params {
-						// err = UpsertInterfaceMethodParam(ctx, driver, interface_.Name, method.Name, param.Name, param.Type, "", info.Packages[0].Package, moduleImportPath)
-						err = UpsertInterfaceMethodParam(ctx, driver, mod, pkg, interface_, method, param)
+						err = UpsertInterfaceMethodParam(ctx, session, mod, pkg, interface_, method, param)
 						if err != nil {
 							log.Info().Err(err).Msgf("Error upserting function param %s", param.Name)
 							return true, err
 						}
 					}
 					for _, result := range method.Returns {
-						err = UpsertInterfaceMethodReturn(ctx, driver, mod, pkg, interface_, method, result)
+						err = UpsertInterfaceMethodReturn(ctx, session, mod, pkg, interface_, method, result)
 						if err != nil {
 							log.Info().Err(err).Msgf("Error upserting function return %s", result.Name)
 							return true, err
