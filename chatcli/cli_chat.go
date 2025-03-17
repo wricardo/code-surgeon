@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
+	"github.com/wricardo/code-surgeon/chatlib"
 	"github.com/wricardo/code-surgeon/log2"
 )
 
@@ -109,7 +110,7 @@ func (cli *CliChat) Start(shutdownChan chan struct{}, chatId string) error {
 				fmt.Println("Error handling form:", err)
 				return err
 			}
-			if cmd == QUIT {
+			if cmd == chatlib.QUIT {
 				log.Debug().Msg("Exiting chat")
 				return nil
 			}
@@ -137,37 +138,15 @@ func (cli *CliChat) Start(shutdownChan chan struct{}, chatId string) error {
 				// send the response back to the chat to process the form submission by the user
 				continue
 			}
-			// formResponse, cmd, err := cli.handleForm(response.Msg.Message)
-			// if err != nil {
-			// 	fmt.Println("Error handling form:", err)
-			// 	return
-			// }
-			// if cmd == QUIT {
-			// 	log.Debug().Msg("Exiting chat")
-			// 	return
-			// }
-
-			// // Send form response back to the server
-			// sendFormReq := &api.SendMessageRequest{Message: formResponse}
-			// response, err = client.SendMessage(ctx, connect.NewRequest(sendFormReq))
-			// if err != nil {
-			// 	fmt.Println("Error sending form response:", err)
-			// 	return
-			// }
-
-			// fmt.Println("🤖:", response.Msg.Message.Text)
 		}
 
 		if response.Msg.Command != nil {
 			switch response.Msg.Command.Name {
-			case string(QUIT.Name):
+			case string(chatlib.QUIT.Name):
 				fmt.Println("Exiting chat")
 				return nil
 			}
 		}
-
-		// Process other commands based on the server response
-		// (e.g., QUIT, MODE_START, etc.) if needed
 	}
 }
 
@@ -200,7 +179,7 @@ func (cli *CliChat) handleForm(msg *api.Message) (responseMsg *api.Message, resp
 
 	}
 	if len(fields) == 0 {
-		return &api.Message{Text: "warn: no questions in form"}, NOOP, nil
+		return &api.Message{Text: "warn: no questions in form"}, chatlib.NOOP, nil
 	}
 
 	// Create a form group with all questions
@@ -211,9 +190,9 @@ func (cli *CliChat) handleForm(msg *api.Message) (responseMsg *api.Message, resp
 	// Run the form group to get all responses
 	err = form.Run()
 	if err != nil {
-		return &api.Message{}, NOOP, err // Return error if form fails
+		return &api.Message{}, chatlib.NOOP, err // Return error if form fails
 	}
 
 	log.Debug().Any("msg", msg).Msg("CliChat.handleForm afterrun.")
-	return msg, NOOP, nil
+	return msg, chatlib.NOOP, nil
 }
