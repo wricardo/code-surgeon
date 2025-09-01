@@ -16,7 +16,6 @@ import (
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
-	"github.com/wricardo/code-surgeon/chatcli"
 	"github.com/wricardo/code-surgeon/neo4j2"
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
@@ -62,7 +61,7 @@ func (s *Server) Start() error {
 	}
 
 	// Set up gRPC and HTTP handlers
-	grpcHandler := NewHandler(s.options.NgrokDomain, &driver, instructorClient)
+	grpcHandler := NewHandler(s.options.NgrokDomain, driver, instructorClient)
 	mux := setupHTTPHandlers(grpcHandler, s.options.SlackToken)
 
 	// Start HTTP server
@@ -115,9 +114,9 @@ func (s *Server) Stop() {
 
 func setupHTTPHandlers(grpcHandler apiconnect.GptServiceHandler, slackToken string) *http.ServeMux {
 	mux := http.NewServeMux()
-	bot := chatcli.NewSlackBot(slackToken, grpcHandler)
-
-	mux.HandleFunc("/slack_message", bot.SlackMessageHandler())
+	// TODO: Re-implement SlackBot without chatcli
+	// bot := chatcli.NewSlackBot(slackToken, grpcHandler)
+	// mux.HandleFunc("/slack_message", bot.SlackMessageHandler())
 
 	// Add static file route
 	mux.Handle("/api/", http.StripPrefix("/api/", http.FileServer(http.FS(codesurgeon.STATICFS))))

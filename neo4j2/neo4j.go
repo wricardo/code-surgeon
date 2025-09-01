@@ -33,6 +33,7 @@ func MergeStruct(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 		SetFields: map[string]string{
 			"documentation": strings.Join(strct.Docs, "\n"),
 			"packageName":   pkg.Package,
+			"definition":    strct.Definition,
 		},
 	}
 }
@@ -204,6 +205,7 @@ func MergeMethod(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(fn.Docs, "\n"),
+			"definition":    fn.Definition,
 		},
 	}
 }
@@ -231,6 +233,7 @@ func MergeFunction(ctx context.Context, alias string, mod codesurgeon.Module, pk
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(fn.Docs, "\n"),
+			"definition":    fn.Definition,
 		},
 	}
 }
@@ -282,6 +285,7 @@ func MergeInterface(ctx context.Context, alias string, mod codesurgeon.Module, p
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(iface.Docs, "\n"),
+			"definition":    iface.Definition,
 		},
 	}
 }
@@ -419,6 +423,7 @@ func MergeInterfaceMethodFunction(ctx context.Context, alias string, mod codesur
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(method.Docs, "\n"),
+			"definition":    method.Definition,
 		},
 	}
 }

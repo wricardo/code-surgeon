@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(goimports:*)",
+      "Bash(go run:*)",
+      "Bash(rm:*)",
+      "Bash(make:*)"
+    ],
+    "deny": []
+  }
+}

@@ -212,6 +212,17 @@ func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string, pkg Package) (Functi
 
 	function.Signature = signature
 
+	// Generate the full function definition
+	definition := fmt.Sprintf("func %s(%s)", function.Name, strings.Join(paramStrings, ", "))
+	if len(returnStrings) > 0 {
+		returnsStr := strings.Join(returnStrings, ", ")
+		if len(function.Returns) > 1 {
+			returnsStr = "(" + returnsStr + ")"
+		}
+		definition += fmt.Sprintf(" %s", returnsStr)
+	}
+	function.Definition = definition
+
 	return function, nil
 }
 
@@ -340,6 +351,17 @@ func parseMethodDecl(funcDecl *ast.FuncDecl, docs string, ourPkg Package) (Metho
 	}
 
 	method.Signature = signature
+
+	// Generate the full method definition
+	definition := fmt.Sprintf("func (%s) %s(%s)", method.Receiver, method.Name, strings.Join(paramStrings, ", "))
+	if len(returnStrings) > 0 {
+		returnsStr := strings.Join(returnStrings, ", ")
+		if len(method.Returns) > 1 {
+			returnsStr = "(" + returnsStr + ")"
+		}
+		definition += fmt.Sprintf(" %s", returnsStr)
+	}
+	method.Definition = definition
 
 	return method, nil
 }

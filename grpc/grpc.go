@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -14,9 +15,10 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/davecgh/go-spew/spew"
 	codesurgeon "github.com/wricardo/code-surgeon"
+	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
-	"github.com/wricardo/code-surgeon/chatcli"
+	"github.com/wricardo/code-surgeon/neo4j2" // Import the neo4j2 package
 )
 
 var _ apiconnect.GptServiceHandler = (*Handler)(nil)
@@ -24,309 +26,34 @@ var _ apiconnect.GptServiceHandler = (*Handler)(nil)
 type Handler struct {
 	publicUrl string
 	// chat      chatcli.IChat
-	mu       sync.Mutex // protects the chat
-	chatRepo chatcli.ChatRepository
+	mu sync.Mutex // protects the chat
+	// chatRepo chatcli.ChatRepository // TODO: Re-implement without chatcli
 
-	driver           *neo4j.DriverWithContext
+	driver           neo4j.DriverWithContext
 	instructorClient *instructor.InstructorOpenAI
 }
 
 func NewHandler(
 	publicUrl string,
-	driver *neo4j.DriverWithContext,
+	driver neo4j.DriverWithContext,
 	instructorClient *instructor.InstructorOpenAI,
 ) *Handler {
 	if instructorClient == nil {
 		panic("instructorClient is required")
 	}
-	repo, err := chatcli.NewInMemoryChatRepository("chats.json", driver, instructorClient)
-	if err != nil {
-		panic(err)
-	}
+	// TODO: Re-implement chat repository without chatcli
+	// repo, err := chatcli.NewInMemoryChatRepository("chats.json", driver, instructorClient)
+	// if err != nil {
+	//	panic(err)
+	// }
 	h := &Handler{
-		publicUrl:        publicUrl,
-		chatRepo:         repo,
+		publicUrl: publicUrl,
+		// chatRepo:         repo,
 		driver:           driver,
 		instructorClient: instructorClient,
 	}
 	return h
 }
-
-func (h *Handler) NewChat(ctx context.Context, req *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
-	// Save the chat
-	chat := chatcli.NewChat(h.driver, h.instructorClient, h.chatRepo)
-	// hack to set chat id from external id if set
-	if req.Msg.ExternalId != "" {
-		chat.Id = req.Msg.ExternalId
-	}
-	err := h.chatRepo.SaveChat(chat.Id, chat)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a new Chat instance
-	newChat := &api.Chat{
-		Id:       chat.Id,
-		Messages: []*api.Message{},
-	}
-
-	// Create the response
-	response := &api.NewChatResponse{
-		Chat: newChat,
-	}
-
-	// Return the response
-	return &connect.Response[api.NewChatResponse]{Msg: response}, nil
-}
-
-func (h *Handler) SendMessage(ctx context.Context, req *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if req.Msg.ChatId == "" {
-		return nil, errors.New("chat ID is required")
-	}
-
-	chat, err := h.chatRepo.GetChat(req.Msg.ChatId)
-	if err != nil {
-		return nil, err
-	}
-
-	// create a new chat if not found
-	if chat == nil {
-		newChatRes, err := h.NewChat(ctx, connect.NewRequest(&api.NewChatRequest{
-			ExternalId: req.Msg.ChatId,
-		}))
-		if err != nil {
-			return nil, err
-		}
-
-		chat, err = h.chatRepo.GetChat(newChatRes.Msg.Chat.Id)
-		if err != nil {
-			return nil, err
-		} else if chat == nil {
-			return nil, errors.New("chat not found")
-		}
-	}
-
-	res, cmd, err := chat.HandleUserMessage(req.Msg.Message)
-	if err != nil {
-		log.Error().Err(err).Msg("Error sending message")
-	}
-	chatcli.HandleTopLevelResponseCommand(cmd, chat, h.chatRepo)
-	if cmd != nil && cmd.Name != "" {
-		// FIXME: handle commands
-		if cmd.Name == "exit" {
-			// h.chat.Stop()
-		}
-	}
-
-	modeName := chat.GetModeText()
-
-	response := &api.SendMessageResponse{
-		Command: cmd,
-		Message: res,
-		Mode: &api.Mode{
-			Name: modeName,
-		},
-	}
-
-	return &connect.Response[api.SendMessageResponse]{Msg: response}, nil
-}
-
-func (h *Handler) GetChat(ctx context.Context, req *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
-	chat, err := h.chatRepo.GetChat(req.Msg.ChatId)
-	if err != nil {
-		return nil, err
-	} else if chat == nil {
-		return nil, errors.New("chat not found") // should not be 500 error
-	}
-
-	// Create an empty Chat instance
-	emptyChat := &api.Chat{
-		Id:        chat.Id,
-		Messages:  chat.GetHistory(),
-		ModeState: chat.GetModeState(),
-	}
-
-	// Create the response
-	response := &api.GetChatResponse{
-		Chat: emptyChat,
-	}
-
-	// Return the response
-	return &connect.Response[api.GetChatResponse]{Msg: response}, nil
-}
-
-/*
-func (*Handler) SearchForGolangFunction(ctx context.Context, req *connect.Request[api.SearchForGolangFunctionRequest]) (*connect.Response[api.SearchForGolangFunctionResponse], error) {
-	path := req.Msg.Path
-	if path == "" {
-		path = "."
-	}
-
-	path, err := codesurgeon.FindFunction(path, req.Msg.Receiver, req.Msg.FunctionName)
-	if err != nil {
-		log.Printf("Error searching for function: %v", err)
-		return &connect.Response[api.SearchForGolangFunctionResponse]{
-			Msg: &api.SearchForGolangFunctionResponse{},
-		}, nil
-	}
-	if path == "" {
-		log.Printf("Function not found")
-		return &connect.Response[api.SearchForGolangFunctionResponse]{
-			Msg: &api.SearchForGolangFunctionResponse{},
-		}, nil
-	}
-
-	parsedInfo, err := codesurgeon.ParseDirectory(path)
-	if err != nil {
-		log.Printf("Error parsing directory: %v", err)
-		return &connect.Response[api.SearchForGolangFunctionResponse]{
-			Msg: &api.SearchForGolangFunctionResponse{},
-		}, nil
-	}
-	if len(parsedInfo.Packages) == 0 {
-		log.Printf("No packages found")
-		return &connect.Response[api.SearchForGolangFunctionResponse]{
-			Msg: &api.SearchForGolangFunctionResponse{},
-		}, nil
-	}
-
-	msg := &api.SearchForGolangFunctionResponse{
-		Filepath: path,
-		// Signature:     fn.Signature,
-		// Documentation: strings.Join(fn.Docs, "\n"),
-		// Body:          fn.Body,
-	}
-
-	// fmt.Printf("parsedInfo\n%s\n", spew.Sdump(parsedInfo))
-
-	for _, pkg := range parsedInfo.Packages {
-		if req.Msg.Receiver != "" {
-			for _, st := range pkg.Structs {
-				if st.Name == req.Msg.Receiver {
-					for _, f := range st.Methods {
-						if f.Name == req.Msg.FunctionName {
-							msg.Signature = f.Signature
-							msg.Documentation = strings.Join(f.Docs, "\n")
-							msg.Body = f.Body
-							break
-						}
-					}
-				}
-			}
-		} else {
-			for _, f := range pkg.Functions {
-				fmt.Println(f.Name, req.Msg.FunctionName)
-				if f.Name == req.Msg.FunctionName {
-					msg.Signature = f.Signature
-					msg.Documentation = strings.Join(f.Docs, "\n")
-					msg.Body = f.Body
-					break
-				}
-
-			}
-		}
-	}
-
-	return &connect.Response[api.SearchForGolangFunctionResponse]{
-		Msg: msg,
-	}, nil
-}
-
-func (_ *Handler) UpsertDocumentationToFunction(ctx context.Context, req *connect.Request[api.UpsertDocumentationToFunctionRequest]) (*connect.Response[api.UpsertDocumentationToFunctionResponse], error) {
-	msg := req.Msg
-	ok, err := codesurgeon.UpsertDocumentationToFunction(msg.Filepath, msg.Receiver, msg.FunctionName, msg.Documentation)
-	if err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[api.UpsertDocumentationToFunctionResponse]{
-		Msg: &api.UpsertDocumentationToFunctionResponse{
-			Ok: ok,
-		},
-	}, nil
-}
-
-func (*Handler) UpsertCodeBlock(ctx context.Context, req *connect.Request[api.UpsertCodeBlockRequest]) (*connect.Response[api.UpsertCodeBlockResponse], error) {
-	msg := req.Msg
-	changes := []codesurgeon.FileChange{}
-
-	block := msg.Modification
-	// for _, block := range msg.Modification {
-	change := codesurgeon.FileChange{
-		PackageName: block.PackageName,
-		File:        block.Filepath,
-		Fragments: []codesurgeon.CodeFragment{
-			{
-				Content:   block.CodeBlock,
-				Overwrite: block.Overwrite,
-			},
-		},
-	}
-	changes = append(changes, change)
-	// }
-	err := codesurgeon.ApplyFileChanges(changes)
-	if err != nil {
-		log.Printf("Error applying file changes: %v\n", err)
-		return &connect.Response[api.UpsertCodeBlockResponse]{
-			Msg: &api.UpsertCodeBlockResponse{
-				Ok: false,
-			},
-		}, nil
-	}
-
-	return &connect.Response[api.UpsertCodeBlockResponse]{
-		Msg: &api.UpsertCodeBlockResponse{
-			Ok: true,
-		},
-	}, nil
-}
-
-// ParseCodebase handles the ParseCodebase gRPC method
-func (*Handler) ParseCodebase(ctx context.Context, req *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error) {
-	// Extract the file or directory path from the request
-	fileOrDirectory := req.Msg.FileOrDirectory
-	if fileOrDirectory == "" {
-		fileOrDirectory = "." // Default to current directory if not provided
-	}
-
-	// Call the ParseDirectory function to parse the codebase
-	parsedInfo, err := codesurgeon.ParseDirectory(fileOrDirectory)
-	if err != nil {
-		log.Printf("Error parsing directory: %v", err)
-		return &connect.Response[api.ParseCodebaseResponse]{
-			Msg: &api.ParseCodebaseResponse{},
-		}, err
-	}
-
-	// Convert the parsed information to the API response format
-	response := &api.ParseCodebaseResponse{
-		Packages: convertParsedInfoToProto(parsedInfo),
-	}
-
-	// Return the response
-	return &connect.Response[api.ParseCodebaseResponse]{Msg: response}, nil
-}
-
-func (h *Handler) Introduction(ctx context.Context, req *connect.Request[api.IntroductionRequest]) (*connect.Response[api.IntroductionResponse], error) {
-	res, err := h.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
-	if err != nil {
-		return nil, err
-	}
-
-	intro, err := ai.GetGPTIntroduction(res.Msg.Openapi)
-	if err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[api.IntroductionResponse]{
-		Msg: &api.IntroductionResponse{
-			Introduction: intro,
-		},
-	}, nil
-}
-*/
 
 func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error) {
 	// Read the embedded file using the embedded FS
@@ -374,7 +101,7 @@ func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOp
 			if ok {
 				// Split the "operationId" by "."
 				parts := strings.Split(operationID, ".")
-				operationID := "operationId"
+				operationID = "operationId"
 				// Get the last 2 parts of the "operationId" and join them with a "_"
 				if len(parts) > 1 {
 					operationID = strings.Join(parts[len(parts)-2:], "_")
@@ -396,12 +123,378 @@ func (h *Handler) GetOpenAPI(ctx context.Context, req *connect.Request[api.GetOp
 	}, nil
 }
 
-func (h *Handler) ReceiveSlackMessage(ctx context.Context, req *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error) {
-	log.Debug().Msg("Received Slack message")
+// ParseCodebase handles the ParseCodebase gRPC method
+func (h *Handler) ParseCodebase(ctx context.Context, req *connect.Request[api.ParseCodebaseRequest]) (*connect.Response[api.ParseCodebaseResponse], error) {
+	// Extract the parameters from the request
+	path := req.Msg.Path
+	if path == "" {
+		path = "." // Default to current directory if not provided
+	}
+	format := req.Msg.Format
+	plainStructs := req.Msg.PlainStructs
+	fieldsPlainStructs := req.Msg.FieldsPlainStructs
+	structsWithMethod := req.Msg.StructsWithMethod
+	fieldsStructsWithMethod := req.Msg.FieldsStructsWithMethod
+	methods := req.Msg.Methods
+	functions := req.Msg.Functions
+	comments := req.Msg.Comments
+	tags := req.Msg.Tags
+	ignoreRule := req.Msg.IgnoreRule
 
-	return &connect.Response[api.ReceiveSlackMessageResponse]{
-		Msg: &api.ReceiveSlackMessageResponse{
-			Challenge: req.Msg.Challenge,
+	// Call the ParseDirectory function to parse the codebase with all flags
+	parsedInfo, err := codesurgeon.ParseDirectoryRecursive(
+		path,
+	)
+	if err != nil {
+		log.Printf("Error parsing codebase: %v", err)
+		return connect.NewResponse(&api.ParseCodebaseResponse{
+			ParsedInfo: "",
+		}), err
+	}
+
+	// Prepare the response
+	response := &api.ParseCodebaseResponse{
+		ParsedInfo: codesurgeon.PrettyPrint(parsedInfo, format, ignoreRule, plainStructs, fieldsPlainStructs, structsWithMethod, fieldsStructsWithMethod, methods, functions, comments, tags),
+	}
+
+	return connect.NewResponse(response), nil
+}
+
+func (h *Handler) SearchSimilarFunctions(ctx context.Context, req *connect.Request[api.SearchSimilarFunctionsRequest]) (*connect.Response[api.SearchSimilarFunctionsResponse], error) {
+	embedding, err := ai.EmbedText(h.instructorClient.Client, req.Msg.Objective)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error embedding")
+	}
+
+	similarNodes, err := findSimilarNodesDirectly(ctx, h.driver, embedding)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error finding similar nodes")
+	}
+
+	res := &api.SearchSimilarFunctionsResponse{}
+	for _, node := range similarNodes {
+		res.Functions = append(res.Functions, &api.SearchSimilarFunctionsResponse_Function{
+			Code: node.Documentation + "\n" + node.Body,
+		})
+	}
+
+	return connect.NewResponse(res), nil
+}
+
+// findSimilarNodesDirectly finds nodes similar to the given embedding without creating a temporary node
+func findSimilarNodesDirectly(ctx context.Context, driver neo4j.DriverWithContext, embedding []float32) ([]struct {
+	ID            int64
+	Documentation string
+	Body          string
+	Similarity    float64
+}, error) {
+	var results []struct {
+		ID            int64
+		Documentation string
+		Body          string
+		Similarity    float64
+	}
+
+	session := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+	defer session.Close(ctx)
+
+	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		query := `
+        MATCH (n:Method)
+        WHERE n.embedding IS NOT NULL
+        WITH n, gds.similarity.cosine($embedding, n.embedding) AS similarity
+        RETURN 
+        id(n) AS id, 
+        n.documentation AS documentation,
+        n.body as body,  
+        similarity
+        ORDER BY similarity DESC
+        LIMIT 10
+        `
+
+		result, err := tx.Run(ctx, query, map[string]any{"embedding": embedding})
+		if err != nil {
+			return nil, err
+		}
+
+		for result.Next(ctx) {
+			record := result.Record()
+			results = append(results, struct {
+				ID            int64
+				Documentation string
+				Body          string
+				Similarity    float64
+			}{
+				ID:            record.Values[0].(int64),
+				Documentation: record.Values[1].(string),
+				Body:          record.Values[2].(string),
+				Similarity:    record.Values[3].(float64),
+			})
+		}
+		return nil, result.Err()
+	})
+
+	return results, err
+}
+
+// GetNeo4JSchema retrieves the Neo4j schema from the database and returns it as a gRPC response.
+// It returns a response containing the schema, which includes labels and relationships, or an error if retrieval fails.
+func (h *Handler) GetNeo4JSchema(ctx context.Context, req *connect.Request[api.GetNeo4JSchemaRequest]) (*connect.Response[api.GetNeo4JSchemaResponse], error) {
+	schema, err := neo4j2.GetSchema(ctx, h.driver)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &api.GetNeo4JSchemaResponse{
+		Schema: &api.Schema{
+			Labels:        convertLabelsToProto(schema.Labels),
+			Relationships: convertRelationshipsToProto(schema.Relationships),
 		},
+	}
+
+	return &connect.Response[api.GetNeo4JSchemaResponse]{Msg: response}, nil
+}
+
+func convertLabelsToProto(labels []neo4j2.LabelSchema) []*api.LabelSchema {
+	var protoLabels []*api.LabelSchema
+	for _, label := range labels {
+		protoLabel := &api.LabelSchema{
+			Label:      label.Label,
+			Properties: convertPropertiesToProto(label.Properties),
+		}
+		protoLabels = append(protoLabels, protoLabel)
+	}
+	return protoLabels
+}
+
+func convertPropertiesToProto(properties []neo4j2.PropertySchema) []*api.PropertySchema {
+	var protoProperties []*api.PropertySchema
+	for _, property := range properties {
+		protoProperty := &api.PropertySchema{
+			Property:            property.Property,
+			Type:                property.Type,
+			IsIndexed:           property.IsIndexed,
+			UniqueConstraint:    property.UniqueConstraint,
+			ExistenceConstraint: property.ExistenceConstraint,
+		}
+		protoProperties = append(protoProperties, protoProperty)
+	}
+	return protoProperties
+}
+
+func convertRelationshipsToProto(relationships []neo4j2.RelationshipSchema) []*api.RelationshipSchema {
+	var protoRelationships []*api.RelationshipSchema
+	for _, relationship := range relationships {
+		protoRelationship := &api.RelationshipSchema{
+			Relationship: relationship.Relationship,
+			FromLabel:    relationship.FromLabel,
+			ToLabel:      relationship.ToLabel,
+		}
+		protoRelationships = append(protoRelationships, protoRelationship)
+	}
+	return protoRelationships
+}
+
+// findSimilarQuestionAnswer finds the Question-Answer pair most similar to the given embedding.
+// It uses only the embedding from the Question node.
+func findSimilarQuestionAnswer(ctx context.Context, driver neo4j.DriverWithContext, embedding []float32) ([]struct {
+	ID         int64
+	Question   string
+	Answer     string
+	Similarity float64
+}, error) {
+	var results []struct {
+		ID         int64
+		Question   string
+		Answer     string
+		Similarity float64
+	}
+
+	session := driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+	defer session.Close(ctx)
+
+	_, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		query := `
+			MATCH (q:Question)-[:HAS_ANSWER]->(a:Answer)
+			WHERE q.embedding IS NOT NULL
+			WITH q, a, gds.similarity.cosine($embedding, q.embedding) AS similarity
+			RETURN id(q) AS id, q.content AS question, a.content AS answer, similarity
+			ORDER BY similarity DESC
+			LIMIT 5
+		`
+		result, err := tx.Run(ctx, query, map[string]any{"embedding": embedding})
+		if err != nil {
+			return nil, err
+		}
+		for result.Next(ctx) {
+			record := result.Record()
+			results = append(results, struct {
+				ID         int64
+				Question   string
+				Answer     string
+				Similarity float64
+			}{
+				ID:         record.Values[0].(int64),
+				Question:   record.Values[1].(string),
+				Answer:     record.Values[2].(string),
+				Similarity: record.Values[3].(float64),
+			})
+		}
+		return nil, result.Err()
+	})
+	return results, err
+}
+
+// ThinkThroughProblem handles a problem by finding a similar Question-Answer pair for each question using cosine similarity.
+func (h *Handler) ThinkThroughProblem(ctx context.Context, req *connect.Request[api.ThinkThroughProblemRequest]) (*connect.Response[api.ThinkThroughProblemResponse], error) {
+	if len(req.Msg.Questions) == 0 && req.Msg.QuestionsString != "" {
+		var err error
+		req.Msg.Questions, err = ai.ParseQuestions(req.Msg.QuestionsString)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(req.Msg.Questions) == 0 && req.Msg.ProblemStatement != "" {
+		req.Msg.Questions = []string{req.Msg.ProblemStatement}
+	}
+
+	if len(req.Msg.Questions) == 0 && req.Msg.Goal != "" {
+		req.Msg.Questions = []string{req.Msg.Goal}
+	}
+
+	similarQuestionsAnswers := make([]*api.QuestionAnswer, 0)
+	for _, questionText := range req.Msg.Questions {
+		// Embed the question text
+		embedding, err := ai.EmbedText(h.instructorClient.Client, questionText)
+		if err != nil {
+			similarQuestionsAnswers = append(similarQuestionsAnswers, &api.QuestionAnswer{
+				Question: questionText,
+				Answer:   "Failed to embed question",
+			})
+			continue
+		}
+		// Find the most similar Question-Answer pair using the question embedding
+		results, err := findSimilarQuestionAnswer(ctx, h.driver, embedding)
+		if err != nil {
+			similarQuestionsAnswers = append(similarQuestionsAnswers, &api.QuestionAnswer{
+				Question: questionText,
+				Answer:   "Failed to find similar question",
+			})
+			continue
+		}
+
+		for _, result := range results {
+			similarQuestionsAnswers = append(similarQuestionsAnswers, &api.QuestionAnswer{
+				Question: result.Question,
+				Answer:   result.Answer,
+			})
+		}
+	}
+
+	res, err := ai.ThinkThroughProblem(h.instructorClient, req.Msg, similarQuestionsAnswers)
+	if err != nil {
+		return nil, err
+	}
+
+	return &connect.Response[api.ThinkThroughProblemResponse]{
+		Msg: res,
 	}, nil
+
+}
+
+// ExecuteNeo4JQuery executes a Neo4j query against the database.
+// It takes a context and a request containing the query string.
+// It returns a response containing the JSON-encoded result of the query, or an error if one occurred.
+func (h *Handler) ExecuteNeo4JQuery(ctx context.Context, req *connect.Request[api.ExecuteNeo4JQueryRequest]) (*connect.Response[api.ExecuteNeo4JQueryResponse], error) {
+	session := h.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close(ctx)
+	params := map[string]any{}
+
+	result, err := session.Run(ctx, req.Msg.Query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	records, err := result.Collect(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	encoded, err := json.Marshal(records)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&api.ExecuteNeo4JQueryResponse{
+		Result: string(encoded),
+	}), nil
+}
+
+// AddKnowledge handles the addition of new knowledge to the knowledge graph.
+// It receives a request containing question-answer pairs, generates embeddings for the questions,
+// and stores the knowledge in a Neo4j graph database.
+//
+// The function iterates through the provided question-answer pairs, validates that both question and answer are present,
+// generates an embedding for the question using an AI model, and then creates nodes for the question and answer in Neo4j,
+// linking them with a HAS_ANSWER relationship.
+//
+// If any error occurs during the process, such as missing question or answer, failure to generate an embedding,
+// or failure to write to Neo4j, the error is logged, and the function continues with the next question-answer pair.
+//
+// Parameters:
+//   - ctx: The context for the request.
+//   - req: A connect.Request containing an AddKnowledgeRequest message, which includes a slice of question-answer pairs.
+//
+// Returns:
+//   - A connect.Response containing an AddKnowledgeResponse message (currently empty).
+//   - An error if any critical error occurs during the process.  Currently, only returns an error if no knowledge is provided.
+func (h *Handler) AddKnowledge(ctx context.Context, req *connect.Request[api.AddKnowledgeRequest]) (*connect.Response[api.AddKnowledgeResponse], error) {
+	if len(req.Msg.QuestionAnswer) == 0 {
+		return nil, errors.New("no knowledge provided")
+	}
+
+	// Open a write session to Neo4j.
+	session := h.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close(ctx)
+
+	// Iterate over each question-answer pair.
+	for _, qa := range req.Msg.QuestionAnswer {
+		// Validate that both question and answer are provided.
+		if qa.Question == "" || qa.Answer == "" {
+			log.Error().Msg("Both question and answer are required for each knowledge item")
+			continue
+		}
+
+		// Compute the embedding for the question text.
+		embedding, err := ai.EmbedText(h.instructorClient.Client, qa.Question)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to generate embedding for the question")
+			continue
+		}
+
+		// Write a new Question node (with its embedding) and a connected Answer node into Neo4j.
+		_, err = session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+			query := `
+				MERGE (q:Question {content: $question, embedding: $embedding})
+				MERGE (a:Answer {content: $answer})
+				MERGE (q)-[:HAS_ANSWER]->(a)
+				RETURN id(q) as qid
+			`
+			params := map[string]any{
+				"question":  qa.Question,
+				"answer":    qa.Answer,
+				"embedding": embedding,
+			}
+			_, err := tx.Run(ctx, query, params)
+			return nil, err
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to add a knowledge item")
+			// Continue with next item or decide to return the error depending on your requirements.
+		}
+	}
+
+	// Return an empty response (or add fields to the response if needed).
+	return &connect.Response[api.AddKnowledgeResponse]{Msg: &api.AddKnowledgeResponse{}}, nil
 }

@@ -4,12 +4,47 @@ package codesurgeon;
 
 // Service definition
 service GptService {
-  rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
   rpc NewChat(NewChatRequest) returns (NewChatResponse);
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc ReceiveSlackMessage(ReceiveSlackMessageRequest) returns (ReceiveSlackMessageResponse);
-  
+
+  // GetOpenAPI retrieves the OpenAPI specification that can be used to on customGPT
+  rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
+
+  // SearchSimilarFunctions searches for similar functions based on an objective
+  rpc SearchSimilarFunctions(SearchSimilarFunctionsRequest) returns (SearchSimilarFunctionsResponse);
+  // GetNeo4jSchema retrieves the schema of the Neo4j database
+  rpc GetNeo4jSchema(GetNeo4jSchemaRequest) returns (GetNeo4jSchemaResponse); 
+  // ExecuteNeo4jQuery executes a Neo4j query
+  rpc ExecuteNeo4jQuery(ExecuteNeo4jQueryRequest) returns (ExecuteNeo4jQueryResponse);
+  // ThinkThroughProblem helps to think through a problem
+  rpc ThinkThroughProblem(ThinkThroughProblemRequest) returns (ThinkThroughProblemResponse);
+  // AddKnowledge adds knowledge to the system
+  rpc AddKnowledge(AddKnowledgeRequest) returns (AddKnowledgeResponse);
+  // ParseCodebase parses a file or directory
+  rpc ParseCodebase(ParseCodebaseRequest) returns (ParseCodebaseResponse);
+}
+
+// Request message for ParseCodebase
+message ParseCodebaseRequest {
+  string path = 1;
+  bool recursive = 2;
+  string format = 3;
+  bool plain_structs = 4;
+  bool fields_plain_structs = 5;
+  bool structs_with_method = 6;
+  bool fields_structs_with_method = 7;
+  bool methods = 8;
+  bool functions = 9;
+  bool comments = 10;
+  bool tags = 11;
+  repeated string ignore_rule = 12;
+}
+
+// Response message for ParseCodebase
+message ParseCodebaseResponse {
+  string parsed_info = 1; // This can be adjusted based on the actual structure of parsed data
 }
 
 message GetChatRequest {
@@ -89,7 +124,90 @@ message ReceiveSlackMessageRequest {
   string type = 3;
 }
 
-
 message ReceiveSlackMessageResponse {
   string challenge = 1;
+}
+
+message SearchSimilarFunctionsRequest {
+  string objective = 1;
+}
+
+message SearchSimilarFunctionsResponse {
+  message Function {
+    string code = 1;
+  }
+
+  repeated Function functions = 1;
+}
+
+message GetNeo4jSchemaRequest {
+}
+
+message GetNeo4jSchemaResponse {
+  Schema schema = 1;
+}
+
+// Schema for Neo4j database
+message Schema {
+  repeated LabelSchema labels = 1;
+  repeated RelationshipSchema relationships = 2;
+}
+
+// LabelSchema represents a node label in Neo4j
+message LabelSchema {
+  string label = 1;
+  repeated PropertySchema properties = 2;
+}
+
+// PropertySchema represents a property of a node in Neo4j
+message PropertySchema {
+  string property = 1;
+  string type = 2;
+  bool isIndexed = 3;
+  bool uniqueConstraint = 4;
+  bool existenceConstraint = 5;
+}
+
+// RelationshipSchema represents a relationship in Neo4j
+message RelationshipSchema {
+  string relationship = 1;
+  string fromLabel = 2;
+  string toLabel = 3;
+}
+
+// Request to think through a problem
+message ThinkThroughProblemRequest {
+  string goal = 1;
+  string context = 2;
+  string problem_statement = 3;
+  repeated string questions = 4;
+  string questions_string = 5; // multiple questions in one block, to be parsed with llm
+}
+
+// Response from thinking through a problem
+message ThinkThroughProblemResponse {
+  repeated QuestionAnswer answers = 1;
+  string observations = 2;
+  repeated QuestionAnswer similar_questions = 3;
+}
+
+
+
+// Request to add knowledge to the system
+message AddKnowledgeRequest {
+  repeated QuestionAnswer question_answer = 1;
+}
+
+// Response after adding knowledge
+message AddKnowledgeResponse {
+}
+
+// Request to execute a Neo4j query
+message ExecuteNeo4jQueryRequest {
+  string query = 1;
+}
+
+// Response from executing a Neo4j query
+message ExecuteNeo4jQueryResponse {
+  string result = 1;
 }

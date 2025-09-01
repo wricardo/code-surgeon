@@ -63,44 +63,48 @@ type Import struct {
 
 // Interface represents a Go interface and its methods.
 type Interface struct {
-	Name    string   `json:"name"`
-	Methods []Method `json:"methods,omitemity"`
-	Docs    []string `json:"docs,omitemity"`
+	Name       string   `json:"name"`
+	Methods    []Method `json:"methods,omitemity"`
+	Docs       []string `json:"docs,omitemity"`
+	Definition string   `json:"definition,omitempty"` // Full Go code definition of the interface
 
 	PtrPackage *Package `json:"-"` // Pointer to the package that this interface belongs to
 }
 
 // Struct represents a Go struct and its fields and methods.
 type Struct struct {
-	Name    string   `json:"name"`
-	Fields  []Field  `json:"fields,omitemity"`
-	Methods []Method `json:"methods,omitemity"`
-	Docs    []string `json:"docs,omitemity"`
+	Name       string   `json:"name"`
+	Fields     []Field  `json:"fields,omitemity"`
+	Methods    []Method `json:"methods,omitemity"`
+	Docs       []string `json:"docs,omitemity"`
+	Definition string   `json:"definition,omitempty"` // Full Go code definition of the struct
 
 	PtrPackage *Package `json:"-"` // Pointer to the package that this struct belongs to
 }
 
 // Method represents a method in a Go struct or interface.
 type Method struct {
-	Receiver  string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
-	Name      string   `json:"name"`
-	Params    []Param  `json:"params,omitemity"`
-	Returns   []Param  `json:"returns,omitemity"`
-	Docs      []string `json:"docs,omitemity"`
-	Signature string   `json:"signature"`
-	Body      string   `json:"body,omitempty"` // New field for method body
+	Receiver   string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
+	Name       string   `json:"name"`
+	Params     []Param  `json:"params,omitemity"`
+	Returns    []Param  `json:"returns,omitemity"`
+	Docs       []string `json:"docs,omitemity"`
+	Signature  string   `json:"signature"`
+	Body       string   `json:"body,omitempty"`       // New field for method body
+	Definition string   `json:"definition,omitempty"` // Full Go code definition of the method
 
 	PtrStruct *Struct `json:"-"` // Pointer to the struct that this method belongs to
 }
 
 // Function represents a Go function with its parameters, return types, and documentation.
 type Function struct {
-	Name      string   `json:"name"`
-	Params    []Param  `json:"params,omitemity"`
-	Returns   []Param  `json:"returns,omitemity"`
-	Docs      []string `json:"docs,omitemity"`
-	Signature string   `json:"signature"`
-	Body      string   `json:"body,omitempty"` // New field for function body
+	Name       string   `json:"name"`
+	Params     []Param  `json:"params,omitemity"`
+	Returns    []Param  `json:"returns,omitemity"`
+	Docs       []string `json:"docs,omitemity"`
+	Signature  string   `json:"signature"`
+	Body       string   `json:"body,omitempty"`       // New field for function body
+	Definition string   `json:"definition,omitempty"` // Full Go code definition of the function
 }
 
 // Param represents a parameter or return value in a Go function or method.
@@ -347,6 +351,47 @@ func extractStructs(docPkg *doc.Package, ourPkg Package) ([]Struct, error) {
 					PtrPackage: &ourPkg,
 				}
 
+				// Generate the full struct definition using AST
+				var defBuf bytes.Buffer
+				// Use go/format to properly format the struct definition
+				defBuf.WriteString(fmt.Sprintf("type %s struct {\n", t.Name))
+				for _, field := range structType.Fields.List {
+					// Format each field properly
+					defBuf.WriteString("\t")
+
+					// Field names
+					for i, name := range field.Names {
+						if i > 0 {
+							defBuf.WriteString(", ")
+						}
+						defBuf.WriteString(name.Name)
+					}
+
+					// If there are field names, add a space
+					if len(field.Names) > 0 {
+						defBuf.WriteString(" ")
+					}
+
+					// Field type
+					defBuf.WriteString(exprToString(field.Type))
+
+					// Field tag
+					if field.Tag != nil {
+						defBuf.WriteString(" ")
+						defBuf.WriteString(field.Tag.Value)
+					}
+
+					// Field comment
+					if field.Comment != nil && len(field.Comment.List) > 0 {
+						defBuf.WriteString(" ")
+						defBuf.WriteString(field.Comment.List[0].Text)
+					}
+
+					defBuf.WriteString("\n")
+				}
+				defBuf.WriteString("}")
+				parsedStruct.Definition = defBuf.String()
+
 				for _, fvalue := range structType.Fields.List {
 					name := ""
 					if len(fvalue.Names) > 0 {
@@ -419,8 +464,23 @@ func extractInterfaces(docPkg *doc.Package, pkg Package) ([]Interface, error) {
 					PtrPackage: &pkg,
 				}
 
+				// Generate the full interface definition
+				var defBuf bytes.Buffer
+				defBuf.WriteString(fmt.Sprintf("type %s interface {\n", t.Name))
+
 				for _, m := range interfaceType.Methods.List {
 					if funcType, ok := m.Type.(*ast.FuncType); ok {
+						// Generate method definition
+						methodDef := m.Names[0].Name + "(" + formatParams(funcType.Params, pkg) + ")"
+						if funcType.Results != nil && len(funcType.Results.List) > 0 {
+							returnStr := formatParams(funcType.Results, pkg)
+							if len(funcType.Results.List) > 1 {
+								methodDef += " (" + returnStr + ")"
+							} else {
+								methodDef += " " + returnStr
+							}
+						}
+
 						method := Method{
 							Name:    m.Names[0].Name,
 							Params:  extractParams(funcType.Params, pkg),
@@ -428,10 +488,36 @@ func extractInterfaces(docPkg *doc.Package, pkg Package) ([]Interface, error) {
 							Docs:    getDocsForFieldAst(m.Doc),
 							Signature: fmt.Sprintf("%s(%s) (%s)", m.Names[0].Name,
 								formatParams(funcType.Params, pkg), formatParams(funcType.Results, pkg)),
+							Definition: methodDef,
 						}
+
+						// Add method to definition buffer
+						defBuf.WriteString("\t")
+						defBuf.WriteString(m.Names[0].Name)
+						defBuf.WriteString("(")
+						defBuf.WriteString(formatParams(funcType.Params, pkg))
+						defBuf.WriteString(")")
+
+						// Add return types if any
+						if funcType.Results != nil && len(funcType.Results.List) > 0 {
+							defBuf.WriteString(" ")
+							returnStr := formatParams(funcType.Results, pkg)
+							if len(funcType.Results.List) > 1 {
+								defBuf.WriteString("(")
+								defBuf.WriteString(returnStr)
+								defBuf.WriteString(")")
+							} else {
+								defBuf.WriteString(returnStr)
+							}
+						}
+						defBuf.WriteString("\n")
+
 						parsedInterface.Methods = append(parsedInterface.Methods, method)
 					}
 				}
+
+				defBuf.WriteString("}")
+				parsedInterface.Definition = defBuf.String()
 
 				interfaces = append(interfaces, parsedInterface)
 			}

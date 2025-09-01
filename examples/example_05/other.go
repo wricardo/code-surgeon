@@ -15,6 +15,7 @@ func DoStuff() {
 
 type MyStruct struct {
 }
+
 // MyMethod my automatic comment for method for struct MyStruct
 func (m *MyStruct) MyMethod() {
 	fmt.Println("My method")
@@ -22,6 +23,7 @@ func (m *MyStruct) MyMethod() {
 
 type OtherStruct struct {
 }
+
 // MyMethod my automatic comment for method for struct OtherStruct
 func (m *OtherStruct) MyMethod() {
 	fmt.Println("My method")

@@ -16,8 +16,66 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
+	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
+
+func ThinkThroughProblem(client *instructor.InstructorOpenAI, req *api.ThinkThroughProblemRequest, similarQuestionsAnswers []*api.QuestionAnswer) (res *api.ThinkThroughProblemResponse, err error) {
+	type QuestionAnswer struct {
+		Question string `json:"question" jsonschema:"title=question,description=the question asked by the user."`
+		Answer   string `json:"answer" jsonschema:"title=answer,description=the answer to the question asked by the user."`
+	}
+	type AiOutput struct {
+		Answers      []*QuestionAnswer `protobuf:"bytes,1,rep,name=answers,proto3" json:"answers,omitempty"`
+		Observations string            `protobuf:"bytes,2,opt,name=observations,proto3" json:"observations,omitempty"`
+	}
+
+	ctx := context.Background()
+	var aiOut AiOutput
+
+	similarQuestionsAnswersTxt := ""
+	for _, qa := range similarQuestionsAnswers {
+		similarQuestionsAnswersTxt += fmt.Sprintf(`
+		<QA>
+		Q:%s
+		A:%s
+		</QA>
+		`, qa.Question, qa.Answer)
+	}
+
+	_, err = client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model: openai.GPT4o,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    "system",
+				Content: "You are a helpful assistant which can help the user think through a problem based on information from contextt and previous seen questions. You must answer in json format with the keys being 'answers' and 'observations'.",
+			},
+			{
+				Role:    "user",
+				Content: fmt.Sprintf(`<previously_seen_questions>%s</previously_seen_questions> <context>%s</context> <problemStatement>%s</problemStatement> <questions>%s</questions>`, similarQuestionsAnswersTxt, req.Context, req.ProblemStatement, strings.Join(req.Questions, ",")),
+			},
+		},
+		MaxTokens: 1000,
+	}, &aiOut)
+
+	if err != nil {
+		return res, fmt.Errorf("Failed to think through problem: %v", err)
+	}
+
+	if len(aiOut.Answers) == 0 {
+		return res, nil
+	}
+
+	finalRes := api.ThinkThroughProblemResponse{}
+	for _, qa := range aiOut.Answers {
+		finalRes.Answers = append(finalRes.Answers, &api.QuestionAnswer{Question: qa.Question, Answer: qa.Answer})
+	}
+
+	finalRes.Observations = aiOut.Observations
+	finalRes.SimilarQuestions = similarQuestionsAnswers
+
+	return &finalRes, nil
+}
 
 func GetGPTInstructions(openapi string) (string, error) {
 	actions, err := getActionsFromOpenApiDev(openapi)
@@ -309,10 +367,10 @@ func getActionsFromOpenApiDev(openapi string) (string, error) {
 	})
 }
 
-// EmbedQuestion embeds a user's question into a vector representation using a predefined embedding model.
-func EmbedQuestion(client *openai.Client, question string) ([]float32, error) {
+// EmbedText embeds a user's question into a vector representation using a predefined embedding model.
+func EmbedText(client *openai.Client, text string) ([]float32, error) {
 	resp, err := client.CreateEmbeddings(context.Background(), openai.
-		EmbeddingRequest{Input: []string{question}, Model: openai.AdaEmbeddingV2})
+		EmbeddingRequest{Input: []string{text}, Model: openai.AdaEmbeddingV2})
 	if err != nil {
 		return nil, err
 	}
@@ -438,4 +496,41 @@ func GetInstructor() *instructor.InstructorOpenAI {
 		instructor.WithMaxRetries(3),
 	)
 	return instructorClient
+}
+
+func ParseQuestions(questions string) ([]string, error) {
+
+	type AiOutput struct {
+		Questions []string `json:"questions"`
+	}
+	var aiOutput AiOutput
+
+	client := GetInstructor()
+	ctx := context.Background()
+
+	_, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model: openai.GPT4o,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    "system",
+				Content: "You are a helpful assistant which can parse questions from a string of questions. You must answer in json format with the key being 'questions' and value an array of strings.",
+			},
+			{
+				Role:    "user",
+				Content: "<questions>" + questions + "</questions>",
+			},
+			{
+				Role:    "user",
+				Content: "You are a helpful assistant which can parse questions from a string of questions inside questions tag. You must answer in json format with the key being 'questions' and value an array of strings.",
+			},
+		},
+		MaxTokens: 1000,
+	}, &aiOutput)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse questions: %v", err)
+	}
+
+	return aiOutput.Questions, nil
+
 }

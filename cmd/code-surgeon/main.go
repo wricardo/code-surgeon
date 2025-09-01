@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
+	"path/filepath"
+	"strings"
 	"syscall"
 
-	"github.com/google/uuid"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
 
 	"connectrpc.com/connect"
@@ -20,7 +21,6 @@ import (
 	"github.com/wricardo/code-surgeon/ai"
 	"github.com/wricardo/code-surgeon/api"
 	"github.com/wricardo/code-surgeon/api/apiconnect"
-	"github.com/wricardo/code-surgeon/chatcli"
 	"github.com/wricardo/code-surgeon/grpc"
 	"github.com/wricardo/code-surgeon/log2"
 	"github.com/wricardo/code-surgeon/neo4j2"
@@ -121,51 +121,6 @@ func main() {
 				},
 			},
 			{
-				Name: "chat",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name: "chat-id",
-						// Required: true,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					domain, useNgrok := myEnv["NGROK_DOMAIN"]
-					if !useNgrok {
-						domain = "http://localhost:8010"
-					}
-
-					// Setup signal handling for graceful exit
-					signalChan := make(chan os.Signal, 1)
-					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-					shutdownChan := make(chan struct{})
-
-					// connect to the grpc server
-					chatId := cCtx.String("chat-id")
-					if chatId == "" {
-						chatId = uuid.New().String()
-					}
-
-					var wg sync.WaitGroup
-					wg.Add(1)
-					go func() {
-						// Start CLI
-						cliChat := chatcli.NewCliChat("http://" + domain)
-						defer wg.Done()
-						err := cliChat.Start(shutdownChan, chatId)
-						if err != nil {
-							log.Fatal().Err(err).Msg("Error starting chat")
-						}
-						return
-					}()
-					<-signalChan
-					close(shutdownChan)
-					fmt.Println("\nshutting down")
-					wg.Wait()
-					fmt.Println("\nBye")
-					return nil
-				},
-			},
-			{
 				Name:  "server",
 				Usage: "Run the gpt service server",
 				Flags: []cli.Flag{
@@ -204,6 +159,16 @@ func main() {
 						return err
 					}
 					fmt.Println(openAPI.Msg.Openapi)
+					return nil
+				},
+			},
+			{
+				Name: "mcp-server",
+				Action: func(cCtx *cli.Context) error {
+					wally := NewMCPServer()
+					if err := wally.ServeStdio(); err != nil {
+						log.Fatal().Err(err).Msg("Error serving")
+					}
 					return nil
 				},
 			},
@@ -405,6 +370,117 @@ func main() {
 					}
 					fmt.Println(rendered)
 					return nil
+				},
+			},
+			{
+				Name:    "ingest-knowledgebase",
+				Aliases: []string{},
+				Usage:   "Ingest knowledge base folder",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "path",
+						Aliases:  []string{"p"},
+						Usage:    "path to the knowledge base folder",
+						Value:    "./knowledgebase",
+						Required: false,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
+					if !useNgrok {
+						ngrokDomain = "http://localhost:8010"
+					}
+
+					// Get the path from flags
+					path := cCtx.String("path")
+
+					// Read all .txt files in the directory
+					entries, err := os.ReadDir(path)
+					if err != nil {
+						return fmt.Errorf("failed to read directory: %w", err)
+					}
+
+					// Connect to the gRPC server
+					client := apiconnect.NewGptServiceClient(http.DefaultClient, "https://"+ngrokDomain)
+
+					var questionAnswers []*api.QuestionAnswer
+
+					// Process each .txt file
+					for _, entry := range entries {
+						if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".txt") {
+							filePath := filepath.Join(path, entry.Name())
+							content, err := os.ReadFile(filePath)
+							if err != nil {
+								log.Error().Err(err).Str("file", filePath).Msg("Failed to read file")
+								continue
+							}
+
+							// Split content into lines
+							lines := strings.Split(string(content), "\n")
+
+							// Find first non-empty line for question
+							var question string
+							var answerLines []string
+							foundQuestion := false
+
+							for _, line := range lines {
+								trimmedLine := strings.TrimSpace(line)
+								if !foundQuestion && trimmedLine != "" {
+									question = trimmedLine
+									foundQuestion = true
+									continue
+								}
+								if foundQuestion {
+									answerLines = append(answerLines, line)
+								}
+							}
+
+							if question != "" {
+								qa := &api.QuestionAnswer{
+									Question: question,
+									Answer:   strings.Join(answerLines, "\n"),
+								}
+								questionAnswers = append(questionAnswers, qa)
+							}
+						}
+					}
+
+					// Send all question-answers to the server
+					if len(questionAnswers) > 0 {
+						req := &api.AddKnowledgeRequest{
+							QuestionAnswer: questionAnswers,
+						}
+						_, err := client.AddKnowledge(cCtx.Context, connect.NewRequest(req))
+						if err != nil {
+							return fmt.Errorf("failed to add knowledge: %w", err)
+						}
+						fmt.Printf("Successfully ingested %d knowledge base entries\n", len(questionAnswers))
+					} else {
+						fmt.Println("No knowledge base entries found")
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:    "generate-embeddings",
+				Aliases: []string{"ge"},
+				Usage:   "Generate embeddings for the specified path",
+				Flags:   []cli.Flag{},
+				Action: func(cCtx *cli.Context) error {
+					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
+					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
+					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+					driver, closeFn, err := neo4j2.Connect(cCtx.Context, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+					if err != nil {
+						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
+						return err
+					} else {
+						defer closeFn()
+					}
+					sess := driver.NewSession(cCtx.Context, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+					defer sess.Close(cCtx.Context)
+					return neo4j2.GenerateEmbeddings(driver, ai.GetInstructor().Client)
 				},
 			},
 			{

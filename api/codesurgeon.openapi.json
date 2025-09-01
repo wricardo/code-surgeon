@@ -2,36 +2,9 @@
 	"openapi": "3.0.0",
 	"info": {
 		"title": "codesurgeon",
-		"version": "1.0.0"
+		"version": "0.1.1"
 	},
 	"paths": {
-		"/codesurgeon.GptService/GetOpenAPI": {
-			"post": {
-				"summary": "GetOpenAPI",
-				"operationId": "codesurgeon.GptService.GetOpenAPI",
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/codesurgeon.GetOpenAPIRequest"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "A successful response",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/codesurgeon.GetOpenAPIResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
 		"/codesurgeon.GptService/NewChat": {
 			"post": {
 				"summary": "NewChat",
@@ -139,10 +112,251 @@
 					}
 				}
 			}
+		},
+		"/codesurgeon.GptService/GetOpenAPI": {
+			"post": {
+				"summary": "GetOpenAPI",
+				"operationId": "codesurgeon.GptService.GetOpenAPI",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.GetOpenAPIRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.GetOpenAPIResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/SearchSimilarFunctions": {
+			"post": {
+				"summary": "SearchSimilarFunctions",
+				"operationId": "codesurgeon.GptService.SearchSimilarFunctions",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.SearchSimilarFunctionsRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.SearchSimilarFunctionsResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/GetNeo4jSchema": {
+			"post": {
+				"summary": "GetNeo4jSchema",
+				"operationId": "codesurgeon.GptService.GetNeo4jSchema",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.GetNeo4jSchemaRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.GetNeo4jSchemaResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/ExecuteNeo4jQuery": {
+			"post": {
+				"summary": "ExecuteNeo4jQuery",
+				"operationId": "codesurgeon.GptService.ExecuteNeo4jQuery",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ExecuteNeo4jQueryRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ExecuteNeo4jQueryResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/ThinkThroughProblem": {
+			"post": {
+				"summary": "ThinkThroughProblem",
+				"operationId": "codesurgeon.GptService.ThinkThroughProblem",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ThinkThroughProblemRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ThinkThroughProblemResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/AddKnowledge": {
+			"post": {
+				"summary": "AddKnowledge",
+				"operationId": "codesurgeon.GptService.AddKnowledge",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.AddKnowledgeRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.AddKnowledgeResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/codesurgeon.GptService/ParseCodebase": {
+			"post": {
+				"summary": "ParseCodebase",
+				"operationId": "codesurgeon.GptService.ParseCodebase",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/codesurgeon.ParseCodebaseRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "A successful response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/codesurgeon.ParseCodebaseResponse"
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"components": {
 		"schemas": {
+			"codesurgeon.ParseCodebaseRequest": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"recursive": {
+						"type": "boolean"
+					},
+					"format": {
+						"type": "string"
+					},
+					"plain_structs": {
+						"type": "boolean"
+					},
+					"fields_plain_structs": {
+						"type": "boolean"
+					},
+					"structs_with_method": {
+						"type": "boolean"
+					},
+					"fields_structs_with_method": {
+						"type": "boolean"
+					},
+					"methods": {
+						"type": "boolean"
+					},
+					"functions": {
+						"type": "boolean"
+					},
+					"comments": {
+						"type": "boolean"
+					},
+					"tags": {
+						"type": "boolean"
+					},
+					"ignore_rule": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"codesurgeon.ParseCodebaseResponse": {
+				"type": "object",
+				"properties": {
+					"parsed_info": {
+						"type": "string"
+					}
+				}
+			},
 			"codesurgeon.GetChatRequest": {
 				"type": "object",
 				"properties": {
@@ -323,6 +537,186 @@
 				"type": "object",
 				"properties": {
 					"challenge": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.SearchSimilarFunctionsRequest": {
+				"type": "object",
+				"properties": {
+					"objective": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.SearchSimilarFunctionsResponse": {
+				"type": "object",
+				"properties": {
+					"functions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.SearchSimilarFunctionsResponse.Function"
+						}
+					}
+				}
+			},
+			"codesurgeon.SearchSimilarFunctionsResponse.Function": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.GetNeo4jSchemaRequest": {
+				"type": "object",
+				"properties": {
+				}
+			},
+			"codesurgeon.GetNeo4jSchemaResponse": {
+				"type": "object",
+				"properties": {
+					"schema": {
+						"$ref": "#/components/schemas/codesurgeon.Schema"
+					}
+				}
+			},
+			"codesurgeon.Schema": {
+				"type": "object",
+				"properties": {
+					"labels": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.LabelSchema"
+						}
+					},
+					"relationships": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.RelationshipSchema"
+						}
+					}
+				}
+			},
+			"codesurgeon.LabelSchema": {
+				"type": "object",
+				"properties": {
+					"label": {
+						"type": "string"
+					},
+					"properties": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.PropertySchema"
+						}
+					}
+				}
+			},
+			"codesurgeon.PropertySchema": {
+				"type": "object",
+				"properties": {
+					"property": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"isIndexed": {
+						"type": "boolean"
+					},
+					"uniqueConstraint": {
+						"type": "boolean"
+					},
+					"existenceConstraint": {
+						"type": "boolean"
+					}
+				}
+			},
+			"codesurgeon.RelationshipSchema": {
+				"type": "object",
+				"properties": {
+					"relationship": {
+						"type": "string"
+					},
+					"fromLabel": {
+						"type": "string"
+					},
+					"toLabel": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ThinkThroughProblemRequest": {
+				"type": "object",
+				"properties": {
+					"goal": {
+						"type": "string"
+					},
+					"context": {
+						"type": "string"
+					},
+					"problem_statement": {
+						"type": "string"
+					},
+					"questions": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"questions_string": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ThinkThroughProblemResponse": {
+				"type": "object",
+				"properties": {
+					"answers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.QuestionAnswer"
+						}
+					},
+					"observations": {
+						"type": "string"
+					},
+					"similar_questions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.QuestionAnswer"
+						}
+					}
+				}
+			},
+			"codesurgeon.AddKnowledgeRequest": {
+				"type": "object",
+				"properties": {
+					"question_answer": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/codesurgeon.QuestionAnswer"
+						}
+					}
+				}
+			},
+			"codesurgeon.AddKnowledgeResponse": {
+				"type": "object",
+				"properties": {
+				}
+			},
+			"codesurgeon.ExecuteNeo4jQueryRequest": {
+				"type": "object",
+				"properties": {
+					"query": {
+						"type": "string"
+					}
+				}
+			},
+			"codesurgeon.ExecuteNeo4jQueryResponse": {
+				"type": "object",
+				"properties": {
+					"result": {
 						"type": "string"
 					}
 				}
