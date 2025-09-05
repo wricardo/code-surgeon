@@ -1,15 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
@@ -46,80 +42,6 @@ func main() {
 			return nil
 		},
 		Commands: []*cli.Command{
-			{
-				Name: "message",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name: "chat-id",
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
-					if !useNgrok {
-						ngrokDomain = "http://localhost:8010"
-					}
-
-					// Setup signal handling for graceful exit
-					signalChan := make(chan os.Signal, 1)
-					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
-					// connect to the grpc server
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, "https://"+ngrokDomain) // replace with actual server URL
-
-					message := &api.Message{
-						Text: "",
-					}
-					// populate text with all of stdin
-					stdinBytes, err := ioutil.ReadAll(os.Stdin)
-					if err != nil {
-						fmt.Println("Error reading stdin:", err)
-						return err
-					}
-					message.Text = string(stdinBytes)
-					sendMsgReq := &api.SendMessageRequest{
-						ChatId:  cCtx.String("chat-id"),
-						Message: message,
-					}
-
-					ctx := context.Background()
-					response, err := client.SendMessage(ctx, connect.NewRequest(sendMsgReq))
-					if err != nil {
-						fmt.Println("Error sending message:", err)
-						return err
-					}
-					if response.Msg != nil {
-						fmt.Println(response.Msg.Message.ChatString())
-					}
-					return nil
-				},
-			},
-			{
-				Name: "new-chat",
-				Action: func(cCtx *cli.Context) error {
-					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
-					if !useNgrok {
-						ngrokDomain = "http://localhost:8010"
-					}
-
-					// Setup signal handling for graceful exit
-					signalChan := make(chan os.Signal, 1)
-					signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
-					// connect to the grpc server
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, "https://"+ngrokDomain) // replace with actual server URL
-
-					ctx := context.Background()
-					response, err := client.NewChat(ctx, connect.NewRequest(&api.NewChatRequest{}))
-					if err != nil {
-						fmt.Println("Error sending message:", err)
-						return err
-					}
-					if response.Msg != nil {
-						fmt.Println(response.Msg.Chat.Id)
-					}
-					return nil
-				},
-			},
 			{
 				Name:  "server",
 				Usage: "Run the gpt service server",

@@ -129,10 +129,10 @@ type Field struct {
 	TypeDetails TypeDetails `json:"type_details"`
 	Tag         string      `json:"tag"`
 	Private     bool        `json:"private"`
-	// Pointer     bool        `json:"pointer"`
-	// Slice       bool        `json:"slice"`
-	Docs    []string `json:"docs,omitemity"`
-	Comment string   `json:"comment,omitempty"`
+	Pointer     bool        `json:"pointer"`
+	Slice       bool        `json:"slice"`
+	Docs        []string    `json:"docs,omitemity"`
+	Comment     string      `json:"comment,omitempty"`
 
 	PtrStruct *Struct `json:"-"` // Pointer to the struct that this field belongs to
 }
@@ -427,6 +427,8 @@ func extractStructs(docPkg *doc.Package, ourPkg Package) ([]Struct, error) {
 						return nil, err
 					}
 					field.TypeDetails = *typeDetails
+					field.Pointer = typeDetails.IsPointer
+					field.Slice = typeDetails.IsSlice
 
 					field.Type = typeDetails.TypeName
 

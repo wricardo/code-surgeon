@@ -7,7 +7,7 @@
 
 
 
-.PHONY: build install run-server new-chat continue-chat generate-proto ngrok test
+.PHONY: build install run-server generate-proto ngrok test
 
 install:
 	go install ./cmd/code-surgeon
@@ -15,11 +15,6 @@ install:
 run-server:
 	go run ./cmd/code-surgeon server
 
-new-chat:
-	go run ./cmd/code-surgeon chat
-
-continue-chat:
-	go run ./cmd/code-surgeon chat --chat-id=${CHAT_ID}
 
 generate-proto:
 	buf build
@@ -29,10 +24,7 @@ ngrok:
 
 test:
 	go build -o /dev/null ./cmd/code-surgeon/
-	go build -o /dev/null ./chatcli/
-	go build -o /dev/null ./cmd/code-surgeon/
-	go test -v ./grpc/
-	go test -v ./chatcli/
+	go test -v ./...
 
 build-delve:
 	go build -gcflags "all=-N -l" -o ./bin/code-surgeon ./cmd/code-surgeon

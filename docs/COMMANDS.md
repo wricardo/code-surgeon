@@ -5,10 +5,7 @@ This document provides a comprehensive reference for all commands available in t
 ## Table of Contents
 
 - [Core Commands](#core-commands)
-  - [chat](#chat)
   - [server](#server)
-  - [message](#message)
-  - [new-chat](#new-chat)
 - [Code Analysis Commands](#code-analysis-commands)
   - [parse](#parse)
   - [document-functions](#document-functions)
@@ -50,32 +47,6 @@ Before using the CLI commands, ensure you have:
 
 ## Core Commands
 
-### chat
-
-Start an interactive chat session with the AI assistant.
-
-```bash
-code-surgeon chat [options]
-```
-
-**Options:**
-- `--chat-id` - Resume an existing chat session by ID (optional)
-
-**Description:**
-- Creates a new chat session if no ID is provided
-- Connects to the gRPC server
-- Provides an interactive terminal UI with rich formatting
-- Supports multiple chat modes (code, architect, teacher, cypher, Q&A)
-- Handles graceful shutdown on SIGINT/SIGTERM
-
-**Example:**
-```bash
-# Start a new chat
-code-surgeon chat
-
-# Resume existing chat
-code-surgeon chat --chat-id=550e8400-e29b-41d4-a716-446655440000
-```
 
 ### server
 
@@ -102,48 +73,7 @@ code-surgeon server
 code-surgeon server --port 9000
 ```
 
-### message
 
-Send a message to an existing chat session via gRPC.
-
-```bash
-code-surgeon message --chat-id=<chat-id> < message.txt
-```
-
-**Options:**
-- `--chat-id` - The ID of the chat session (required)
-
-**Description:**
-- Reads message content from stdin
-- Sends the message to the specified chat session
-- Prints the AI response
-- Useful for scripting and automation
-
-**Example:**
-```bash
-echo "What is the purpose of the parse command?" | code-surgeon message --chat-id=550e8400-e29b-41d4-a716-446655440000
-```
-
-### new-chat
-
-Create a new chat session programmatically.
-
-```bash
-code-surgeon new-chat
-```
-
-**Description:**
-- Connects to the gRPC server
-- Creates a new chat session
-- Returns the new chat ID
-- Useful for scripting when you need to create sessions programmatically
-
-**Example:**
-```bash
-# Create new chat and save ID
-CHAT_ID=$(code-surgeon new-chat)
-echo "New chat created: $CHAT_ID"
-```
 
 ## Code Analysis Commands
 

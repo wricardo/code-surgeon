@@ -4,11 +4,6 @@ package codesurgeon;
 
 // Service definition
 service GptService {
-  rpc NewChat(NewChatRequest) returns (NewChatResponse);
-  rpc GetChat(GetChatRequest) returns (GetChatResponse);
-  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
-  rpc ReceiveSlackMessage(ReceiveSlackMessageRequest) returns (ReceiveSlackMessageResponse);
-
   // GetOpenAPI retrieves the OpenAPI specification that can be used to on customGPT
   rpc GetOpenAPI(GetOpenAPIRequest) returns (GetOpenAPIResponse);
 
@@ -47,65 +42,6 @@ message ParseCodebaseResponse {
   string parsed_info = 1; // This can be adjusted based on the actual structure of parsed data
 }
 
-message GetChatRequest {
-  string chat_id = 1;
-}
-
-message GetChatResponse {
-  Chat chat = 1;
-}
-
-message NewChatRequest {
-  string external_id = 1;
-}
-
-message NewChatResponse {
-  Chat chat = 1;
-}
-
-message Chat {
-  string id = 1;
-  Mode current_mode = 2;
-  repeated ModeState mode_state = 3;
-  repeated Message messages = 4;
-}
-
-message ModeState {
-  string mode_name = 1;
-  string key = 2;
-  string value = 3;
-}
-
-message SendMessageRequest {
-  string chat_id = 1;
-  Message message = 2;
-}
-
-message SendMessageResponse {
-  string chat_id = 1;
-  Command command = 2;
-  Message message = 3;
-  Mode mode = 4; // mode if any
-} 
-
-message Mode {
-  string name = 1;
-}
-
-message Command {
-  string name = 1;
-}
-
-message Message {
-  string text = 2;
-  FormMessage form = 3;
-  string sender = 4; // user or ai or mode
-}
-
-message FormMessage {
-  repeated QuestionAnswer questions = 1;
-}
-
 message QuestionAnswer {
   string question = 1;
   string answer = 2;
@@ -118,15 +54,6 @@ message GetOpenAPIResponse {
   string openapi = 1;
 }
 
-message ReceiveSlackMessageRequest {
-  string token = 1;
-  string challenge = 2;
-  string type = 3;
-}
-
-message ReceiveSlackMessageResponse {
-  string challenge = 1;
-}
 
 message SearchSimilarFunctionsRequest {
   string objective = 1;

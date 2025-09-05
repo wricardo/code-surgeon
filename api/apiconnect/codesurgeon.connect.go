@@ -5,13 +5,12 @@
 package apiconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	api "github.com/wricardo/code-surgeon/api"
 	http "net/http"
 	strings "strings"
-
-	connect "connectrpc.com/connect"
-	api "github.com/wricardo/code-surgeon/api"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are
@@ -34,15 +33,6 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// GptServiceNewChatProcedure is the fully-qualified name of the GptService's NewChat RPC.
-	GptServiceNewChatProcedure = "/codesurgeon.GptService/NewChat"
-	// GptServiceGetChatProcedure is the fully-qualified name of the GptService's GetChat RPC.
-	GptServiceGetChatProcedure = "/codesurgeon.GptService/GetChat"
-	// GptServiceSendMessageProcedure is the fully-qualified name of the GptService's SendMessage RPC.
-	GptServiceSendMessageProcedure = "/codesurgeon.GptService/SendMessage"
-	// GptServiceReceiveSlackMessageProcedure is the fully-qualified name of the GptService's
-	// ReceiveSlackMessage RPC.
-	GptServiceReceiveSlackMessageProcedure = "/codesurgeon.GptService/ReceiveSlackMessage"
 	// GptServiceGetOpenAPIProcedure is the fully-qualified name of the GptService's GetOpenAPI RPC.
 	GptServiceGetOpenAPIProcedure = "/codesurgeon.GptService/GetOpenAPI"
 	// GptServiceSearchSimilarFunctionsProcedure is the fully-qualified name of the GptService's
@@ -67,10 +57,6 @@ const (
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
 	gptServiceServiceDescriptor                      = api.File_api_codesurgeon_proto.Services().ByName("GptService")
-	gptServiceNewChatMethodDescriptor                = gptServiceServiceDescriptor.Methods().ByName("NewChat")
-	gptServiceGetChatMethodDescriptor                = gptServiceServiceDescriptor.Methods().ByName("GetChat")
-	gptServiceSendMessageMethodDescriptor            = gptServiceServiceDescriptor.Methods().ByName("SendMessage")
-	gptServiceReceiveSlackMessageMethodDescriptor    = gptServiceServiceDescriptor.Methods().ByName("ReceiveSlackMessage")
 	gptServiceGetOpenAPIMethodDescriptor             = gptServiceServiceDescriptor.Methods().ByName("GetOpenAPI")
 	gptServiceSearchSimilarFunctionsMethodDescriptor = gptServiceServiceDescriptor.Methods().ByName("SearchSimilarFunctions")
 	gptServiceGetNeo4JSchemaMethodDescriptor         = gptServiceServiceDescriptor.Methods().ByName("GetNeo4jSchema")
@@ -82,10 +68,6 @@ var (
 
 // GptServiceClient is a client for the codesurgeon.GptService service.
 type GptServiceClient interface {
-	NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error)
-	GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error)
-	SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error)
-	ReceiveSlackMessage(context.Context, *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error)
 	// GetOpenAPI retrieves the OpenAPI specification that can be used to on customGPT
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
 	// SearchSimilarFunctions searches for similar functions based on an objective
@@ -112,30 +94,6 @@ type GptServiceClient interface {
 func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GptServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &gptServiceClient{
-		newChat: connect.NewClient[api.NewChatRequest, api.NewChatResponse](
-			httpClient,
-			baseURL+GptServiceNewChatProcedure,
-			connect.WithSchema(gptServiceNewChatMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getChat: connect.NewClient[api.GetChatRequest, api.GetChatResponse](
-			httpClient,
-			baseURL+GptServiceGetChatProcedure,
-			connect.WithSchema(gptServiceGetChatMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		sendMessage: connect.NewClient[api.SendMessageRequest, api.SendMessageResponse](
-			httpClient,
-			baseURL+GptServiceSendMessageProcedure,
-			connect.WithSchema(gptServiceSendMessageMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		receiveSlackMessage: connect.NewClient[api.ReceiveSlackMessageRequest, api.ReceiveSlackMessageResponse](
-			httpClient,
-			baseURL+GptServiceReceiveSlackMessageProcedure,
-			connect.WithSchema(gptServiceReceiveSlackMessageMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 		getOpenAPI: connect.NewClient[api.GetOpenAPIRequest, api.GetOpenAPIResponse](
 			httpClient,
 			baseURL+GptServiceGetOpenAPIProcedure,
@@ -183,10 +141,6 @@ func NewGptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 
 // gptServiceClient implements GptServiceClient.
 type gptServiceClient struct {
-	newChat                *connect.Client[api.NewChatRequest, api.NewChatResponse]
-	getChat                *connect.Client[api.GetChatRequest, api.GetChatResponse]
-	sendMessage            *connect.Client[api.SendMessageRequest, api.SendMessageResponse]
-	receiveSlackMessage    *connect.Client[api.ReceiveSlackMessageRequest, api.ReceiveSlackMessageResponse]
 	getOpenAPI             *connect.Client[api.GetOpenAPIRequest, api.GetOpenAPIResponse]
 	searchSimilarFunctions *connect.Client[api.SearchSimilarFunctionsRequest, api.SearchSimilarFunctionsResponse]
 	getNeo4JSchema         *connect.Client[api.GetNeo4JSchemaRequest, api.GetNeo4JSchemaResponse]
@@ -194,26 +148,6 @@ type gptServiceClient struct {
 	thinkThroughProblem    *connect.Client[api.ThinkThroughProblemRequest, api.ThinkThroughProblemResponse]
 	addKnowledge           *connect.Client[api.AddKnowledgeRequest, api.AddKnowledgeResponse]
 	parseCodebase          *connect.Client[api.ParseCodebaseRequest, api.ParseCodebaseResponse]
-}
-
-// NewChat calls codesurgeon.GptService.NewChat.
-func (c *gptServiceClient) NewChat(ctx context.Context, req *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
-	return c.newChat.CallUnary(ctx, req)
-}
-
-// GetChat calls codesurgeon.GptService.GetChat.
-func (c *gptServiceClient) GetChat(ctx context.Context, req *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
-	return c.getChat.CallUnary(ctx, req)
-}
-
-// SendMessage calls codesurgeon.GptService.SendMessage.
-func (c *gptServiceClient) SendMessage(ctx context.Context, req *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
-	return c.sendMessage.CallUnary(ctx, req)
-}
-
-// ReceiveSlackMessage calls codesurgeon.GptService.ReceiveSlackMessage.
-func (c *gptServiceClient) ReceiveSlackMessage(ctx context.Context, req *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error) {
-	return c.receiveSlackMessage.CallUnary(ctx, req)
 }
 
 // GetOpenAPI calls codesurgeon.GptService.GetOpenAPI.
@@ -253,10 +187,6 @@ func (c *gptServiceClient) ParseCodebase(ctx context.Context, req *connect.Reque
 
 // GptServiceHandler is an implementation of the codesurgeon.GptService service.
 type GptServiceHandler interface {
-	NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error)
-	GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error)
-	SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error)
-	ReceiveSlackMessage(context.Context, *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error)
 	// GetOpenAPI retrieves the OpenAPI specification that can be used to on customGPT
 	GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error)
 	// SearchSimilarFunctions searches for similar functions based on an objective
@@ -279,30 +209,6 @@ type GptServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	gptServiceNewChatHandler := connect.NewUnaryHandler(
-		GptServiceNewChatProcedure,
-		svc.NewChat,
-		connect.WithSchema(gptServiceNewChatMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceGetChatHandler := connect.NewUnaryHandler(
-		GptServiceGetChatProcedure,
-		svc.GetChat,
-		connect.WithSchema(gptServiceGetChatMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceSendMessageHandler := connect.NewUnaryHandler(
-		GptServiceSendMessageProcedure,
-		svc.SendMessage,
-		connect.WithSchema(gptServiceSendMessageMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	gptServiceReceiveSlackMessageHandler := connect.NewUnaryHandler(
-		GptServiceReceiveSlackMessageProcedure,
-		svc.ReceiveSlackMessage,
-		connect.WithSchema(gptServiceReceiveSlackMessageMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	gptServiceGetOpenAPIHandler := connect.NewUnaryHandler(
 		GptServiceGetOpenAPIProcedure,
 		svc.GetOpenAPI,
@@ -347,14 +253,6 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 	)
 	return "/codesurgeon.GptService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case GptServiceNewChatProcedure:
-			gptServiceNewChatHandler.ServeHTTP(w, r)
-		case GptServiceGetChatProcedure:
-			gptServiceGetChatHandler.ServeHTTP(w, r)
-		case GptServiceSendMessageProcedure:
-			gptServiceSendMessageHandler.ServeHTTP(w, r)
-		case GptServiceReceiveSlackMessageProcedure:
-			gptServiceReceiveSlackMessageHandler.ServeHTTP(w, r)
 		case GptServiceGetOpenAPIProcedure:
 			gptServiceGetOpenAPIHandler.ServeHTTP(w, r)
 		case GptServiceSearchSimilarFunctionsProcedure:
@@ -377,22 +275,6 @@ func NewGptServiceHandler(svc GptServiceHandler, opts ...connect.HandlerOption) 
 
 // UnimplementedGptServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGptServiceHandler struct{}
-
-func (UnimplementedGptServiceHandler) NewChat(context.Context, *connect.Request[api.NewChatRequest]) (*connect.Response[api.NewChatResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.NewChat is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) GetChat(context.Context, *connect.Request[api.GetChatRequest]) (*connect.Response[api.GetChatResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GetChat is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) SendMessage(context.Context, *connect.Request[api.SendMessageRequest]) (*connect.Response[api.SendMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.SendMessage is not implemented"))
-}
-
-func (UnimplementedGptServiceHandler) ReceiveSlackMessage(context.Context, *connect.Request[api.ReceiveSlackMessageRequest]) (*connect.Response[api.ReceiveSlackMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.ReceiveSlackMessage is not implemented"))
-}
 
 func (UnimplementedGptServiceHandler) GetOpenAPI(context.Context, *connect.Request[api.GetOpenAPIRequest]) (*connect.Response[api.GetOpenAPIResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("codesurgeon.GptService.GetOpenAPI is not implemented"))

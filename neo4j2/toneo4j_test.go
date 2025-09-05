@@ -357,7 +357,7 @@ func TestToNeo4j_type_struct(t *testing.T) {
 	require.NoError(t, err, "Failed to clear out database")
 
 	// Insert the parsed AST into Neo4j
-	_, err = toNeo4j(ctx, parsed, "test", "test", driver, false)
+	_, err = toNeo4j(ctx, parsed, "test", "test", session, false)
 	require.NoError(t, err, "Failed to insert nodes into Neo4j")
 
 	// Helper function to run a query that returns a single integer count
@@ -615,7 +615,7 @@ func TestToNeo4j_VanillaStruct(t *testing.T) {
 	require.NoError(t, err, "Failed to clear out database")
 
 	// Insert the parsed AST into Neo4j
-	_, err = toNeo4j(ctx, parsed, "test", "test", driver, false)
+	_, err = toNeo4j(ctx, parsed, "test", "test", session, false)
 	require.NoError(t, err, "Failed to insert nodes into Neo4j")
 
 	// Helper function to run a query that returns a single integer count
@@ -768,7 +768,7 @@ func TestToNeo4j_Func(t *testing.T) {
 	require.NoError(t, err, "Failed to clear out database")
 
 	// Insert the parsed AST into Neo4j
-	_, err = toNeo4j(ctx, parsed, "test", "test", driver, false)
+	_, err = toNeo4j(ctx, parsed, "test", "test", session, false)
 	require.NoError(t, err, "Failed to insert nodes into Neo4j")
 
 	allData := getAllData(ctx, session)
@@ -1011,7 +1011,7 @@ func TestToNeo4j_SharedTypes(t *testing.T) {
 	require.NoError(t, err, "Failed to clear out database")
 
 	// Insert the parsed AST into Neo4j
-	_, err = toNeo4j(ctx, parsed, "test", "test", driver, false)
+	_, err = toNeo4j(ctx, parsed, "test", "test", session, false)
 	require.NoError(t, err, "Failed to insert nodes into Neo4j")
 
 	allData := getAllData(ctx, session)
@@ -1071,7 +1071,7 @@ func TestToNeo4j_Advanced(t *testing.T) {
 	require.NoError(t, err, "Failed to clear out database")
 
 	// Insert the parsed AST into Neo4j
-	_, err = toNeo4j(ctx, parsed, "test", "test", driver, false)
+	_, err = toNeo4j(ctx, parsed, "test", "test", session, false)
 	require.NoError(t, err, "Failed to insert nodes into Neo4j")
 
 	// Helper function to run a query that returns a single integer count
