@@ -2,27 +2,18 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
 
-	"connectrpc.com/connect"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 	codesurgeon "github.com/wricardo/code-surgeon"
 	"github.com/wricardo/code-surgeon/ai"
-	"github.com/wricardo/code-surgeon/api"
-	"github.com/wricardo/code-surgeon/api/apiconnect"
-	"github.com/wricardo/code-surgeon/grpc"
 	"github.com/wricardo/code-surgeon/log2"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
-
-const DEFAULT_PORT = 8010
 
 func main() {
 	// Initialize logger
@@ -43,54 +34,50 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "server",
-				Usage: "Run the gpt service server",
-				Flags: []cli.Flag{
-					&cli.IntFlag{
-						Name:     "port",
-						Aliases:  []string{"p"},
-						Usage:    "port number",
-						Required: false,
-						Value:    DEFAULT_PORT,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					opts := grpc.NewServerOptions()
-					serv := grpc.NewServer(opts)
-
-					return serv.Start()
-				},
-			},
-			{
-				Name:  "openapi-json",
-				Usage: "Generate open api json",
+				Name:  "init",
+				Usage: "initialize code-surgeon configuration files",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "url",
-						Aliases:  []string{"u"},
-						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
-						Required: false,
-						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
+						Name:  "output",
+						Value: "docker-compose.codesurgeon.yaml",
+						Usage: "output filename for the docker-compose file",
+					},
+					&cli.BoolFlag{
+						Name:  "force",
+						Usage: "overwrite existing files",
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("orl"))
-					ctx := cCtx.Context
-					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
+					outputFile := cCtx.String("output")
+					force := cCtx.Bool("force")
+
+					// Check if file already exists
+					if _, err := os.Stat(outputFile); err == nil && !force {
+						return fmt.Errorf("file %s already exists. Use --force to overwrite", outputFile)
+					}
+
+					// Read the embedded template
+					templateData, err := codesurgeon.FS.ReadFile("templates/docker-compose.codesurgeon.yaml")
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to read template: %w", err)
 					}
-					fmt.Println(openAPI.Msg.Openapi)
-					return nil
-				},
-			},
-			{
-				Name: "mcp-server",
-				Action: func(cCtx *cli.Context) error {
-					wally := NewMCPServer()
-					if err := wally.ServeStdio(); err != nil {
-						log.Fatal().Err(err).Msg("Error serving")
+
+					// Write the template to the output file
+					err = os.WriteFile(outputFile, templateData, 0644)
+					if err != nil {
+						return fmt.Errorf("failed to write file: %w", err)
 					}
+
+					fmt.Printf("Created %s\n", outputFile)
+					fmt.Println("\nNext steps:")
+					fmt.Printf("1. Start Neo4j: docker-compose -f %s up -d\n", outputFile)
+					fmt.Println("2. Access Neo4j Browser: http://localhost:7474")
+					fmt.Println("3. Login with username 'neo4j' and password 'neo4jneo4j'")
+					fmt.Println("4. Set environment variables in .env file:")
+					fmt.Println("   NEO4J_DB_URI=neo4j://localhost:7687")
+					fmt.Println("   NEO4J_DB_USER=neo4j")
+					fmt.Println("   NEO4J_DB_PASSWORD=neo4jneo4j")
+
 					return nil
 				},
 			},
@@ -182,205 +169,6 @@ func main() {
 						}
 						fmt.Println(codesurgeon.PrettyPrint([]*codesurgeon.ParsedInfo{parsed}, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments")))
 					}
-					return nil
-				},
-			},
-			{
-				Name:  "document-functions",
-				Usage: "generate AI documentation for golang code on a  path",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "path",
-						Aliases:  []string{"p"},
-						Usage:    "path to golang file or folder to generate documentation for go all files",
-						Required: false,
-						Value:    ".",
-					},
-					&cli.BoolFlag{
-						Name:     "overwrite",
-						Usage:    "overwrite existing documentation",
-						Required: false,
-						Value:    false,
-					},
-					&cli.StringFlag{
-						Name:     "receiver",
-						Aliases:  []string{"r"},
-						Usage:    "receiver name for the method",
-						Value:    "",
-						Required: false,
-					},
-					&cli.StringFlag{
-						Name:     "function",
-						Aliases:  []string{"f"},
-						Usage:    "function name",
-						Required: false,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					instructorClient := ai.GetInstructor()
-
-					req := ai.GenerateDocumentationRequest{
-						Path:              cCtx.String("path"),
-						OverwriteExisting: cCtx.Bool("overwrite"),
-						ReceiverName:      cCtx.String("receiver"),
-						FunctionName:      cCtx.String("function"),
-					}
-					ok, err := ai.GenerateDocumentation(instructorClient, req)
-					if err != nil {
-						return err
-					}
-					if ok {
-						fmt.Println("Documentation generated successfully")
-					} else {
-						fmt.Println("Nothing to do")
-					}
-					return nil
-				},
-			},
-			// {
-			// 	Name:  "instructions",
-			// 	Usage: "get instructions to be used in custom chatgpt",
-			// 	Flags: []cli.Flag{
-			// 		&cli.StringFlag{
-			// 			Name:     "url",
-			// 			Aliases:  []string{"u"},
-			// 			Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
-			// 			Required: false,
-			// 			Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
-			// 		},
-			// 	},
-			// 	Action: func(cCtx *cli.Context) error {
-			// 		client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
-			// 		ctx := cCtx.Context
-			// 		openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
-			// 		if err != nil {
-			// 			return err
-			// 		}
-			// 		rendered, err := ai.GetGPTInstructions(openAPI.Msg.Openapi)
-			// 		if err != nil {
-			// 			log.Println("Error getting prompt", err)
-			// 			return err
-			// 		}
-			// 		fmt.Println(rendered)
-			// 		return nil
-
-			// 	},
-			// },
-			{
-				Name:  "introduction",
-				Usage: "introductions that are displayed to the user when he asks for it, this is used to give context to the llm.",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "url",
-						Aliases:  []string{"u"},
-						Usage:    "ngrok https url. e.g. https://xxxxx.ngrok-free.app",
-						Required: false,
-						Value:    fmt.Sprintf("http://localhost:%d", DEFAULT_PORT),
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, cCtx.String("url"))
-					ctx := cCtx.Context
-					openAPI, err := client.GetOpenAPI(ctx, connect.NewRequest(&api.GetOpenAPIRequest{}))
-					if err != nil {
-						return err
-					}
-					rendered, err := ai.GetGPTIntroduction(openAPI.Msg.Openapi)
-					if err != nil {
-						log.Info().Err(err).Msg("Error getting prompt")
-						return err
-					}
-					fmt.Println(rendered)
-					return nil
-				},
-			},
-			{
-				Name:    "ingest-knowledgebase",
-				Aliases: []string{},
-				Usage:   "Ingest knowledge base folder",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "path",
-						Aliases:  []string{"p"},
-						Usage:    "path to the knowledge base folder",
-						Value:    "./knowledgebase",
-						Required: false,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					ngrokDomain, useNgrok := myEnv["NGROK_DOMAIN"]
-					if !useNgrok {
-						ngrokDomain = "http://localhost:8010"
-					}
-
-					// Get the path from flags
-					path := cCtx.String("path")
-
-					// Read all .txt files in the directory
-					entries, err := os.ReadDir(path)
-					if err != nil {
-						return fmt.Errorf("failed to read directory: %w", err)
-					}
-
-					// Connect to the gRPC server
-					client := apiconnect.NewGptServiceClient(http.DefaultClient, "https://"+ngrokDomain)
-
-					var questionAnswers []*api.QuestionAnswer
-
-					// Process each .txt file
-					for _, entry := range entries {
-						if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".txt") {
-							filePath := filepath.Join(path, entry.Name())
-							content, err := os.ReadFile(filePath)
-							if err != nil {
-								log.Error().Err(err).Str("file", filePath).Msg("Failed to read file")
-								continue
-							}
-
-							// Split content into lines
-							lines := strings.Split(string(content), "\n")
-
-							// Find first non-empty line for question
-							var question string
-							var answerLines []string
-							foundQuestion := false
-
-							for _, line := range lines {
-								trimmedLine := strings.TrimSpace(line)
-								if !foundQuestion && trimmedLine != "" {
-									question = trimmedLine
-									foundQuestion = true
-									continue
-								}
-								if foundQuestion {
-									answerLines = append(answerLines, line)
-								}
-							}
-
-							if question != "" {
-								qa := &api.QuestionAnswer{
-									Question: question,
-									Answer:   strings.Join(answerLines, "\n"),
-								}
-								questionAnswers = append(questionAnswers, qa)
-							}
-						}
-					}
-
-					// Send all question-answers to the server
-					if len(questionAnswers) > 0 {
-						req := &api.AddKnowledgeRequest{
-							QuestionAnswer: questionAnswers,
-						}
-						_, err := client.AddKnowledge(cCtx.Context, connect.NewRequest(req))
-						if err != nil {
-							return fmt.Errorf("failed to add knowledge: %w", err)
-						}
-						fmt.Printf("Successfully ingested %d knowledge base entries\n", len(questionAnswers))
-					} else {
-						fmt.Println("No knowledge base entries found")
-					}
-
 					return nil
 				},
 			},

@@ -7,20 +7,10 @@
 
 
 
-.PHONY: build install run-server generate-proto ngrok test
+.PHONY: build install test
 
 install:
 	go install ./cmd/code-surgeon
-
-run-server:
-	go run ./cmd/code-surgeon server
-
-
-generate-proto:
-	buf build
-	buf generate
-ngrok:
-	ngrok http 8010
 
 test:
 	go build -o /dev/null ./cmd/code-surgeon/

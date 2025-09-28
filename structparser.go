@@ -18,10 +18,9 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// FS embeds OpenAPI and proto files for the codesurgeon package.
+// FS embeds static files for the codesurgeon package.
 //
-//go:embed api/codesurgeon.openapi.json
-//go:embed api/codesurgeon.proto
+//go:embed templates/*
 var FS embed.FS
 
 // ParsedInfo holds parsed information about Go packages.

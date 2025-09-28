@@ -9,7 +9,6 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -21,7 +20,7 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-var STATICFS, _ = fs.Sub(FS, "api")
+var STATICFS = FS
 
 type (
 	FileChange struct {

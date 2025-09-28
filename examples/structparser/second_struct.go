@@ -3,8 +3,6 @@ package structs
 import (
 	"context"
 	"errors"
-
-	"connectrpc.com/connect"
 )
 
 type (
@@ -37,6 +35,6 @@ func (s *FirstStruct) TakesThirdStruct(ctx context.Context, x *ThirdStruct) (*st
 // UnimplementedZivoAPIHandler returns CodeUnimplemented from all methods.
 type UnimplementedZivoAPIHandler struct{}
 
-func (UnimplementedZivoAPIHandler) SendSms(ctx context.Context, r *connect.Request[FirstStruct]) (*connect.Response[FirstStruct], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("trinity.zivo.ZivoAPI.SendSms is not implemented"))
+func (UnimplementedZivoAPIHandler) SendSms(ctx context.Context, r *FirstStruct) (*FirstStruct, error) {
+	return nil, errors.New("trinity.zivo.ZivoAPI.SendSms is not implemented")
 }

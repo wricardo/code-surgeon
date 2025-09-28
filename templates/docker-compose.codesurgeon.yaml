@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Neo4j Graph Database for Code Surgeon
+  neo4j:
+    image: neo4j:5.15
+    container_name: code-surgeon-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/neo4jneo4j
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4JLABS_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: 'gds.*,apoc.*'
+      NEO4J_dbms_security_procedures_whitelist: 'gds.*,apoc.*'
+      NEO4J_dbms_default__listen__address: 0.0.0.0
+      NEO4J_dbms_default__advertised__address: localhost
+    ports:
+      - "7474:7474"  # Neo4j Browser (HTTP)
+      - "7687:7687"  # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4jneo4j", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  neo4j_plugins:
+    driver: local
+
+# Usage:
+#   docker-compose -f docker-compose.codesurgeon.yaml up -d
+#
+# Access Neo4j Browser: http://localhost:7474
+# Username: neo4j
+# Password: neo4jneo4j
+#
+# Environment variables for code-surgeon:
+#   NEO4J_DB_URI=neo4j://localhost:7687
+#   NEO4J_DB_USER=neo4j
+#   NEO4J_DB_PASSWORD=neo4jneo4j
