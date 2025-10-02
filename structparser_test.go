@@ -401,9 +401,19 @@ func TestParseDirectory(t *testing.T) {
 
 		// New test case for Imports
 		t.Run("Imports", func(t *testing.T) {
-			require.Contains(t, tmp.Packages[0].Imports, "context")
-			require.Contains(t, tmp.Packages[0].Imports, "github.com/wricardo/code-surgeon/examples/structparser/other")
-			require.Contains(t, tmp.Packages[0].Imports, "time")
+			// Helper function to check if import path exists
+			hasImport := func(imports []Import, path string) bool {
+				for _, imp := range imports {
+					if imp.Path == path {
+						return true
+					}
+				}
+				return false
+			}
+
+			require.True(t, hasImport(tmp.Packages[0].Imports, "context"))
+			require.True(t, hasImport(tmp.Packages[0].Imports, "github.com/wricardo/code-surgeon/examples/structparser/other"))
+			require.True(t, hasImport(tmp.Packages[0].Imports, "time"))
 		})
 	}
 }

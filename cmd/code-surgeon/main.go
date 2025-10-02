@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"time"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
@@ -14,6 +16,13 @@ import (
 	"github.com/wricardo/code-surgeon/log2"
 	"github.com/wricardo/code-surgeon/neo4j2"
 )
+
+func getEnvOrDefault(env map[string]string, key, defaultValue string) string {
+	if val, ok := env[key]; ok && val != "" {
+		return val
+	}
+	return defaultValue
+}
 
 func main() {
 	// Initialize logger
@@ -33,6 +42,112 @@ func main() {
 			return nil
 		},
 		Commands: []*cli.Command{
+			{
+				Name:  "up",
+				Usage: "start Neo4j infrastructure and verify it's ready",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "detach",
+						Usage: "run containers in background",
+						Value: true,
+					},
+					&cli.IntFlag{
+						Name:  "timeout",
+						Usage: "timeout in seconds to wait for Neo4j to be ready",
+						Value: 60,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					fmt.Println("🚀 Starting Neo4j infrastructure...")
+
+					// Check if docker compose is available (try v2 first, then v1)
+					dockerCmd := "docker"
+					composeArgs := []string{"compose"}
+
+					if _, err := exec.LookPath(dockerCmd); err != nil {
+						return fmt.Errorf("docker not found in PATH. Please install Docker")
+					}
+
+					// Test if docker compose v2 works
+					testCmd := exec.Command(dockerCmd, "compose", "version")
+					if err := testCmd.Run(); err != nil {
+						// Fall back to docker-compose v1
+						if _, err := exec.LookPath("docker-compose"); err != nil {
+							return fmt.Errorf("docker compose not found. Please install Docker Compose")
+						}
+						dockerCmd = "docker-compose"
+						composeArgs = []string{}
+					}
+
+					// Read embedded docker-compose template
+					templateData, err := codesurgeon.FS.ReadFile("templates/docker-compose.codesurgeon.yaml")
+					if err != nil {
+						return fmt.Errorf("failed to read embedded docker-compose template: %w", err)
+					}
+
+					// Write to temp file
+					tmpFile, err := os.CreateTemp("", "code-surgeon-docker-compose-*.yaml")
+					if err != nil {
+						return fmt.Errorf("failed to create temp file: %w", err)
+					}
+					defer os.Remove(tmpFile.Name())
+
+					if _, err := tmpFile.Write(templateData); err != nil {
+						tmpFile.Close()
+						return fmt.Errorf("failed to write temp file: %w", err)
+					}
+					tmpFile.Close()
+
+					// Start docker compose
+					args := append(composeArgs, "-f", tmpFile.Name(), "up")
+					if cCtx.Bool("detach") {
+						args = append(args, "-d")
+					}
+
+					cmd := exec.Command(dockerCmd, args...)
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+
+					if err := cmd.Run(); err != nil {
+						return fmt.Errorf("failed to start docker compose: %w", err)
+					}
+
+					fmt.Println("\n⏳ Waiting for Neo4j to be ready...")
+
+					// Hardcoded credentials matching docker-compose.yaml
+					neo4jDbUri := "neo4j://localhost:7687"
+					neo4jDbUser := "neo4j"
+					neo4jDbPassword := "neo4jneo4j"
+
+					timeout := time.Duration(cCtx.Int("timeout")) * time.Second
+					deadline := time.Now().Add(timeout)
+
+					for time.Now().Before(deadline) {
+						driver, closeFn, err := neo4j2.Connect(cCtx.Context, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+						if err == nil {
+							// Try a simple query to verify it's fully ready
+							sess := driver.NewSession(cCtx.Context, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+							_, err := sess.Run(cCtx.Context, "RETURN 1", nil)
+							sess.Close(cCtx.Context)
+							closeFn()
+
+							if err == nil {
+								fmt.Println("\n✅ Neo4j is ready!")
+								fmt.Println("\n📊 Neo4j Browser: http://localhost:7474")
+								fmt.Printf("🔐 Username: %s\n", neo4jDbUser)
+								fmt.Printf("🔑 Password: %s\n", neo4jDbPassword)
+								fmt.Println("\n💡 Next steps:")
+								fmt.Println("   code-surgeon to-neo4j --path . --recursive")
+								return nil
+							}
+						}
+						time.Sleep(2 * time.Second)
+						fmt.Print(".")
+					}
+
+					return fmt.Errorf("timeout waiting for Neo4j to be ready")
+				},
+			},
 			{
 				Name:  "init",
 				Usage: "initialize code-surgeon configuration files",
@@ -178,9 +293,9 @@ func main() {
 				Usage:   "Generate embeddings for the specified path",
 				Flags:   []cli.Flag{},
 				Action: func(cCtx *cli.Context) error {
-					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+					neo4jDbUri := getEnvOrDefault(myEnv, "NEO4J_DB_URI", "neo4j://localhost:7687")
+					neo4jDbUser := getEnvOrDefault(myEnv, "NEO4J_DB_USER", "neo4j")
+					neo4jDbPassword := getEnvOrDefault(myEnv, "NEO4J_DB_PASSWORD", "neo4jneo4j")
 					driver, closeFn, err := neo4j2.Connect(cCtx.Context, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 					if err != nil {
 						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
@@ -223,9 +338,9 @@ func main() {
 				Usage: "clear all nodes and relationships in neo4j",
 				Action: func(cCtx *cli.Context) error {
 					ctx := cCtx.Context
-					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+					neo4jDbUri := getEnvOrDefault(myEnv, "NEO4J_DB_URI", "neo4j://localhost:7687")
+					neo4jDbUser := getEnvOrDefault(myEnv, "NEO4J_DB_USER", "neo4j")
+					neo4jDbPassword := getEnvOrDefault(myEnv, "NEO4J_DB_PASSWORD", "neo4jneo4j")
 					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 					if err != nil {
 						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
@@ -255,9 +370,9 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 					ctx := cCtx.Context
-					neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-					neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-					neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+					neo4jDbUri := getEnvOrDefault(myEnv, "NEO4J_DB_URI", "neo4j://localhost:7687")
+					neo4jDbUser := getEnvOrDefault(myEnv, "NEO4J_DB_USER", "neo4j")
+					neo4jDbPassword := getEnvOrDefault(myEnv, "NEO4J_DB_PASSWORD", "neo4jneo4j")
 					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 					if err != nil {
 						log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
@@ -270,6 +385,52 @@ func main() {
 						return err
 					}
 					fmt.Println(schema.Format(cCtx.String("format")))
+					return nil
+				},
+			},
+
+			{
+				Name:    "query",
+				Aliases: []string{"q"},
+				Usage:   "execute a Cypher query against the Neo4j database",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "cypher",
+						Aliases:  []string{"c"},
+						Usage:    "Cypher query to execute",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:    "format",
+						Aliases: []string{"f"},
+						Usage:   "output format: json, table, raw",
+						Value:   "table",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					ctx := cCtx.Context
+					neo4jDbUri := getEnvOrDefault(myEnv, "NEO4J_DB_URI", "neo4j://localhost:7687")
+					neo4jDbUser := getEnvOrDefault(myEnv, "NEO4J_DB_USER", "neo4j")
+					neo4jDbPassword := getEnvOrDefault(myEnv, "NEO4J_DB_PASSWORD", "neo4jneo4j")
+
+					driver, closeFn, err := neo4j2.Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
+					if err != nil {
+						return fmt.Errorf("failed to connect to Neo4j: %w", err)
+					}
+					defer closeFn()
+
+					cypherQuery := cCtx.String("cypher")
+					results, err := neo4j2.QueryNeo4J(ctx, driver, cypherQuery, nil)
+					if err != nil {
+						return fmt.Errorf("query execution failed: %w", err)
+					}
+
+					format := cCtx.String("format")
+					err = neo4j2.FormatQueryResults(results, format)
+					if err != nil {
+						return fmt.Errorf("failed to format results: %w", err)
+					}
+
 					return nil
 				},
 			},

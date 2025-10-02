@@ -54,7 +54,7 @@ type Package struct {
 }
 
 type Import struct {
-	Name string `json:"name"` // the alias of the package as it's being imported
+	Name string `json:"name,omitempty"` // the alias of the package as it's being imported
 	Path string `json:"path"`
 
 	PtrPackage *Package `json:"-"` // Pointer to the package that this import belongs to
@@ -66,6 +66,7 @@ type Interface struct {
 	Methods    []Method `json:"methods,omitemity"`
 	Docs       []string `json:"docs,omitemity"`
 	Definition string   `json:"definition,omitempty"` // Full Go code definition of the interface
+	IsExported bool     `json:"is_exported"`          // Whether the interface is exported (public)
 
 	PtrPackage *Package `json:"-"` // Pointer to the package that this interface belongs to
 }
@@ -77,33 +78,40 @@ type Struct struct {
 	Methods    []Method `json:"methods,omitemity"`
 	Docs       []string `json:"docs,omitemity"`
 	Definition string   `json:"definition,omitempty"` // Full Go code definition of the struct
+	IsExported bool     `json:"is_exported"`          // Whether the struct is exported (public)
 
 	PtrPackage *Package `json:"-"` // Pointer to the package that this struct belongs to
 }
 
 // Method represents a method in a Go struct or interface.
 type Method struct {
-	Receiver   string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
-	Name       string   `json:"name"`
-	Params     []Param  `json:"params,omitemity"`
-	Returns    []Param  `json:"returns,omitemity"`
-	Docs       []string `json:"docs,omitemity"`
-	Signature  string   `json:"signature"`
-	Body       string   `json:"body,omitempty"`       // New field for method body
-	Definition string   `json:"definition,omitempty"` // Full Go code definition of the method
+	Receiver    string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
+	Name        string   `json:"name"`
+	Params      []Param  `json:"params,omitemity"`
+	Returns     []Param  `json:"returns,omitemity"`
+	Docs        []string `json:"docs,omitemity"`
+	Signature   string   `json:"signature"`
+	Body        string   `json:"body,omitempty"`       // New field for method body
+	Definition  string   `json:"definition,omitempty"` // Full Go code definition of the method
+	IsExported  bool     `json:"is_exported"`          // Whether the method is exported (public)
+	IsTest      bool     `json:"is_test"`              // Whether the method is a test method
+	IsBenchmark bool     `json:"is_benchmark"`         // Whether the method is a benchmark method
 
 	PtrStruct *Struct `json:"-"` // Pointer to the struct that this method belongs to
 }
 
 // Function represents a Go function with its parameters, return types, and documentation.
 type Function struct {
-	Name       string   `json:"name"`
-	Params     []Param  `json:"params,omitemity"`
-	Returns    []Param  `json:"returns,omitemity"`
-	Docs       []string `json:"docs,omitemity"`
-	Signature  string   `json:"signature"`
-	Body       string   `json:"body,omitempty"`       // New field for function body
-	Definition string   `json:"definition,omitempty"` // Full Go code definition of the function
+	Name        string   `json:"name"`
+	Params      []Param  `json:"params,omitemity"`
+	Returns     []Param  `json:"returns,omitemity"`
+	Docs        []string `json:"docs,omitemity"`
+	Signature   string   `json:"signature"`
+	Body        string   `json:"body,omitempty"`       // New field for function body
+	Definition  string   `json:"definition,omitempty"` // Full Go code definition of the function
+	IsExported  bool     `json:"is_exported"`          // Whether the function is exported (public)
+	IsTest      bool     `json:"is_test"`              // Whether the function is a test function (TestXxx)
+	IsBenchmark bool     `json:"is_benchmark"`         // Whether the function is a benchmark function (BenchmarkXxx)
 }
 
 // Param represents a parameter or return value in a Go function or method.
@@ -126,7 +134,7 @@ type Field struct {
 	Name        string      `json:"name"`
 	Type        string      `json:"type"`
 	TypeDetails TypeDetails `json:"type_details"`
-	Tag         string      `json:"tag"`
+	Tag         string      `json:"tag,omitempty"`
 	Private     bool        `json:"private"`
 	Pointer     bool        `json:"pointer"`
 	Slice       bool        `json:"slice"`
@@ -342,10 +350,11 @@ func extractStructs(docPkg *doc.Package, ourPkg Package) ([]Struct, error) {
 			structType, ok := typeSpec.Type.(*ast.StructType)
 			if ok {
 				parsedStruct := Struct{
-					Name:    t.Name,
-					Fields:  make([]Field, 0, len(structType.Fields.List)),
-					Docs:    getDocsForStruct(t.Doc),
-					Methods: make([]Method, 0),
+					Name:       t.Name,
+					Fields:     make([]Field, 0, len(structType.Fields.List)),
+					Docs:       getDocsForStruct(t.Doc),
+					Methods:    make([]Method, 0),
+					IsExported: ast.IsExported(t.Name),
 
 					PtrPackage: &ourPkg,
 				}
@@ -458,9 +467,10 @@ func extractInterfaces(docPkg *doc.Package, pkg Package) ([]Interface, error) {
 			interfaceType, ok := typeSpec.Type.(*ast.InterfaceType)
 			if ok {
 				parsedInterface := Interface{
-					Name:    t.Name,
-					Methods: make([]Method, 0),
-					Docs:    getDocsForStruct(t.Doc),
+					Name:       t.Name,
+					Methods:    make([]Method, 0),
+					Docs:       getDocsForStruct(t.Doc),
+					IsExported: ast.IsExported(t.Name),
 
 					PtrPackage: &pkg,
 				}
@@ -482,14 +492,18 @@ func extractInterfaces(docPkg *doc.Package, pkg Package) ([]Interface, error) {
 							}
 						}
 
+						methodName := m.Names[0].Name
 						method := Method{
-							Name:    m.Names[0].Name,
+							Name:    methodName,
 							Params:  extractParams(funcType.Params, pkg),
 							Returns: extractParams(funcType.Results, pkg),
 							Docs:    getDocsForFieldAst(m.Doc),
-							Signature: fmt.Sprintf("%s(%s) (%s)", m.Names[0].Name,
+							Signature: fmt.Sprintf("%s(%s) (%s)", methodName,
 								formatParams(funcType.Params, pkg), formatParams(funcType.Results, pkg)),
-							Definition: methodDef,
+							Definition:  methodDef,
+							IsExported:  ast.IsExported(methodName),
+							IsTest:      isTestFunction(methodName),
+							IsBenchmark: isBenchmarkFunction(methodName),
 						}
 
 						// Add method to definition buffer
@@ -529,19 +543,28 @@ func extractInterfaces(docPkg *doc.Package, pkg Package) ([]Interface, error) {
 
 // extractImports extracts unique imports from the provided package.
 func extractImports(pkg *ast.Package) ([]Import, error) {
-	importSet := make(map[string]struct{})
+	importMap := make(map[string]Import)
 	for _, file := range pkg.Files {
 		for _, importSpec := range file.Imports {
 			importPath := strings.Trim(importSpec.Path.Value, "\"")
-			importSet[importPath] = struct{}{}
+
+			// Extract import alias/name if it exists
+			var importName string
+			if importSpec.Name != nil {
+				importName = importSpec.Name.Name
+			}
+
+			// Use import path as key to deduplicate
+			importMap[importPath] = Import{
+				Name: importName,
+				Path: importPath,
+			}
 		}
 	}
 
 	var imports []Import
-	for imp := range importSet {
-		imports = append(imports, Import{
-			Path: imp,
-		})
+	for _, imp := range importMap {
+		imports = append(imports, imp)
 	}
 	return imports, nil
 }
@@ -730,6 +753,30 @@ func cleanDocText(doc string) string {
 
 func void(_ ...interface{}) {}
 
+// resolveFullImportPath resolves a short package name to its full import path
+// by looking through the package's imports list.
+func resolveFullImportPath(shortPackageName string, pkg Package) string {
+	// Look through the package imports to find the full path
+	for _, imp := range pkg.Imports {
+		// Handle both aliased and non-aliased imports
+		importName := imp.Name
+		if importName == "" {
+			// For non-aliased imports, the package name is the last part of the path
+			parts := strings.Split(imp.Path, "/")
+			if len(parts) > 0 {
+				importName = parts[len(parts)-1]
+			}
+		}
+
+		if importName == shortPackageName {
+			return imp.Path
+		}
+	}
+
+	// If not found in imports, return the short name as fallback
+	return shortPackageName
+}
+
 // getFullType processes an AST expression and returns a comprehensive TypeReference.
 func getFullType(expr ast.Expr, pkg Package) (*TypeDetails, error) {
 	//TODO: need to know if is builtin, custom type on current package (needs current package), or external type
@@ -778,13 +825,18 @@ func getFullType(expr ast.Expr, pkg Package) (*TypeDetails, error) {
 			return nil, err
 		}
 		tr.TypeName = xFullType.TypeName + "." + t.Sel.Name
-		tr.PackageName = &xFullType.TypeName
-		tr.Package = &xFullType.TypeName
+
+		// Resolve the full import path for the package
+		shortPackageName := xFullType.TypeName
+		fullImportPath := resolveFullImportPath(shortPackageName, pkg)
+
+		tr.PackageName = &shortPackageName
+		tr.Package = &fullImportPath
 		tr.Type = &t.Sel.Name
 		tr.TypeReferences = []TypeReference{
 			{
-				Package:     coallesce(xFullType.Package, tr.Package),
-				PackageName: coallesce(xFullType.PackageName, tr.PackageName),
+				Package:     &fullImportPath,
+				PackageName: &shortPackageName,
 				Name:        t.Sel.Name,
 			},
 		}

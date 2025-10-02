@@ -15,9 +15,22 @@ import (
 )
 
 func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]string, recursive bool) error {
-	neo4jDbUri, _ := myEnv["NEO4J_DB_URI"]
-	neo4jDbUser, _ := myEnv["NEO4J_DB_USER"]
-	neo4jDbPassword, _ := myEnv["NEO4J_DB_PASSWORD"]
+	// Use hardcoded defaults if not in env
+	neo4jDbUri := "neo4j://localhost:7687"
+	neo4jDbUser := "neo4j"
+	neo4jDbPassword := "neo4jneo4j"
+
+	// Override with env if available
+	if uri, ok := myEnv["NEO4J_DB_URI"]; ok && uri != "" {
+		neo4jDbUri = uri
+	}
+	if user, ok := myEnv["NEO4J_DB_USER"]; ok && user != "" {
+		neo4jDbUser = user
+	}
+	if pass, ok := myEnv["NEO4J_DB_PASSWORD"]; ok && pass != "" {
+		neo4jDbPassword = pass
+	}
+
 	driver, closeFn, err := Connect(ctx, neo4jDbUri, neo4jDbUser, neo4jDbPassword)
 	if err != nil {
 		log.Info().Err(err).Msg("Error connecting to Neo4j (proceeding anyway)")
@@ -56,7 +69,7 @@ func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]strin
 				return err
 			}
 			for _, info := range infos {
-				shouldContinue, err1 := toNeo4j(ctx, info, module.ImportPath, module.Dir, sess, deep)
+				shouldContinue, err1 := toNeo4j(ctx, info, module.Dir, module.ImportPath, sess, deep)
 				if err1 != nil {
 					if shouldContinue {
 						continue

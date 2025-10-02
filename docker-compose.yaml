@@ -1,43 +1,4 @@
-version: '3.7'
-
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: temporal
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_DB: temporal
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  # Temporal Server with Auto-Setup
-  temporal:
-    image: temporalio/auto-setup:latest
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_SEEDS=postgres
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_DB=temporal
-      # - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
-    depends_on:
-      - postgres
-    ports:
-      - "7233:7233"
-      - "8233:8233"
-
-  # Temporal Admin Tools (optional)
-  temporal-admin-tools:
-    image: temporalio/admin-tools:latest
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-
   # Neo4j Graph Database
   neo4j:
     image: neo4j:enterprise
@@ -53,7 +14,19 @@ services:
     volumes:
       - neo4j_data:/data
 
+  # Neo4j Test Database (for testing only - no persistent data)
+  neo4j-test:
+    image: neo4j:enterprise
+    environment:
+      NEO4J_AUTH: neo4j/testpass  # Username: neo4j, Password: testpass
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4JLABS_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: 'gds.*,apoc.*'
+      NEO4J_dbms_security_procedures_whitelist: 'gds.*,apoc.*'
+    ports:
+      - "7475:7474"  # HTTP
+      - "7688:7687"  # Bolt
+
 volumes:
-  postgres_data:
   neo4j_data:
 

@@ -376,45 +376,142 @@ func ParseRepository(pkg string, folder string) (string, string, string) {
 }
 
 // ParseReceiver extracts the receiver from a function name.
-// It returns the original function name, cleaned function name and the receiver.
+// It returns the function name and the receiver.
 func ParseReceiver(s string) (string, string, string) {
 	if s == "" {
 		return "", "", ""
 	}
 
-	parts := strings.Split(s, ".")
-	if len(parts) == 0 {
-		return s, s, ""
+	// Handle complex cases by smart splitting that preserves [...] and (...) groups
+	parts := smartSplit(s)
+
+	if len(parts) <= 1 {
+		return s, "", ""
 	}
 
-	// Regular expression to match anonymous functions like func1, func2, func6.1
-	anonFuncPattern := regexp.MustCompile(`^func\d+(\.\d+)*$`)
+	// Regular expressions to match anonymous functions
+	anonFuncPattern := regexp.MustCompile(`^func\d+$`)
+	numericPattern := regexp.MustCompile(`^\d+$`)
 
-	// Start from the end and find the first non-anonymous function name
-	functionName := ""
-	var receiver string
+	// Check if the last parts are anonymous functions
+	hasTrailingAnonymousFunc := false
+
+	// Find the last non-numeric part
 	for i := len(parts) - 1; i >= 0; i-- {
-		part := parts[i]
-		if anonFuncPattern.MatchString(part) {
-			continue
-		} else {
-			functionName = part
-			if i > 0 {
-				receiver = parts[i-1]
+		if !numericPattern.MatchString(parts[i]) {
+			// Check if it's an anonymous function
+			if anonFuncPattern.MatchString(parts[i]) {
+				hasTrailingAnonymousFunc = true
 			}
 			break
 		}
 	}
 
-	// If functionName is still empty, it means all parts were anonymous functions
+	// Start from the end and find the first non-anonymous function name
+	functionName := ""
+	receiverIndex := -1
+
+	for i := len(parts) - 1; i >= 0; i-- {
+		part := parts[i]
+		// Skip numeric parts (like "1" in "func6.1")
+		if numericPattern.MatchString(part) {
+			continue
+		}
+		// Skip anonymous functions (like "func6")
+		if anonFuncPattern.MatchString(part) {
+			continue
+		}
+
+		functionName = part
+
+		// If we have trailing anonymous functions, apply special rules
+		if hasTrailingAnonymousFunc {
+			// For simple patterns like "run.func9" (2 parts), receiver is empty
+			if len(parts) == 2 {
+				receiver := ""
+				return functionName, receiver, ""
+			}
+			// For 4-part patterns like "ApiServer.NewInterceptor.func2.1" where there's a numeric suffix
+			// Check if there are numeric parts after the anonymous function and exactly 4 parts
+			if len(parts) == 4 {
+				hasNumericSuffix := false
+				for j := i + 1; j < len(parts); j++ {
+					if numericPattern.MatchString(parts[j]) {
+						hasNumericSuffix = true
+						break
+					}
+				}
+				if hasNumericSuffix {
+					receiver := ""
+					return functionName, receiver, ""
+				}
+			}
+		}
+
+		// Otherwise, receiver is the previous part
+		receiverIndex = i - 1
+		break
+	}
+
+	// If functionName is still empty, use the last non-numeric part
 	if functionName == "" {
-		functionName = parts[len(parts)-1]
-		if len(parts) > 1 {
-			receiver = parts[len(parts)-2]
+		for i := len(parts) - 1; i >= 0; i-- {
+			if !numericPattern.MatchString(parts[i]) {
+				functionName = parts[i]
+				receiverIndex = i - 1
+				break
+			}
 		}
 	}
 
-	return s, functionName, ReplacePointerNotation(receiver)
+	var receiver string
+	if receiverIndex >= 0 {
+		receiver = parts[receiverIndex]
+	}
+
+	return functionName, receiver, ""
+}
+
+// smartSplit splits a string on dots while preserving [...] and (...) groups
+func smartSplit(s string) []string {
+	var parts []string
+	var current strings.Builder
+	parenDepth := 0
+	bracketDepth := 0
+
+	for _, r := range s {
+		switch r {
+		case '(':
+			parenDepth++
+			current.WriteRune(r)
+		case ')':
+			parenDepth--
+			current.WriteRune(r)
+		case '[':
+			bracketDepth++
+			current.WriteRune(r)
+		case ']':
+			bracketDepth--
+			current.WriteRune(r)
+		case '.':
+			if parenDepth == 0 && bracketDepth == 0 {
+				// Split here
+				parts = append(parts, current.String())
+				current.Reset()
+			} else {
+				current.WriteRune(r)
+			}
+		default:
+			current.WriteRune(r)
+		}
+	}
+
+	// Add the last part
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+
+	return parts
 }
 
 // ReplacePointerNotation uses regex to replace patterns like "(*TypeName)" with "TypeName"

@@ -18,10 +18,17 @@ func extractParsedInfo(packages map[string]*ast.Package, moduleName string, relM
 		Modules: make([]Module, 0, len(packages)),
 	}
 
+	// Construct full name, avoiding trailing slash for root module
+	trimmedPath := strings.TrimLeft(relModPath, "./")
+	fullName := moduleName
+	if trimmedPath != "" {
+		fullName = moduleName + "/" + trimmedPath
+	}
+
 	m := &Module{
 		RootModuleName:    moduleName,
 		RelativeDirectory: relModPath,
-		FullName:          moduleName + "/" + strings.TrimLeft(relModPath, "./"),
+		FullName:          fullName,
 		Packages:          make([]Package, 0, len(packages)),
 	}
 
@@ -101,9 +108,13 @@ func extractParsedInfo(packages map[string]*ast.Package, moduleName string, relM
 
 // parseFunctionDecl extracts function details from an *ast.FuncDecl node.
 func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string, pkg Package) (Function, error) {
+	funcName := funcDecl.Name.Name
 	function := Function{
-		Name: funcDecl.Name.Name,
-		Docs: getDocsForField([]string{docs}),
+		Name:        funcName,
+		Docs:        getDocsForField([]string{docs}),
+		IsExported:  ast.IsExported(funcName),
+		IsTest:      isTestFunction(funcName),
+		IsBenchmark: isBenchmarkFunction(funcName),
 	}
 
 	// Parse function parameters
@@ -229,10 +240,14 @@ func parseFunctionDecl(funcDecl *ast.FuncDecl, docs string, pkg Package) (Functi
 // parseMethodDecl extracts method details from an *ast.FuncDecl node.
 func parseMethodDecl(funcDecl *ast.FuncDecl, docs string, ourPkg Package) (Method, error) {
 	receiverType, _ := getFullType(funcDecl.Recv.List[0].Type, ourPkg)
+	methodName := funcDecl.Name.Name
 	method := Method{
-		Name:     funcDecl.Name.Name,
-		Receiver: receiverType.TypeName,
-		Docs:     getDocsForField([]string{docs}),
+		Name:        methodName,
+		Receiver:    receiverType.TypeName,
+		Docs:        getDocsForField([]string{docs}),
+		IsExported:  ast.IsExported(methodName),
+		IsTest:      isTestFunction(methodName),
+		IsBenchmark: isBenchmarkFunction(methodName),
 	}
 
 	// Parse method parameters
@@ -394,4 +409,14 @@ func extractFunctionsAndMethods(pkg *ast.Package, ourPkg Package) ([]Function, [
 	}
 
 	return functions, methods, nil
+}
+
+// isTestFunction checks if a function name follows the Go test function naming convention
+func isTestFunction(name string) bool {
+	return strings.HasPrefix(name, "Test") && len(name) > 4 && strings.ToUpper(name[4:5]) == name[4:5]
+}
+
+// isBenchmarkFunction checks if a function name follows the Go benchmark function naming convention
+func isBenchmarkFunction(name string) bool {
+	return strings.HasPrefix(name, "Benchmark") && len(name) > 9 && strings.ToUpper(name[9:10]) == name[9:10]
 }

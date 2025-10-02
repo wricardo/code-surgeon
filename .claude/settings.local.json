@@ -5,7 +5,9 @@
       "Bash(goimports:*)",
       "Bash(go run:*)",
       "Bash(rm:*)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Bash(go build:*)",
+      "Bash(code-surgeon parse:*)"
     ],
     "deny": []
   }

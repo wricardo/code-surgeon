@@ -2,8 +2,11 @@ package neo4j2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/rs/zerolog/log"
@@ -27,13 +30,15 @@ func MergeStruct(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 		NodeType: "Struct",
 		Alias:    alias,
 		Properties: map[string]any{
-			"name":    strct.Name,
-			"package": pkg.Package,
+			"name":                strct.Name,
+			"packageName":         pkg.Package,
+			"packageFullName":     mod.FullName,
+			"rootPackageFullName": mod.RootModuleName,
 		},
 		SetFields: map[string]string{
 			"documentation": strings.Join(strct.Docs, "\n"),
-			"packageName":   pkg.Package,
 			"definition":    strct.Definition,
+			"isExported":    fmt.Sprintf("%t", strct.IsExported),
 		},
 	}
 }
@@ -84,18 +89,19 @@ func UpsertStruct(ctx context.Context, session neo4j.SessionWithContext, mod cod
 }
 
 // Helper function to merge a Field node
-func MergeField(ctx context.Context, alias string, pkg codesurgeon.Package, fieldName, fieldType, documentation string) MergeQuery {
+func MergeField(ctx context.Context, alias string, pkg codesurgeon.Package, field codesurgeon.Field) MergeQuery {
 	return MergeQuery{
 		NodeType: "Field",
 		Alias:    alias,
 		Properties: map[string]any{
-			"name":    fieldName,
+			"name":    field.Name,
 			"package": pkg.Package,
 		},
 		SetFields: map[string]string{
-			"documentation": documentation,
+			"documentation": strings.Join(field.Docs, "\n"),
 			"packageName":   pkg.Package,
-			"type":          fieldType,
+			"type":          field.Type,
+			"isExported":    fmt.Sprintf("%t", !field.Private),
 		},
 	}
 }
@@ -114,6 +120,10 @@ func MergeType2(ctx context.Context, alias string, paramType string) MergeQuery 
 // Helper to merge a Type node
 func MergeType(ctx context.Context, alias string, paramType codesurgeon.TypeDetails) MergeQuery {
 	normalizedType := normalizeType(paramType.TypeName)
+	// Fallback to Type field if TypeName is empty
+	if normalizedType == "" && paramType.Type != nil {
+		normalizedType = *paramType.Type
+	}
 	return MergeQuery{
 		NodeType: "Type",
 		Alias:    alias,
@@ -160,7 +170,7 @@ func MergeBaseType(ctx context.Context, alias string, td codesurgeon.TypeDetails
 // UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
 func UpsertStructField(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) error {
 	query := CypherQuery{}.
-		Merge(MergeField(ctx, "f", pkg, field.Name, field.Type, strings.Join(field.Docs, "\n"))).
+		Merge(MergeField(ctx, "f", pkg, field)).
 		Merge(MergeType(ctx, "t", field.TypeDetails)).
 		Merge(MergeBaseType(ctx, "b", field.TypeDetails)).
 		Merge(MergeStruct(ctx, "s", mod, pkg, strct)).
@@ -206,6 +216,9 @@ func MergeMethod(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 		SetFields: map[string]string{
 			"documentation": strings.Join(fn.Docs, "\n"),
 			"definition":    fn.Definition,
+			"isExported":    fmt.Sprintf("%t", fn.IsExported),
+			"isTest":        fmt.Sprintf("%t", fn.IsTest),
+			"isBenchmark":   fmt.Sprintf("%t", fn.IsBenchmark),
 		},
 	}
 }
@@ -234,6 +247,9 @@ func MergeFunction(ctx context.Context, alias string, mod codesurgeon.Module, pk
 		SetFields: map[string]string{
 			"documentation": strings.Join(fn.Docs, "\n"),
 			"definition":    fn.Definition,
+			"isExported":    fmt.Sprintf("%t", fn.IsExported),
+			"isTest":        fmt.Sprintf("%t", fn.IsTest),
+			"isBenchmark":   fmt.Sprintf("%t", fn.IsBenchmark),
 		},
 	}
 }
@@ -286,6 +302,7 @@ func MergeInterface(ctx context.Context, alias string, mod codesurgeon.Module, p
 		SetFields: map[string]string{
 			"documentation": strings.Join(iface.Docs, "\n"),
 			"definition":    iface.Definition,
+			"isExported":    fmt.Sprintf("%t", iface.IsExported),
 		},
 	}
 }
@@ -424,6 +441,9 @@ func MergeInterfaceMethodFunction(ctx context.Context, alias string, mod codesur
 		SetFields: map[string]string{
 			"documentation": strings.Join(method.Docs, "\n"),
 			"definition":    method.Definition,
+			"isExported":    fmt.Sprintf("%t", method.IsExported),
+			"isTest":        fmt.Sprintf("%t", method.IsTest),
+			"isBenchmark":   fmt.Sprintf("%t", method.IsBenchmark),
 		},
 	}
 }
@@ -795,4 +815,79 @@ func (cq CypherQuery) ExecuteSession(ctx context.Context, session neo4j.Session)
 	}
 	return records, nil
 
+}
+
+// FormatQueryResults formats and prints the query results in the specified format
+func FormatQueryResults(results [][]interface{}, format string) error {
+	if len(results) == 0 {
+		fmt.Println("No results found.")
+		return nil
+	}
+
+	switch format {
+	case "json":
+		return formatAsJSON(results)
+	case "table":
+		return formatAsTable(results)
+	case "raw":
+		return formatAsRaw(results)
+	default:
+		return fmt.Errorf("unsupported format: %s (supported: json, table, raw)", format)
+	}
+}
+
+func formatAsJSON(results [][]interface{}) error {
+	jsonResults := make([]map[string]interface{}, len(results))
+	for i, row := range results {
+		rowMap := make(map[string]interface{})
+		for j, value := range row {
+			rowMap[fmt.Sprintf("column_%d", j)] = value
+		}
+		jsonResults[i] = rowMap
+	}
+
+	output, err := json.MarshalIndent(jsonResults, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(output))
+	return nil
+}
+
+func formatAsTable(results [][]interface{}) error {
+	if len(results) == 0 {
+		return nil
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	// Print header
+	numCols := len(results[0])
+	for i := 0; i < numCols; i++ {
+		fmt.Fprintf(w, "Column_%d\t", i)
+	}
+	fmt.Fprintln(w)
+
+	// Print separator
+	for i := 0; i < numCols; i++ {
+		fmt.Fprint(w, "--------\t")
+	}
+	fmt.Fprintln(w)
+
+	// Print data rows
+	for _, row := range results {
+		for _, value := range row {
+			fmt.Fprintf(w, "%v\t", value)
+		}
+		fmt.Fprintln(w)
+	}
+
+	return w.Flush()
+}
+
+func formatAsRaw(results [][]interface{}) error {
+	for i, row := range results {
+		fmt.Printf("Row %d: %v\n", i, row)
+	}
+	return nil
 }
