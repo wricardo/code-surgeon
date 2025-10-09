@@ -67,8 +67,8 @@ func UpsertPackage(ctx context.Context, session neo4j.SessionWithContext, mod co
 // UpsertStruct creates or updates a struct node in Neo4j and links it to its package and base type.
 func UpsertStruct(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct) error {
 	query := CypherQuery{}.
-		Merge(MergeBaseType(ctx, "bs", codesurgeon.TypeDetails{
-			Package:        &pkg.Package,
+		Merge(MergeBaseType(ctx, "bs", strct.Name, pkg.Package, mod.FullName, codesurgeon.TypeDetails{
+			Package:        &mod.FullName,
 			PackageName:    &pkg.Package,
 			Type:           &strct.Name,
 			TypeName:       strct.Name,
@@ -89,7 +89,7 @@ func UpsertStruct(ctx context.Context, session neo4j.SessionWithContext, mod cod
 }
 
 // Helper function to merge a Field node
-func MergeField(ctx context.Context, alias string, pkg codesurgeon.Package, field codesurgeon.Field) MergeQuery {
+func MergeField(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, field codesurgeon.Field) MergeQuery {
 	return MergeQuery{
 		NodeType: "Field",
 		Alias:    alias,
@@ -98,10 +98,11 @@ func MergeField(ctx context.Context, alias string, pkg codesurgeon.Package, fiel
 			"package": pkg.Package,
 		},
 		SetFields: map[string]string{
-			"documentation": strings.Join(field.Docs, "\n"),
-			"packageName":   pkg.Package,
-			"type":          field.Type,
-			"isExported":    fmt.Sprintf("%t", !field.Private),
+			"documentation":   strings.Join(field.Docs, "\n"),
+			"packageName":     pkg.Package,
+			"packageFullName": mod.FullName,
+			"type":            field.Type,
+			"isExported":      fmt.Sprintf("%t", !field.Private),
 		},
 	}
 }
@@ -118,11 +119,15 @@ func MergeType2(ctx context.Context, alias string, paramType string) MergeQuery 
 }
 
 // Helper to merge a Type node
-func MergeType(ctx context.Context, alias string, paramType codesurgeon.TypeDetails) MergeQuery {
+func MergeType(ctx context.Context, alias string, typeString string, paramType codesurgeon.TypeDetails) MergeQuery {
 	normalizedType := normalizeType(paramType.TypeName)
-	// Fallback to Type field if TypeName is empty
+	// Fallback to TypeDetails.Type if TypeName is empty
 	if normalizedType == "" && paramType.Type != nil {
 		normalizedType = *paramType.Type
+	}
+	// Final fallback to the type string from Param.Type
+	if normalizedType == "" {
+		normalizedType = typeString
 	}
 	return MergeQuery{
 		NodeType: "Type",
@@ -138,41 +143,123 @@ func normalizeType(n string) string {
 }
 
 // A simpler BaseType merge for when we only have a "type" property
-func MergeBaseType(ctx context.Context, alias string, td codesurgeon.TypeDetails) MergeQuery {
+func MergeBaseType(ctx context.Context, alias string, typeString string, currentPackage string, currentPackageFullName string, td codesurgeon.TypeDetails) MergeQuery {
 	packageName := ""
+	packageFullName := ""
 	baseType := "UNKNOWN"
+
+	// Try to get from TypeDetails first
 	if td.Type != nil && len(*td.Type) > 0 {
-		// baseType = field.TypeDetails.TypeReferences[0].Name
 		baseType = *td.Type
 		if len(td.TypeReferences) > 0 {
-			packageName = *td.TypeReferences[0].PackageName
+			if td.TypeReferences[0].PackageName != nil {
+				packageName = *td.TypeReferences[0].PackageName
+			}
+			if td.TypeReferences[0].Package != nil {
+				packageFullName = *td.TypeReferences[0].Package
+			}
 		}
 	}
 	if td.PackageName != nil {
 		packageName = *td.PackageName
 	}
+	if td.Package != nil {
+		packageFullName = *td.Package
+	}
+
+	// If we have packageName but no packageFullName, and it matches current package, use currentPackageFullName
+	if packageName != "" && packageFullName == "" && packageName == currentPackage {
+		packageFullName = currentPackageFullName
+	}
+
+	// Fallback: parse the type string if TypeDetails is empty
+	if baseType == "UNKNOWN" && typeString != "" {
+		// Strip pointer prefix
+		cleanType := strings.TrimPrefix(typeString, "*")
+		// Strip slice prefix
+		cleanType = strings.TrimPrefix(cleanType, "[]")
+
+		// Check if it has a package prefix (e.g., "model.Person")
+		if strings.Contains(cleanType, ".") {
+			parts := strings.Split(cleanType, ".")
+			if len(parts) == 2 {
+				packageName = parts[0]
+				baseType = parts[1]
+				// If this package matches current package, we can infer full name
+				if packageName == currentPackage {
+					packageFullName = currentPackageFullName
+				}
+			}
+		} else {
+			// No package prefix, use current package
+			baseType = cleanType
+			if packageName == "" {
+				packageName = currentPackage
+				packageFullName = currentPackageFullName
+			}
+		}
+	}
+
+	// Final check: if we still have packageName but no packageFullName, and it matches current package
+	if packageName != "" && packageFullName == "" && packageName == currentPackage {
+		packageFullName = currentPackageFullName
+	}
+
+	// Override package for known builtin types
+	if isBuiltinType(baseType) {
+		packageName = "builtin"
+		packageFullName = "builtin"
+	}
 
 	if packageName == "" {
 		packageName = "builtin"
+		packageFullName = "builtin"
 	}
 
 	return MergeQuery{
 		NodeType: "BaseType",
 		Alias:    alias,
 		Properties: map[string]any{
-			"type":        baseType,
-			"packageName": packageName,
+			"type":            baseType,
+			"packageName":     packageName,
+			"packageFullName": packageFullName,
 		},
 	}
+}
+
+func isBuiltinType(typeName string) bool {
+	builtins := map[string]bool{
+		"bool":       true,
+		"byte":       true,
+		"complex64":  true,
+		"complex128": true,
+		"error":      true,
+		"float32":    true,
+		"float64":    true,
+		"int":        true,
+		"int8":       true,
+		"int16":      true,
+		"int32":      true,
+		"int64":      true,
+		"rune":       true,
+		"string":     true,
+		"uint":       true,
+		"uint8":      true,
+		"uint16":     true,
+		"uint32":     true,
+		"uint64":     true,
+		"uintptr":    true,
+	}
+	return builtins[typeName]
 }
 
 // UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
 // UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
 func UpsertStructField(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) error {
 	query := CypherQuery{}.
-		Merge(MergeField(ctx, "f", pkg, field)).
-		Merge(MergeType(ctx, "t", field.TypeDetails)).
-		Merge(MergeBaseType(ctx, "b", field.TypeDetails)).
+		Merge(MergeField(ctx, "f", mod, pkg, field)).
+		Merge(MergeType(ctx, "t", field.Type, field.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", field.Type, pkg.Package, mod.FullName, field.TypeDetails)).
 		Merge(MergeStruct(ctx, "s", mod, pkg, strct)).
 		Merge(MergePackage(ctx, "p", mod, pkg)).
 		MergeRel("f", "OF_TYPE", "t", nil).
@@ -268,8 +355,8 @@ func UpsertFunction(ctx context.Context, session neo4j.SessionWithContext, mod c
 // UpsertInterface creates or updates an interface node in Neo4j and links it to its package.
 func UpsertInterface(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface) error {
 	query := CypherQuery{}.
-		Merge(MergeBaseType(ctx, "bs", codesurgeon.TypeDetails{
-			Package:        &pkg.Package,
+		Merge(MergeBaseType(ctx, "bs", iface.Name, pkg.Package, mod.FullName, codesurgeon.TypeDetails{
+			Package:        &mod.FullName,
 			PackageName:    &pkg.Package,
 			Type:           &iface.Name,
 			TypeName:       iface.Name,
@@ -307,13 +394,17 @@ func MergeInterface(ctx context.Context, alias string, mod codesurgeon.Module, p
 	}
 }
 
-func MergeReturn(ctx context.Context, alias string, ret codesurgeon.Param) MergeQuery {
+func MergeReturn(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, ret codesurgeon.Param) MergeQuery {
 	return MergeQuery{
 		NodeType: "Return",
 		Alias:    alias,
 		Properties: map[string]any{
 			"name": ret.Name,
 			"type": ret.Type,
+		},
+		SetFields: map[string]string{
+			"packageName":     pkg.Package,
+			"packageFullName": mod.FullName,
 		},
 	}
 }
@@ -322,11 +413,11 @@ func MergeReturn(ctx context.Context, alias string, ret codesurgeon.Param) Merge
 func UpsertFunctionReturn(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, ret codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
-		Merge(MergeReturn(ctx, "r", ret)).
+		Merge(MergeReturn(ctx, "r", mod, pkg, ret)).
 		MergeRel("f", "RETURNS", "r", nil).
-		Merge(MergeType(ctx, "t", ret.TypeDetails)).
+		Merge(MergeType(ctx, "t", ret.Type, ret.TypeDetails)).
 		MergeRel("r", "OF_TYPE", "t", nil).
-		Merge(MergeBaseType(ctx, "b", ret.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", ret.Type, pkg.Package, mod.FullName, ret.TypeDetails)).
 		MergeRel("t", "BASE_TYPE", "b", nil).
 		Return("id(r) as nodeID")
 
@@ -337,18 +428,18 @@ func UpsertFunctionReturn(ctx context.Context, session neo4j.SessionWithContext,
 func UpsertMethodReturn(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Method, ret codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeMethod(ctx, "m", mod, pkg, fn)).
-		Merge(MergeReturn(ctx, "r", ret)).
+		Merge(MergeReturn(ctx, "r", mod, pkg, ret)).
 		MergeRel("m", "RETURNS", "r", nil).
-		Merge(MergeType(ctx, "t", ret.TypeDetails)).
+		Merge(MergeType(ctx, "t", ret.Type, ret.TypeDetails)).
 		MergeRel("r", "OF_TYPE", "t", nil).
-		Merge(MergeBaseType(ctx, "b", ret.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", ret.Type, pkg.Package, mod.FullName, ret.TypeDetails)).
 		MergeRel("t", "BASE_TYPE", "b", nil).
 		Return("id(r) as nodeID")
 
 	return query.Execute(ctx, session)
 }
 
-func MergeFuncParam(ctx context.Context, alias string, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) MergeQuery {
+func MergeFuncParam(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) MergeQuery {
 	return MergeQuery{
 		NodeType: "Param",
 		Alias:    alias,
@@ -358,11 +449,14 @@ func MergeFuncParam(ctx context.Context, alias string, pkg codesurgeon.Package, 
 			"package":    pkg.Package,
 			"methodName": fn.Name,
 		},
-		SetFields: map[string]string{},
+		SetFields: map[string]string{
+			"packageName":     pkg.Package,
+			"packageFullName": mod.FullName,
+		},
 	}
 }
 
-func MergeInterfaceMethodParam(ctx context.Context, alias string, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) MergeQuery {
+func MergeInterfaceMethodParam(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) MergeQuery {
 	return MergeQuery{
 		NodeType: "Param",
 		Alias:    alias,
@@ -374,13 +468,15 @@ func MergeInterfaceMethodParam(ctx context.Context, alias string, pkg codesurgeo
 			"method":  method.Name,
 		},
 		SetFields: map[string]string{
-			"name": param.Name,
-			"type": param.Type,
+			"name":            param.Name,
+			"type":            param.Type,
+			"packageName":     pkg.Package,
+			"packageFullName": mod.FullName,
 		},
 	}
 }
 
-func MergeMethodParam(ctx context.Context, alias string, pkg codesurgeon.Package, method codesurgeon.Method, param codesurgeon.Param) MergeQuery {
+func MergeMethodParam(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, method codesurgeon.Method, param codesurgeon.Param) MergeQuery {
 	return MergeQuery{
 		NodeType: "Param",
 		Alias:    alias,
@@ -391,18 +487,20 @@ func MergeMethodParam(ctx context.Context, alias string, pkg codesurgeon.Package
 			"methodName": method.Name,
 		},
 		SetFields: map[string]string{
-			"name": param.Name,
-			"type": param.Type,
+			"name":            param.Name,
+			"type":            param.Type,
+			"packageName":     pkg.Package,
+			"packageFullName": mod.FullName,
 		},
 	}
 }
 
 func UpsertFunctionParam(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, fn codesurgeon.Function, param codesurgeon.Param) error {
 	query := CypherQuery{}.
-		Merge(MergeFuncParam(ctx, "p", pkg, fn, param)).
+		Merge(MergeFuncParam(ctx, "p", mod, pkg, fn, param)).
 		Merge(MergeFunction(ctx, "f", mod, pkg, fn)).
-		Merge(MergeType(ctx, "t", param.TypeDetails)).
-		Merge(MergeBaseType(ctx, "b", param.TypeDetails)).
+		Merge(MergeType(ctx, "t", param.Type, param.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", param.Type, pkg.Package, mod.FullName, param.TypeDetails)).
 		MergeRel("t", "BASE_TYPE", "b", nil).
 		MergeRel("f", "HAS_PARAM", "p", nil).
 		MergeRel("p", "OF_TYPE", "t", nil).
@@ -413,10 +511,10 @@ func UpsertFunctionParam(ctx context.Context, session neo4j.SessionWithContext, 
 
 func UpsertMethodParam(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, method codesurgeon.Method, param codesurgeon.Param) error {
 	query := CypherQuery{}.
-		Merge(MergeMethodParam(ctx, "p", pkg, method, param)).
+		Merge(MergeMethodParam(ctx, "p", mod, pkg, method, param)).
 		Merge(MergeMethod(ctx, "m", mod, pkg, method)).
-		Merge(MergeType(ctx, "t", param.TypeDetails)).
-		Merge(MergeBaseType(ctx, "b", param.TypeDetails)).
+		Merge(MergeType(ctx, "t", param.Type, param.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", param.Type, pkg.Package, mod.FullName, param.TypeDetails)).
 		MergeRel("t", "BASE_TYPE", "b", nil).
 		MergeRel("m", "HAS_PARAM", "p", nil).
 		MergeRel("p", "OF_TYPE", "t", nil).
@@ -450,12 +548,12 @@ func MergeInterfaceMethodFunction(ctx context.Context, alias string, mod codesur
 
 func UpsertInterfaceMethodParam(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, param codesurgeon.Param) error {
 	query := CypherQuery{}.
-		Merge(MergeInterfaceMethodParam(ctx, "p", pkg, iface, method, param)).
+		Merge(MergeInterfaceMethodParam(ctx, "p", mod, pkg, iface, method, param)).
 		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
 		MergeRel("m", "HAS_PARAM", "p", nil).
-		Merge(MergeType(ctx, "t", param.TypeDetails)).
+		Merge(MergeType(ctx, "t", param.Type, param.TypeDetails)).
 		MergeRel("p", "OF_TYPE", "t", nil).
-		Merge(MergeBaseType(ctx, "b", param.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", param.Type, pkg.Package, mod.FullName, param.TypeDetails)).
 		MergeRel("t", "BASE_TYPE", "b", nil).
 		Return("id(p) as nodeID")
 
@@ -465,11 +563,11 @@ func UpsertInterfaceMethodParam(ctx context.Context, session neo4j.SessionWithCo
 func UpsertInterfaceMethodReturn(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, iface codesurgeon.Interface, method codesurgeon.Method, ret codesurgeon.Param) error {
 	query := CypherQuery{}.
 		Merge(MergeInterfaceMethodFunction(ctx, "m", mod, pkg, iface, method)).
-		Merge(MergeReturn(ctx, "r", ret)).
+		Merge(MergeReturn(ctx, "r", mod, pkg, ret)).
 		MergeRel("m", "RETURNS", "r", nil).
-		Merge(MergeType(ctx, "t", ret.TypeDetails)).
+		Merge(MergeType(ctx, "t", ret.Type, ret.TypeDetails)).
 		MergeRel("r", "OF_TYPE", "t", nil).
-		Merge(MergeBaseType(ctx, "b", ret.TypeDetails)).
+		Merge(MergeBaseType(ctx, "b", ret.Type, pkg.Package, mod.FullName, ret.TypeDetails)).
 		MergeRel("t", "BASE_TYPE", "b", nil).
 		Return("id(r) as nodeID")
 
