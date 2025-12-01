@@ -993,6 +993,10 @@ func getFullType(expr ast.Expr, pkg Package) (*TypeDetails, error) {
 		tr.Type = &eltFullType.TypeName
 		// Adjust flags if necessary
 
+	case *ast.ParenExpr:
+		// Handle parenthesized expressions by unwrapping and recursing
+		return getFullType(t.X, pkg)
+
 	default:
 		return nil, fmt.Errorf("unsupported type: %T", expr)
 	}
