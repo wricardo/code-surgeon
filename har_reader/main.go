@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -153,28 +152,46 @@ func outputJSON(entries []HarEntry, pretty bool) {
 	fmt.Println(string(output))
 }
 
-// outputToon outputs in TOON format (simplified version)
-// TOON format: key=value pairs, one per line, with sections separated by blank lines
+// outputToon outputs in TOON format (array of objects with = instead of :)
 func outputToon(entries []HarEntry) {
+	fmt.Println("[")
 	for i, entry := range entries {
-		if i > 0 {
+		fmt.Println("  {")
+		fmt.Printf("    request = {\n")
+		fmt.Printf("      method = %q\n", entry.Request.Method)
+		fmt.Printf("      url = %q\n", entry.Request.URL)
+		if len(entry.Request.Headers) > 0 {
+			fmt.Printf("      headers = [\n")
+			for _, h := range entry.Request.Headers {
+				fmt.Printf("        { name = %q, value = %q }\n", h.Name, h.Value)
+			}
+			fmt.Printf("      ]\n")
+		}
+		if entry.Request.PostData != nil && entry.Request.PostData.Text != "" {
+			fmt.Printf("      postData = %q\n", entry.Request.PostData.Text)
+		}
+		fmt.Printf("    }\n")
+
+		fmt.Printf("    response = {\n")
+		fmt.Printf("      status = %d\n", entry.Response.Status)
+		if len(entry.Response.Headers) > 0 {
+			fmt.Printf("      headers = [\n")
+			for _, h := range entry.Response.Headers {
+				fmt.Printf("        { name = %q, value = %q }\n", h.Name, h.Value)
+			}
+			fmt.Printf("      ]\n")
+		}
+		if entry.Response.Content.Text != "" {
+			fmt.Printf("      content = %q\n", entry.Response.Content.Text)
+		}
+		fmt.Printf("    }\n")
+
+		fmt.Print("  }")
+		if i < len(entries)-1 {
+			fmt.Println(",")
+		} else {
 			fmt.Println()
 		}
-		fmt.Printf("entry=%d\n", i+1)
-		fmt.Printf("request.method=%s\n", entry.Request.Method)
-		fmt.Printf("request.url=%s\n", entry.Request.URL)
-		fmt.Printf("response.status=%d\n", entry.Response.Status)
-
-		if entry.Request.PostData != nil && entry.Request.PostData.Text != "" {
-			// Escape newlines for TOON format
-			escapedBody := bytes.ReplaceAll([]byte(entry.Request.PostData.Text), []byte("\n"), []byte("\\n"))
-			fmt.Printf("request.body=%s\n", escapedBody)
-		}
-
-		if entry.Response.Content.Text != "" {
-			// Escape newlines for TOON format
-			escapedContent := bytes.ReplaceAll([]byte(entry.Response.Content.Text), []byte("\n"), []byte("\\n"))
-			fmt.Printf("response.content=%s\n", escapedContent)
-		}
 	}
+	fmt.Println("]")
 }
