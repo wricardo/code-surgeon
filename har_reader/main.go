@@ -12,8 +12,9 @@ import (
 
 // Define the structures for request and response
 type HarEntry struct {
-	Request  HarRequest  `json:"request"`
-	Response HarResponse `json:"response"`
+	Request      HarRequest  `json:"request"`
+	Response     HarResponse `json:"response"`
+	ResourceType string      `json:"_resourceType"`
 }
 
 type HarRequest struct {
@@ -59,7 +60,8 @@ func main() {
 	// Define flags for file path and prefix match
 	filePath := flag.String("file", "", "Path to the HAR file")
 	prefixMatch := flag.String("prefix", "", "URL prefix to match")
-	format := flag.String("format", "text", "Output format: text, json, json-small")
+	format := flag.String("format", "text", "Output format: text, json, json-small, jsonl, jsonl-small")
+	excludeType := flag.String("exclude-type", "", "Comma-separated resource types to exclude (e.g., script,stylesheet,image,fetch,document,other)")
 
 	// Parse command-line flags
 	flag.Parse()
@@ -84,12 +86,27 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Filter entries based on prefix
+	// Parse excluded types
+	var excludedTypes map[string]bool
+	if *excludeType != "" {
+		excludedTypes = make(map[string]bool)
+		for _, t := range strings.Split(*excludeType, ",") {
+			excludedTypes[strings.TrimSpace(t)] = true
+		}
+	}
+
+	// Filter entries based on prefix and excluded types
 	var filteredEntries []HarEntry
 	for _, entry := range harLog.Log.Entries {
-		if *prefixMatch == "" || strings.HasPrefix(entry.Request.URL, *prefixMatch) {
-			filteredEntries = append(filteredEntries, entry)
+		// Check prefix match
+		if *prefixMatch != "" && !strings.HasPrefix(entry.Request.URL, *prefixMatch) {
+			continue
 		}
+		// Check resource type exclusion
+		if excludedTypes != nil && excludedTypes[entry.ResourceType] {
+			continue
+		}
+		filteredEntries = append(filteredEntries, entry)
 	}
 
 	// Output based on format
