@@ -14,7 +14,6 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/sashabaranov/go-openai v1.30.0
 	github.com/stretchr/testify v1.9.0
-	github.com/toon-format/toon-go v0.0.0-20251202084852-7ca0e27c4e8c
 	github.com/urfave/cli/v2 v2.27.4
 	golang.org/x/mod v0.20.0
 	golang.org/x/tools v0.24.0
