@@ -1,0 +1,767 @@
+[
+  {
+    "modules": [
+      {
+        "root_module_name": "github.com/wricardo/stella",
+        "relative_directory": ".",
+        "full_name": "github.com/wricardo/stella",
+        "packages": [
+          {
+            "package": "main",
+            "module_name": "",
+            "imports": [
+              {
+                "name": "subpkg",
+                "path": "github.com/wricardo/stella/otherpkg"
+              },
+              {
+                "path": "github.com/wricardo/stella/otherpkg2"
+              },
+              {
+                "path": "fmt"
+              }
+            ],
+            "structs": [],
+            "functions": [
+              {
+                "name": "main",
+                "params": [],
+                "returns": [],
+                "docs": [],
+                "signature": "main()",
+                "body": "{\n\tp := subpkg.GetBestPerson()\n\t_ = otherpkg2.GetWorstPerson()\n\terr := subpkg.ValidatePerson(p)\n\tfmt.Println(err)\n}",
+                "definition": "func main()",
+                "is_exported": false,
+                "is_test": false,
+                "is_benchmark": false
+              }
+            ],
+            "variables": [],
+            "constants": [],
+            "interfaces": null
+          }
+        ]
+      }
+    ],
+    "packages": [
+      {
+        "package": "main",
+        "module_name": "",
+        "imports": [
+          {
+            "name": "subpkg",
+            "path": "github.com/wricardo/stella/otherpkg"
+          },
+          {
+            "path": "github.com/wricardo/stella/otherpkg2"
+          },
+          {
+            "path": "fmt"
+          }
+        ],
+        "structs": [],
+        "functions": [
+          {
+            "name": "main",
+            "params": [],
+            "returns": [],
+            "docs": [],
+            "signature": "main()",
+            "body": "{\n\tp := subpkg.GetBestPerson()\n\t_ = otherpkg2.GetWorstPerson()\n\terr := subpkg.ValidatePerson(p)\n\tfmt.Println(err)\n}",
+            "definition": "func main()",
+            "is_exported": false,
+            "is_test": false,
+            "is_benchmark": false
+          }
+        ],
+        "variables": [],
+        "constants": [],
+        "interfaces": null
+      }
+    ],
+    "directory": "/Users/wricardo/go/src/github.com/wricardo/stella",
+    "file": ""
+  },
+  {
+    "modules": [
+      {
+        "root_module_name": "github.com/wricardo/stella",
+        "relative_directory": "model",
+        "full_name": "github.com/wricardo/stella/model",
+        "packages": [
+          {
+            "package": "model",
+            "module_name": "",
+            "imports": null,
+            "structs": [
+              {
+                "name": "Person",
+                "fields": [
+                  {
+                    "name": "Name",
+                    "type": "string",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": "string",
+                      "TypeName": "string",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": true,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    },
+                    "private": false,
+                    "pointer": false,
+                    "slice": false,
+                    "docs": null
+                  },
+                  {
+                    "name": "Age",
+                    "type": "int",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": "int",
+                      "TypeName": "int",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": true,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    },
+                    "private": false,
+                    "pointer": false,
+                    "slice": false,
+                    "docs": null
+                  }
+                ],
+                "methods": [],
+                "docs": [],
+                "definition": "type Person struct {\n\tName string\n\tAge int\n}",
+                "is_exported": true
+              }
+            ],
+            "functions": [
+              {
+                "name": "NewPerson",
+                "params": [
+                  {
+                    "name": "name",
+                    "type": "string",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": "string",
+                      "TypeName": "string",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": true,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  },
+                  {
+                    "name": "age",
+                    "type": "int",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": "int",
+                      "TypeName": "int",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": true,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "returns": [
+                  {
+                    "name": "",
+                    "type": "*Person",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": null,
+                      "TypeName": "",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "docs": [],
+                "signature": "NewPerson(name string, age int) *Person",
+                "body": "{\n\treturn \u0026Person{Name: name, Age: age}\n}",
+                "definition": "func NewPerson(name string, age int) *Person",
+                "is_exported": true,
+                "is_test": false,
+                "is_benchmark": false
+              },
+              {
+                "name": "ClonePerson",
+                "params": [
+                  {
+                    "name": "p",
+                    "type": "Person",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": "model",
+                      "Type": "Person",
+                      "TypeName": "Person",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "returns": [
+                  {
+                    "name": "",
+                    "type": "Person",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": null,
+                      "TypeName": "",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "docs": [],
+                "signature": "ClonePerson(p Person) Person",
+                "body": "{\n\treturn Person{Name: p.Name, Age: p.Age}\n}",
+                "definition": "func ClonePerson(p Person) Person",
+                "is_exported": true,
+                "is_test": false,
+                "is_benchmark": false
+              }
+            ],
+            "variables": [],
+            "constants": [],
+            "interfaces": null
+          }
+        ]
+      }
+    ],
+    "packages": [
+      {
+        "package": "model",
+        "module_name": "",
+        "imports": null,
+        "structs": [
+          {
+            "name": "Person",
+            "fields": [
+              {
+                "name": "Name",
+                "type": "string",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": "string",
+                  "TypeName": "string",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": true,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                },
+                "private": false,
+                "pointer": false,
+                "slice": false,
+                "docs": null
+              },
+              {
+                "name": "Age",
+                "type": "int",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": "int",
+                  "TypeName": "int",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": true,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                },
+                "private": false,
+                "pointer": false,
+                "slice": false,
+                "docs": null
+              }
+            ],
+            "methods": [],
+            "docs": [],
+            "definition": "type Person struct {\n\tName string\n\tAge int\n}",
+            "is_exported": true
+          }
+        ],
+        "functions": [
+          {
+            "name": "NewPerson",
+            "params": [
+              {
+                "name": "name",
+                "type": "string",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": "string",
+                  "TypeName": "string",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": true,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              },
+              {
+                "name": "age",
+                "type": "int",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": "int",
+                  "TypeName": "int",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": true,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "*Person",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": null,
+                  "TypeName": "",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "docs": [],
+            "signature": "NewPerson(name string, age int) *Person",
+            "body": "{\n\treturn \u0026Person{Name: name, Age: age}\n}",
+            "definition": "func NewPerson(name string, age int) *Person",
+            "is_exported": true,
+            "is_test": false,
+            "is_benchmark": false
+          },
+          {
+            "name": "ClonePerson",
+            "params": [
+              {
+                "name": "p",
+                "type": "Person",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": "model",
+                  "Type": "Person",
+                  "TypeName": "Person",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "Person",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": null,
+                  "TypeName": "",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "docs": [],
+            "signature": "ClonePerson(p Person) Person",
+            "body": "{\n\treturn Person{Name: p.Name, Age: p.Age}\n}",
+            "definition": "func ClonePerson(p Person) Person",
+            "is_exported": true,
+            "is_test": false,
+            "is_benchmark": false
+          }
+        ],
+        "variables": [],
+        "constants": [],
+        "interfaces": null
+      }
+    ],
+    "directory": "/Users/wricardo/go/src/github.com/wricardo/stella/model",
+    "file": ""
+  },
+  {
+    "modules": [
+      {
+        "root_module_name": "github.com/wricardo/stella",
+        "relative_directory": "otherpkg",
+        "full_name": "github.com/wricardo/stella/otherpkg",
+        "packages": [
+          {
+            "package": "subpkg",
+            "module_name": "",
+            "imports": [
+              {
+                "path": "errors"
+              },
+              {
+                "path": "github.com/wricardo/stella/model"
+              }
+            ],
+            "structs": [],
+            "functions": [
+              {
+                "name": "GetBestPerson",
+                "params": [],
+                "returns": [
+                  {
+                    "name": "",
+                    "type": "model.Person",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": null,
+                      "TypeName": "",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "docs": [],
+                "signature": "GetBestPerson() model.Person",
+                "body": "{\n\treturn model.Person{Name: \"Alice\", Age: 30}\n}",
+                "definition": "func GetBestPerson() model.Person",
+                "is_exported": true,
+                "is_test": false,
+                "is_benchmark": false
+              },
+              {
+                "name": "ValidatePerson",
+                "params": [
+                  {
+                    "name": "p",
+                    "type": "model.Person",
+                    "type_details": {
+                      "Package": "github.com/wricardo/stella/model",
+                      "PackageName": "model",
+                      "Type": "Person",
+                      "TypeName": "model.Person",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": true,
+                      "TypeReferences": [
+                        {
+                          "Package": "github.com/wricardo/stella/model",
+                          "PackageName": "model",
+                          "Name": "Person"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "returns": [
+                  {
+                    "name": "",
+                    "type": "error",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": null,
+                      "TypeName": "",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "docs": [],
+                "signature": "ValidatePerson(p model.Person) error",
+                "body": "{\n\tif p.Name == \"\" {\n\t\treturn errors.New(\"name cannot be empty\")\n\t}\n\tif p.Age \u003c 0 {\n\t\treturn errors.New(\"age cannot be negative\")\n\t}\n\treturn nil\n}",
+                "definition": "func ValidatePerson(p model.Person) error",
+                "is_exported": true,
+                "is_test": false,
+                "is_benchmark": false
+              }
+            ],
+            "variables": [],
+            "constants": [],
+            "interfaces": null
+          }
+        ]
+      }
+    ],
+    "packages": [
+      {
+        "package": "subpkg",
+        "module_name": "",
+        "imports": [
+          {
+            "path": "errors"
+          },
+          {
+            "path": "github.com/wricardo/stella/model"
+          }
+        ],
+        "structs": [],
+        "functions": [
+          {
+            "name": "GetBestPerson",
+            "params": [],
+            "returns": [
+              {
+                "name": "",
+                "type": "model.Person",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": null,
+                  "TypeName": "",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "docs": [],
+            "signature": "GetBestPerson() model.Person",
+            "body": "{\n\treturn model.Person{Name: \"Alice\", Age: 30}\n}",
+            "definition": "func GetBestPerson() model.Person",
+            "is_exported": true,
+            "is_test": false,
+            "is_benchmark": false
+          },
+          {
+            "name": "ValidatePerson",
+            "params": [
+              {
+                "name": "p",
+                "type": "model.Person",
+                "type_details": {
+                  "Package": "github.com/wricardo/stella/model",
+                  "PackageName": "model",
+                  "Type": "Person",
+                  "TypeName": "model.Person",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": true,
+                  "TypeReferences": [
+                    {
+                      "Package": "github.com/wricardo/stella/model",
+                      "PackageName": "model",
+                      "Name": "Person"
+                    }
+                  ]
+                }
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "error",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": null,
+                  "TypeName": "",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "docs": [],
+            "signature": "ValidatePerson(p model.Person) error",
+            "body": "{\n\tif p.Name == \"\" {\n\t\treturn errors.New(\"name cannot be empty\")\n\t}\n\tif p.Age \u003c 0 {\n\t\treturn errors.New(\"age cannot be negative\")\n\t}\n\treturn nil\n}",
+            "definition": "func ValidatePerson(p model.Person) error",
+            "is_exported": true,
+            "is_test": false,
+            "is_benchmark": false
+          }
+        ],
+        "variables": [],
+        "constants": [],
+        "interfaces": null
+      }
+    ],
+    "directory": "/Users/wricardo/go/src/github.com/wricardo/stella/otherpkg",
+    "file": ""
+  },
+  {
+    "modules": [
+      {
+        "root_module_name": "github.com/wricardo/stella",
+        "relative_directory": "otherpkg2",
+        "full_name": "github.com/wricardo/stella/otherpkg2",
+        "packages": [
+          {
+            "package": "otherpkg2",
+            "module_name": "",
+            "imports": [
+              {
+                "path": "github.com/wricardo/stella/model"
+              }
+            ],
+            "structs": [],
+            "functions": [
+              {
+                "name": "GetWorstPerson",
+                "params": [],
+                "returns": [
+                  {
+                    "name": "",
+                    "type": "model.Person",
+                    "type_details": {
+                      "Package": null,
+                      "PackageName": null,
+                      "Type": null,
+                      "TypeName": "",
+                      "IsPointer": false,
+                      "IsSlice": false,
+                      "IsMap": false,
+                      "IsBuiltin": false,
+                      "IsExternal": false,
+                      "TypeReferences": null
+                    }
+                  }
+                ],
+                "docs": [],
+                "signature": "GetWorstPerson() model.Person",
+                "body": "{\n\treturn model.Person{Name: \"Bob\", Age: 25}\n}",
+                "definition": "func GetWorstPerson() model.Person",
+                "is_exported": true,
+                "is_test": false,
+                "is_benchmark": false
+              }
+            ],
+            "variables": [],
+            "constants": [],
+            "interfaces": null
+          }
+        ]
+      }
+    ],
+    "packages": [
+      {
+        "package": "otherpkg2",
+        "module_name": "",
+        "imports": [
+          {
+            "path": "github.com/wricardo/stella/model"
+          }
+        ],
+        "structs": [],
+        "functions": [
+          {
+            "name": "GetWorstPerson",
+            "params": [],
+            "returns": [
+              {
+                "name": "",
+                "type": "model.Person",
+                "type_details": {
+                  "Package": null,
+                  "PackageName": null,
+                  "Type": null,
+                  "TypeName": "",
+                  "IsPointer": false,
+                  "IsSlice": false,
+                  "IsMap": false,
+                  "IsBuiltin": false,
+                  "IsExternal": false,
+                  "TypeReferences": null
+                }
+              }
+            ],
+            "docs": [],
+            "signature": "GetWorstPerson() model.Person",
+            "body": "{\n\treturn model.Person{Name: \"Bob\", Age: 25}\n}",
+            "definition": "func GetWorstPerson() model.Person",
+            "is_exported": true,
+            "is_test": false,
+            "is_benchmark": false
+          }
+        ],
+        "variables": [],
+        "constants": [],
+        "interfaces": null
+      }
+    ],
+    "directory": "/Users/wricardo/go/src/github.com/wricardo/stella/otherpkg2",
+    "file": ""
+  },
+  {
+    "modules": [
+      {
+        "root_module_name": "github.com/wricardo/stella",
+        "relative_directory": "subpkg",
+        "full_name": "github.com/wricardo/stella/subpkg",
+        "packages": []
+      }
+    ],
+    "packages": [],
+    "directory": "/Users/wricardo/go/src/github.com/wricardo/stella/subpkg",
+    "file": ""
+  }
+]

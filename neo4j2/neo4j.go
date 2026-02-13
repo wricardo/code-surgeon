@@ -89,13 +89,14 @@ func UpsertStruct(ctx context.Context, session neo4j.SessionWithContext, mod cod
 }
 
 // Helper function to merge a Field node
-func MergeField(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, field codesurgeon.Field) MergeQuery {
+func MergeField(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) MergeQuery {
 	return MergeQuery{
 		NodeType: "Field",
 		Alias:    alias,
 		Properties: map[string]any{
-			"name":    field.Name,
-			"package": pkg.Package,
+			"name":       field.Name,
+			"package":    pkg.Package,
+			"structName": strct.Name,
 		},
 		SetFields: map[string]string{
 			"documentation":   strings.Join(field.Docs, "\n"),
@@ -257,7 +258,7 @@ func isBuiltinType(typeName string) bool {
 // UpsertStructField creates or updates a field node in Neo4j and links it to its struct and package.
 func UpsertStructField(ctx context.Context, session neo4j.SessionWithContext, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct, field codesurgeon.Field) error {
 	query := CypherQuery{}.
-		Merge(MergeField(ctx, "f", mod, pkg, field)).
+		Merge(MergeField(ctx, "f", mod, pkg, strct, field)).
 		Merge(MergeType(ctx, "t", field.Type, field.TypeDetails)).
 		Merge(MergeBaseType(ctx, "b", field.Type, pkg.Package, mod.FullName, field.TypeDetails)).
 		Merge(MergeStruct(ctx, "s", mod, pkg, strct)).

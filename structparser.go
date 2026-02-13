@@ -43,12 +43,12 @@ type Module struct {
 type Package struct {
 	Package    string      `json:"package"`     // Name of the package as seen in the package declaration (e.g., "main")
 	ModuleName string      `json:"module_name"` // Name of the module as seen in the go.mod file
-	Imports    []Import    `json:"imports,omitemity"`
-	Structs    []Struct    `json:"structs,omitemity"`
-	Functions  []Function  `json:"functions,omitemity"`
-	Variables  []Variable  `json:"variables,omitemity"`
-	Constants  []Constant  `json:"constants,omitemity"`
-	Interfaces []Interface `json:"interfaces,omitemity"`
+	Imports    []Import    `json:"imports,omitempty"`
+	Structs    []Struct    `json:"structs,omitempty"`
+	Functions  []Function  `json:"functions,omitempty"`
+	Variables  []Variable  `json:"variables,omitempty"`
+	Constants  []Constant  `json:"constants,omitempty"`
+	Interfaces []Interface `json:"interfaces,omitempty"`
 
 	PtrModule *Module `json:"-"` // Pointer to the module that this package belongs to
 }
@@ -63,8 +63,8 @@ type Import struct {
 // Interface represents a Go interface and its methods.
 type Interface struct {
 	Name       string   `json:"name"`
-	Methods    []Method `json:"methods,omitemity"`
-	Docs       []string `json:"docs,omitemity"`
+	Methods    []Method `json:"methods,omitempty"`
+	Docs       []string `json:"docs,omitempty"`
 	Definition string   `json:"definition,omitempty"` // Full Go code definition of the interface
 	IsExported bool     `json:"is_exported"`          // Whether the interface is exported (public)
 
@@ -74,9 +74,9 @@ type Interface struct {
 // Struct represents a Go struct and its fields and methods.
 type Struct struct {
 	Name       string   `json:"name"`
-	Fields     []Field  `json:"fields,omitemity"`
-	Methods    []Method `json:"methods,omitemity"`
-	Docs       []string `json:"docs,omitemity"`
+	Fields     []Field  `json:"fields,omitempty"`
+	Methods    []Method `json:"methods,omitempty"`
+	Docs       []string `json:"docs,omitempty"`
 	Definition string   `json:"definition,omitempty"` // Full Go code definition of the struct
 	IsExported bool     `json:"is_exported"`          // Whether the struct is exported (public)
 
@@ -87,9 +87,9 @@ type Struct struct {
 type Method struct {
 	Receiver    string   `json:"receiver,omitempty"` // Receiver type (e.g., "*MyStruct" or "MyStruct")
 	Name        string   `json:"name"`
-	Params      []Param  `json:"params,omitemity"`
-	Returns     []Param  `json:"returns,omitemity"`
-	Docs        []string `json:"docs,omitemity"`
+	Params      []Param  `json:"params,omitempty"`
+	Returns     []Param  `json:"returns,omitempty"`
+	Docs        []string `json:"docs,omitempty"`
 	Signature   string   `json:"signature"`
 	Body        string   `json:"body,omitempty"`       // New field for method body
 	Definition  string   `json:"definition,omitempty"` // Full Go code definition of the method
@@ -103,9 +103,9 @@ type Method struct {
 // Function represents a Go function with its parameters, return types, and documentation.
 type Function struct {
 	Name        string   `json:"name"`
-	Params      []Param  `json:"params,omitemity"`
-	Returns     []Param  `json:"returns,omitemity"`
-	Docs        []string `json:"docs,omitemity"`
+	Params      []Param  `json:"params,omitempty"`
+	Returns     []Param  `json:"returns,omitempty"`
+	Docs        []string `json:"docs,omitempty"`
 	Signature   string   `json:"signature"`
 	Body        string   `json:"body,omitempty"`       // New field for function body
 	Definition  string   `json:"definition,omitempty"` // Full Go code definition of the function
@@ -138,7 +138,7 @@ type Field struct {
 	Private     bool        `json:"private"`
 	Pointer     bool        `json:"pointer"`
 	Slice       bool        `json:"slice"`
-	Docs        []string    `json:"docs,omitemity"`
+	Docs        []string    `json:"docs,omitempty"`
 	Comment     string      `json:"comment,omitempty"`
 
 	PtrStruct *Struct `json:"-"` // Pointer to the struct that this field belongs to
@@ -168,14 +168,14 @@ type TypeReference struct {
 type Variable struct {
 	Name string   `json:"name"`
 	Type string   `json:"type"`
-	Docs []string `json:"docs,omitemity"`
+	Docs []string `json:"docs,omitempty"`
 }
 
 // Constant represents a constant in a Go package.
 type Constant struct {
 	Name  string   `json:"name"`
 	Value string   `json:"value"`
-	Docs  []string `json:"docs,omitemity"`
+	Docs  []string `json:"docs,omitempty"`
 }
 
 // ParseFile parses a Go file or directory and returns the parsed information.

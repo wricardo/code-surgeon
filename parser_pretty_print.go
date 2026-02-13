@@ -9,18 +9,54 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// omitNullsFromJSON recursively removes null and empty values from JSON data
+func omitNullsFromJSON(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, val := range v {
+			cleaned := omitNullsFromJSON(val)
+			// Only include non-nil values
+			if cleaned != nil {
+				result[key] = cleaned
+			}
+		}
+		return result
+	case []interface{}:
+		if len(v) == 0 {
+			return nil // Omit empty slices
+		}
+		result := make([]interface{}, 0, len(v))
+		for _, item := range v {
+			cleaned := omitNullsFromJSON(item)
+			if cleaned != nil {
+				result = append(result, cleaned)
+			}
+		}
+		if len(result) == 0 {
+			return nil
+		}
+		return result
+	case nil:
+		return nil
+	default:
+		return v
+	}
+}
+
 func PrettyPrint(
 	parsed []*ParsedInfo,
 	mode string,
 	ignoreRules []string,
 	plainStructs, fieldsPlainStructs, structsWithMethod, fieldsStructsWithMethod, methods, functions, tags bool,
 	comments bool,
+	omitNulls bool,
 ) string {
 	var sb strings.Builder
 
 	switch mode {
 	case "json":
-		return prettyPrintJSON(parsed)
+		return prettyPrintJSON(parsed, omitNulls)
 	case "grepindex":
 		return prettyPrintGrepIndex(parsed, ignoreRules, &sb)
 	case "llm":
@@ -34,8 +70,26 @@ func PrettyPrint(
 	}
 }
 
-func prettyPrintJSON(parsed []*ParsedInfo) string {
-	pretty, err := json.MarshalIndent(parsed, "", "  ")
+func prettyPrintJSON(parsed []*ParsedInfo, omitNulls bool) string {
+	var data interface{} = parsed
+
+	if omitNulls {
+		// Marshal to JSON then unmarshal to get a map structure we can filter
+		jsonBytes, err := json.MarshalIndent(parsed, "", "  ")
+		if err != nil {
+			return fmt.Sprintf("Error: %v", err)
+		}
+
+		var jsonData interface{}
+		if err := json.Unmarshal(jsonBytes, &jsonData); err != nil {
+			return fmt.Sprintf("Error: %v", err)
+		}
+
+		// Filter out nulls and empty values
+		data = omitNullsFromJSON(jsonData)
+	}
+
+	pretty, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return fmt.Sprintf("Error: %v", err)
 	}

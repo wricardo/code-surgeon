@@ -219,6 +219,11 @@ func main() {
 						Usage: "format to print the parsed information: llm, text_short, test_long, json",
 					},
 					&cli.BoolFlag{
+						Name:  "omit-nulls",
+						Usage: "omit null and empty values from JSON output",
+						Value: false,
+					},
+					&cli.BoolFlag{
 						Name:  "plain-structs",
 						Usage: "print plain structs",
 						Value: true,
@@ -275,14 +280,14 @@ func main() {
 							log.Fatal().Err(err).Msg("Failed to parse directory")
 						}
 
-						fmt.Println(codesurgeon.PrettyPrint(parsed, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments")))
+						fmt.Println(codesurgeon.PrettyPrint(parsed, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments"), cCtx.Bool("omit-nulls")))
 
 					} else {
 						parsed, err := codesurgeon.ParseDirectoryWithFilter(path, nil)
 						if err != nil {
 							log.Fatal().Err(err).Msg("Failed to parse directory")
 						}
-						fmt.Println(codesurgeon.PrettyPrint([]*codesurgeon.ParsedInfo{parsed}, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments")))
+						fmt.Println(codesurgeon.PrettyPrint([]*codesurgeon.ParsedInfo{parsed}, cCtx.String("format"), ignores, cCtx.Bool("plain-structs"), cCtx.Bool("fields-plain-structs"), cCtx.Bool("structs-with-method"), cCtx.Bool("fields-structs-with-method"), cCtx.Bool("methods"), cCtx.Bool("functions"), cCtx.Bool("tags"), cCtx.Bool("comments"), cCtx.Bool("omit-nulls")))
 					}
 					return nil
 				},
