@@ -100,10 +100,12 @@ func main() {
 		outputJSON(filteredEntries, false)
 	case "jsonl":
 		outputJSONL(filteredEntries)
+	case "jsonl-small":
+		outputJSONLSmall(filteredEntries)
 	case "text":
 		outputText(filteredEntries)
 	default:
-		log.Fatalf("Unknown format: %s (supported: text, json, json-small, jsonl)", *format)
+		log.Fatalf("Unknown format: %s (supported: text, json, json-small, jsonl, jsonl-small)", *format)
 	}
 }
 
@@ -190,6 +192,17 @@ func simplifyEntries(entries []HarEntry) []map[string]interface{} {
 func outputJSONL(entries []HarEntry) {
 	for _, entry := range entries {
 		output, err := json.Marshal(entry)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(output))
+	}
+}
+
+func outputJSONLSmall(entries []HarEntry) {
+	simplified := simplifyEntries(entries)
+	for _, item := range simplified {
+		output, err := json.Marshal(item)
 		if err != nil {
 			log.Fatal(err)
 		}
