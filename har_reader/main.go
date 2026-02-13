@@ -135,6 +135,13 @@ func outputText(entries []HarEntry) {
 	}
 }
 
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 func outputJSON(entries []HarEntry, pretty bool) {
 	var output []byte
 	var err error
@@ -142,7 +149,9 @@ func outputJSON(entries []HarEntry, pretty bool) {
 	if pretty {
 		output, err = json.MarshalIndent(entries, "", "  ")
 	} else {
-		output, err = json.Marshal(entries)
+		// For json-small, use simplified format with only essential fields
+		simplified := simplifyEntries(entries)
+		output, err = json.Marshal(simplified)
 	}
 
 	if err != nil {
@@ -150,6 +159,32 @@ func outputJSON(entries []HarEntry, pretty bool) {
 	}
 
 	fmt.Println(string(output))
+}
+
+func simplifyEntries(entries []HarEntry) []map[string]interface{} {
+	simplified := make([]map[string]interface{}, 0, len(entries))
+
+	for _, entry := range entries {
+		item := map[string]interface{}{
+			"method": entry.Request.Method,
+			"url":    entry.Request.URL,
+			"status": entry.Response.Status,
+		}
+
+		// Add request body if present, truncated to 100 chars
+		if entry.Request.PostData != nil && entry.Request.PostData.Text != "" {
+			item["request_body"] = truncateString(entry.Request.PostData.Text, 100)
+		}
+
+		// Add response content if present, truncated to 100 chars
+		if entry.Response.Content.Text != "" {
+			item["response_body"] = truncateString(entry.Response.Content.Text, 100)
+		}
+
+		simplified = append(simplified, item)
+	}
+
+	return simplified
 }
 
 func outputJSONL(entries []HarEntry) {
