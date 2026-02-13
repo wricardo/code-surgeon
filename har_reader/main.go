@@ -185,9 +185,11 @@ func simplifyEntries(entries []HarEntry) []map[string]interface{} {
 
 	for _, entry := range entries {
 		item := map[string]interface{}{
-			"method": entry.Request.Method,
-			"url":    entry.Request.URL,
-			"status": entry.Response.Status,
+			"method":              entry.Request.Method,
+			"url":                 entry.Request.URL,
+			"status":              entry.Response.Status,
+			"request_bytes":       entry.Request.BodySize,
+			"response_bytes":      entry.Response.BodySize,
 		}
 
 		// Add request body if present, truncated to 100 chars
