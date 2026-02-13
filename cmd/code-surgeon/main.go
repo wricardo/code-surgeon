@@ -1,3 +1,6 @@
+// Package main implements the code-surgeon CLI tool.
+// Code-surgeon is a multi-purpose Go development tool that combines code analysis,
+// AST parsing, and Neo4j graph database integration for code structure exploration.
 package main
 
 import (

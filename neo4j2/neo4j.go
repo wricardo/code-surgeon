@@ -1,3 +1,7 @@
+// Package neo4j2 provides Neo4j graph database integration for storing and querying Go code structures.
+// It converts parsed Go code (packages, functions, structs, methods, etc.) into a graph model
+// and provides operations for upserting code elements, querying relationships, schema management,
+// and generating embeddings for semantic search.
 package neo4j2
 
 import (
@@ -13,6 +17,8 @@ import (
 	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
+// MergePackage creates a MergeQuery for a Package node with properties linking it to its module.
+// The alias parameter specifies the Cypher query alias for this node.
 func MergePackage(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package) MergeQuery {
 	return MergeQuery{
 		NodeType: "Package",
@@ -25,6 +31,8 @@ func MergePackage(ctx context.Context, alias string, mod codesurgeon.Module, pkg
 	}
 }
 
+// MergeStruct creates a MergeQuery for a Struct node including its documentation and definition.
+// The struct is linked to its package and module via properties.
 func MergeStruct(ctx context.Context, alias string, mod codesurgeon.Module, pkg codesurgeon.Package, strct codesurgeon.Struct) MergeQuery {
 	return MergeQuery{
 		NodeType: "Struct",
@@ -43,6 +51,7 @@ func MergeStruct(ctx context.Context, alias string, mod codesurgeon.Module, pkg 
 	}
 }
 
+// MergeModule creates a MergeQuery for a Module node representing a Go module.
 func MergeModule(ctx context.Context, alias string, mod codesurgeon.Module) MergeQuery {
 	return MergeQuery{
 		NodeType: "Module",
@@ -620,6 +629,8 @@ func toFloat64(v interface{}) float64 {
 	return f
 }
 
+// QueryNeo4J executes a Cypher query against the Neo4j database and returns the results.
+// Parameters can be passed via the params map for parameterized queries.
 func QueryNeo4J(ctx context.Context, driver neo4j.DriverWithContext, query string, params map[string]interface{}) ([][]interface{}, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)
@@ -642,6 +653,9 @@ func QueryNeo4J(ctx context.Context, driver neo4j.DriverWithContext, query strin
 	return results, nil
 }
 
+// Connect establishes a connection to a Neo4j database and returns a driver and close function.
+// It verifies connectivity before returning. The close function should be called when done
+// to properly close the driver connection.
 func Connect(ctx context.Context, uri, user, password string) (neo4j.DriverWithContext, func(), error) {
 	driver, err := neo4j.NewDriverWithContext(
 		uri,
@@ -665,6 +679,8 @@ func Connect(ctx context.Context, uri, user, password string) (neo4j.DriverWithC
 	return driver, closefn, nil
 }
 
+// ClearAll deletes all nodes and relationships from the Neo4j database.
+// This is a destructive operation that clears the entire graph.
 func ClearAll(ctx context.Context, driver neo4j.DriverWithContext) error {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
 	defer session.Close(ctx)

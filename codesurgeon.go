@@ -35,6 +35,9 @@ type (
 	}
 )
 
+// ApplyFileChanges applies a set of code changes to multiple files.
+// It creates directories and files as needed, then inserts or updates code fragments
+// in each target file. Changes are grouped by file path before being applied.
 func ApplyFileChanges(changes []FileChange) error {
 	// Group changes by file
 	implementationsMap := make(map[string][]CodeFragment)
@@ -58,6 +61,9 @@ func ApplyFileChanges(changes []FileChange) error {
 	return InsertCodeFragments(implementationsMap)
 }
 
+// InsertCodeFragments inserts or updates code fragments in Go files.
+// It parses each file, applies code changes using AST manipulation, and writes the
+// modified files back. If Overwrite is true, existing declarations are replaced.
 func InsertCodeFragments(implementationsMap map[string][]CodeFragment) error {
 	// Apply changes to each file
 	for file, fragments := range implementationsMap {
@@ -116,11 +122,15 @@ func MustRenderTemplate(tmpl string, data interface{}) string {
 	return buf.String()
 }
 
+// RenderTemplateNoError renders a Go template with the given data, ignoring any errors.
+// Use this when you're certain the template is valid and want simpler error handling.
 func RenderTemplateNoError(tmpl string, data interface{}) string {
 	res, _ := RenderTemplate(tmpl, data)
 	return res
 }
 
+// RenderTemplate renders a Go template string with the provided data.
+// Returns the rendered string or an error if the template is invalid or execution fails.
 func RenderTemplate(tmpl string, data interface{}) (string, error) {
 	t, err := template.New("tpl").Parse(tmpl)
 	if err != nil {
@@ -307,6 +317,8 @@ func renderModifiedNode(fset *token.FileSet, node ast.Node) (string, error) {
 	return buf.String(), nil
 }
 
+// ToSnakeCase converts a camelCase or PascalCase string to snake_case.
+// It inserts underscores before uppercase letters (except the first character).
 func ToSnakeCase(s string) string {
 	var result []rune
 	for i, c := range s {

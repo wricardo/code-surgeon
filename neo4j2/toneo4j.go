@@ -14,6 +14,11 @@ import (
 	codesurgeon "github.com/wricardo/code-surgeon"
 )
 
+// ToNeo4j parses Go code at the specified path and stores it in a Neo4j database.
+// It uses MERGE operations and does NOT erase existing Neo4j data. The path parameter
+// specifies the Go module or package path to parse. If recursive is true, it parses
+// all subdirectories. The deep flag enables detailed function body analysis.
+// Connection parameters are read from myEnv with defaults to localhost:7687.
 func ToNeo4j(ctx context.Context, path string, deep bool, myEnv map[string]string, recursive bool) error {
 	// Use hardcoded defaults if not in env
 	neo4jDbUri := "neo4j://localhost:7687"
