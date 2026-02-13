@@ -1,3 +1,6 @@
+// Package ai provides unified AI integration with OpenAI and Anthropic APIs.
+// It uses instructor-go for type-safe structured outputs and supports operations
+// like question answering, cypher query generation, embeddings, and problem analysis.
 package ai
 
 import (
@@ -16,7 +19,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
 	codesurgeon "github.com/wricardo/code-surgeon"
-	"github.com/wricardo/code-surgeon/neo4j2"
 )
 
 // ThinkThroughProblemRequest represents a request to think through a problem
@@ -41,6 +43,10 @@ type QuestionAnswer struct {
 	Answer   string
 }
 
+// ThinkThroughProblem uses AI to analyze a problem statement and answer related questions.
+// It takes a request with context, problem statement, and questions, along with optional
+// similar question-answer pairs for reference. Returns answers, observations, and the provided
+// similar questions for context.
 func ThinkThroughProblem(client *instructor.InstructorOpenAI, req *ThinkThroughProblemRequest, similarQuestionsAnswers []*QuestionAnswer) (res *ThinkThroughProblemResponse, err error) {
 	type InternalQuestionAnswer struct {
 		Question string `json:"question" jsonschema:"title=question,description=the question asked by the user."`
@@ -98,6 +104,9 @@ func ThinkThroughProblem(client *instructor.InstructorOpenAI, req *ThinkThroughP
 	return &finalRes, nil
 }
 
+// GetGPTInstructions generates AI assistant instructions from an OpenAPI specification.
+// It extracts available actions from the OpenAPI definition and returns a formatted
+// instruction string for configuring an AI assistant's behavior.
 func GetGPTInstructions(openapi string) (string, error) {
 	actions, err := getActionsFromOpenApiDev(openapi)
 	if err != nil {
@@ -114,6 +123,8 @@ Let's have a conversation and whenever I tell you to MSG:<something>, you call t
 `, m)
 }
 
+// GetGPTIntroduction generates an introduction message for an AI assistant based on an OpenAPI specification.
+// It creates a friendly greeting that includes available actions extracted from the OpenAPI definition.
 func GetGPTIntroduction(openapiDef string) (string, error) {
 	actions, err := getActionsFromOpenApiDev(openapiDef)
 	if err != nil {
@@ -234,6 +245,9 @@ func EmbedText(client *openai.Client, text string) ([]float32, error) {
 	return resp.Data[0].Embedding, nil
 }
 
+// GenerateCypher uses AI to generate a Cypher query based on a natural language request.
+// It takes a question or description and returns a Neo4j Cypher query string that
+// can be executed against a Neo4j database.
 func GenerateCypher(client *instructor.InstructorOpenAI, ask string) (string, error) {
 	type AiOutput struct {
 		Cypher string `json:"cypher" jsonschema:"title=cypher,description=the cypher query to be executed on the neo4j database."`
@@ -268,7 +282,10 @@ func GenerateCypher(client *instructor.InstructorOpenAI, ask string) (string, er
 	return aiOut.Cypher, nil
 }
 
-func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, questionsAnswers []neo4j2.QuestionAnswer) (string, error) {
+// GenerateFinalAnswer synthesizes an answer to a question based on previous question-answer pairs.
+// It uses recent Q&A context to provide factually grounded responses. The questionsAnswers slice
+// is reversed internally to prioritize the most recent information.
+func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, questionsAnswers []QuestionAnswer) (string, error) {
 	// Create a struct to capture the AI's response
 	type AiOutput struct {
 		FinalAnswer string `json:"final_answer" jsonschema:"title=final_answer,description=the final answer to the user's question."`
@@ -332,6 +349,9 @@ func GenerateFinalAnswer(client *instructor.InstructorOpenAI, question string, q
 	return aiOut.FinalAnswer, nil
 }
 
+// GetInstructor initializes and returns a configured InstructorOpenAI client.
+// It reads the OPENAI_API_KEY from the environment file and configures the client
+// with JSON mode and 3 retry attempts. Panics if the API key is not found.
 func GetInstructor() *instructor.InstructorOpenAI {
 	var myEnv map[string]string
 	myEnv, err := godotenv.Read()
@@ -352,6 +372,8 @@ func GetInstructor() *instructor.InstructorOpenAI {
 	return instructorClient
 }
 
+// ParseQuestions uses AI to extract individual questions from a string containing multiple questions.
+// It takes a raw string with one or more questions and returns a slice of parsed question strings.
 func ParseQuestions(questions string) ([]string, error) {
 
 	type AiOutput struct {
