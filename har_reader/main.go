@@ -98,10 +98,12 @@ func main() {
 		outputJSON(filteredEntries, true)
 	case "json-small":
 		outputJSON(filteredEntries, false)
+	case "jsonl":
+		outputJSONL(filteredEntries)
 	case "text":
 		outputText(filteredEntries)
 	default:
-		log.Fatalf("Unknown format: %s (supported: text, json, json-small)", *format)
+		log.Fatalf("Unknown format: %s (supported: text, json, json-small, jsonl)", *format)
 	}
 }
 
@@ -148,4 +150,14 @@ func outputJSON(entries []HarEntry, pretty bool) {
 	}
 
 	fmt.Println(string(output))
+}
+
+func outputJSONL(entries []HarEntry) {
+	for _, entry := range entries {
+		output, err := json.Marshal(entry)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(output))
+	}
 }
