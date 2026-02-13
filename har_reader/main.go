@@ -14,39 +14,39 @@ import (
 
 // Define the structures for request and response
 type HarEntry struct {
-	Request  HarRequest  `json:"request"`
-	Response HarResponse `json:"response"`
+	Request  HarRequest  `json:"request" toon:"request"`
+	Response HarResponse `json:"response" toon:"response"`
 }
 
 type HarRequest struct {
-	Method   string    `json:"method"`
-	URL      string    `json:"url"`
-	Headers  []Header  `json:"headers"`
-	BodySize int       `json:"bodySize"`
-	PostData *PostData `json:"postData"`
+	Method   string    `json:"method" toon:"method"`
+	URL      string    `json:"url" toon:"url"`
+	Headers  []Header  `json:"headers" toon:"headers"`
+	BodySize int       `json:"bodySize" toon:"bodySize"`
+	PostData *PostData `json:"postData" toon:"postData"`
 }
 
 type Header struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name  string `json:"name" toon:"name"`
+	Value string `json:"value" toon:"value"`
 }
 
 type PostData struct {
-	MimeType string `json:"mimeType"`
-	Text     string `json:"text"`
+	MimeType string `json:"mimeType" toon:"mimeType"`
+	Text     string `json:"text" toon:"text"`
 }
 
 type HarResponse struct {
-	Status   int             `json:"status"`
-	Headers  []Header        `json:"headers"`
-	BodySize int             `json:"bodySize"`
-	Content  ResponseContent `json:"content"`
+	Status   int             `json:"status" toon:"status"`
+	Headers  []Header        `json:"headers" toon:"headers"`
+	BodySize int             `json:"bodySize" toon:"bodySize"`
+	Content  ResponseContent `json:"content" toon:"content"`
 }
 
 type ResponseContent struct {
-	Size     int    `json:"size"`
-	MimeType string `json:"mimeType"`
-	Text     string `json:"text"`
+	Size     int    `json:"size" toon:"size"`
+	MimeType string `json:"mimeType" toon:"mimeType"`
+	Text     string `json:"text" toon:"text"`
 }
 
 type HarLog struct {
@@ -156,8 +156,25 @@ func outputJSON(entries []HarEntry, pretty bool) {
 
 // outputToon outputs in TOON format using the toon-go library
 func outputToon(entries []HarEntry) {
-	// Convert entries to TOON format with pretty printing
-	toonStr, err := toon.MarshalString(entries, toon.WithIndent(2))
+	// Clean up entries to reduce size: remove empty fields and null values
+	cleanedEntries := make([]HarEntry, 0, len(entries))
+	for _, entry := range entries {
+		cleaned := entry
+		// Remove empty headers
+		if len(cleaned.Request.Headers) == 0 {
+			cleaned.Request.Headers = nil
+		}
+		if len(cleaned.Response.Headers) == 0 {
+			cleaned.Response.Headers = nil
+		}
+		cleanedEntries = append(cleanedEntries, cleaned)
+	}
+
+	// Convert entries to TOON format with length markers, 0 indent for compactness
+	toonStr, err := toon.MarshalString(cleanedEntries,
+		toon.WithLengthMarkers(true),
+		toon.WithIndent(0),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
