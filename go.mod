@@ -7,7 +7,6 @@ toolchain go1.24.4
 require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Knetic/govaluate v3.0.0+incompatible
-	github.com/davecgh/go-spew v1.1.1
 	github.com/google/uuid v1.6.0
 	github.com/instructor-ai/instructor-go v0.0.0-20240827181533-b63ca60f159b
 	github.com/joho/godotenv v1.5.1
@@ -15,6 +14,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/sashabaranov/go-openai v1.30.0
 	github.com/stretchr/testify v1.9.0
+	github.com/toon-format/toon-go v0.0.0-20251202084852-7ca0e27c4e8c
 	github.com/urfave/cli/v2 v2.27.4
 	golang.org/x/mod v0.20.0
 	golang.org/x/tools v0.24.0
@@ -25,6 +25,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cohere-ai/cohere-go/v2 v2.8.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect

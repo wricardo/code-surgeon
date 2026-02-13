@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/toon-format/toon-go"
 )
 
 // Define the structures for request and response
@@ -152,46 +154,13 @@ func outputJSON(entries []HarEntry, pretty bool) {
 	fmt.Println(string(output))
 }
 
-// outputToon outputs in TOON format (array of objects with = instead of :)
+// outputToon outputs in TOON format using the toon-go library
 func outputToon(entries []HarEntry) {
-	fmt.Println("[")
-	for i, entry := range entries {
-		fmt.Println("  {")
-		fmt.Printf("    request = {\n")
-		fmt.Printf("      method = %q\n", entry.Request.Method)
-		fmt.Printf("      url = %q\n", entry.Request.URL)
-		if len(entry.Request.Headers) > 0 {
-			fmt.Printf("      headers = [\n")
-			for _, h := range entry.Request.Headers {
-				fmt.Printf("        { name = %q, value = %q }\n", h.Name, h.Value)
-			}
-			fmt.Printf("      ]\n")
-		}
-		if entry.Request.PostData != nil && entry.Request.PostData.Text != "" {
-			fmt.Printf("      postData = %q\n", entry.Request.PostData.Text)
-		}
-		fmt.Printf("    }\n")
-
-		fmt.Printf("    response = {\n")
-		fmt.Printf("      status = %d\n", entry.Response.Status)
-		if len(entry.Response.Headers) > 0 {
-			fmt.Printf("      headers = [\n")
-			for _, h := range entry.Response.Headers {
-				fmt.Printf("        { name = %q, value = %q }\n", h.Name, h.Value)
-			}
-			fmt.Printf("      ]\n")
-		}
-		if entry.Response.Content.Text != "" {
-			fmt.Printf("      content = %q\n", entry.Response.Content.Text)
-		}
-		fmt.Printf("    }\n")
-
-		fmt.Print("  }")
-		if i < len(entries)-1 {
-			fmt.Println(",")
-		} else {
-			fmt.Println()
-		}
+	// Convert entries to TOON format with pretty printing
+	toonStr, err := toon.MarshalString(entries, toon.WithIndent(2))
+	if err != nil {
+		log.Fatal(err)
 	}
-	fmt.Println("]")
+
+	fmt.Println(toonStr)
 }
