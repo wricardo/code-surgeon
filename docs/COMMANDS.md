@@ -143,6 +143,14 @@ code-surgeon document-functions --receiver Parser
 code-surgeon document-functions --overwrite
 ```
 
+## Agent Skill
+
+```bash
+code-surgeon install-skill                 # writes ~/.claude/skills/code-surgeon/SKILL.md
+code-surgeon install-skill --dir DIR       # write DIR/SKILL.md instead (e.g. for another agent's skills folder)
+```
+Installs the user manual that teaches Claude Code when and how to use `parse`, `list-tests`, `describe-test` and the `graph` commands (which command answers which question, recipes, pitfalls, limits). The skill is embedded in the binary (`cmd/code-surgeon/skill/SKILL.md`), so re-running the command after upgrading code-surgeon updates it; an existing file is overwritten. It prints `skill installed at <path>` or `skill updated at <path>`.
+
 ## Embedded Code Graph Commands
 
 `graph` builds a type-checked code graph with `go/packages` and stores it in a single bbolt file (default `.codesurgeon/graph.db`, git-ignored). No Docker or external service is needed. Queries open the file read-only; a `graph build` holds an exclusive lock while it writes, and each build atomically replaces the previous graph.

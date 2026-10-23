@@ -36,6 +36,13 @@ make run-server
 make new-chat
 ```
 
+## Claude Code skill
+
+```bash
+code-surgeon install-skill    # installs/updates ~/.claude/skills/code-surgeon/SKILL.md
+```
+Teaches Claude Code when to reach for `parse`, `list-tests` and the `graph` commands. Re-run it after upgrading the binary.
+
 ## Code Graph
 
 Build a type-checked graph of a code base into an embedded bbolt file (no external services) and query it from the CLI or from Go:

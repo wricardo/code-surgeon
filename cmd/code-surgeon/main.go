@@ -50,6 +50,9 @@ KEY COMMANDS:
   graph            Build and query an embedded code graph (call graph, implementers, structure).
                    Example: code-surgeon graph build && code-surgeon graph callers -d 0 ParseDirectory
 
+  install-skill    Install or update the code-surgeon skill for Claude Code (~/.claude/skills/code-surgeon/).
+                   Example: code-surgeon install-skill
+
 WORKFLOW FOR LLMs:
   Step 1 — discover structure:    code-surgeon parse -r --path ./pkg
   Step 2 — discover tests:        code-surgeon list-tests -r --path ./pkg
@@ -337,6 +340,7 @@ WORKFLOW FOR LLMs:
 				},
 			},
 			graphCommand(),
+			installSkillCommand(),
 		},
 	}
 

@@ -17,7 +17,7 @@ Go source ─┬─► root pkg `codesurgeon` (go/ast) ──► ParsedInfo{Modu
 
 ## Key Directories
 - `/` (package `codesurgeon`): `structparser.go` (model + `Parse*` entry points), `exp.go` (unexported AST extraction), `parser_pretty_print.go`, `codesurgeon.go` (rewrite API, templates), `helper.go`.
-- `cmd/code-surgeon/`: CLI entry point (`main.go`: `parse`, `list-tests`, `describe-test`; `graph.go`: `graph ...`).
+- `cmd/code-surgeon/`: CLI entry point (`main.go`: `parse`, `list-tests`, `describe-test`; `graph*.go`: `graph ...`; `skill.go` + `skill/SKILL.md`: `install-skill`, the skill text is embedded with `go:embed`). When you add or rename a `graph` command, update `skill/SKILL.md` too (it is the agent-facing manual and is shipped in the binary).
 - `codegraph/`: `build.go` (nodes/edges extraction), `store.go` (bbolt buckets `nodes`/`out`/`in`/`byname`/`bykind`/`meta`; key parts joined by `\x00`), `query.go` (chainable traversal), `walk.go` (`step` with interface-dispatch bridging, `Tree`, `Path`, `Roots`, `upwardClosure` shared with `Impact`), `inspect.go` (`Usages`, `Describe`), `types.go` (`Types`), `unused.go`, `impact.go` (git diff ranges → affected set), `stale.go` (staleness, `UpToDate`), `graph.go` (Node/Edge types, kind and relation constants).
 - `ai/`: OpenAI wrapper via instructor-go (`ai.go`); used by `examples/example_02`.
 - `log2/`: zerolog setup.
