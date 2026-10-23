@@ -3,8 +3,7 @@
 Code Surgeon is:
 - a library for generating code, parsing golang code
 - a command line tool to parse golang code
-- a stack trace analysis library for Go function parsing
-- a Neo4j integration tool for code structure visualization
+- an embedded code graph (call graph, implementers, structure) queried from the CLI or Go
 - an AI chatbot through grpc
 
 
@@ -20,20 +19,12 @@ Code Surgeon is:
 OPENAI_API_KEY=sk-....
 NGROK_AUTH_TOKEN=your_ngrok_auth_token
 NGROK_DOMAIN=example-domain.ngrok-free.app
-NEO4j_DB_URI=neo4j://localhost
-NEO4j_DB_USER=neo4j
-NEO4j_DB_PASSWORD=neo4jneo4j
 ```
 
 https://dashboard.ngrok.com/cloud-edge/domains
 
 ## Using chatbot
 
-
-- Start infrastructure (terminal 1)
-```
-docker-compose up
-```
 
 - Run the chatbot server (terminal 2)
 ```
@@ -45,79 +36,28 @@ make run-server
 make new-chat
 ```
 
-## Stack Trace Analysis
+## Code Graph
 
-Code Surgeon includes a powerful stack trace parsing library in the `neo4j2` package that can analyze Go stack traces and extract function information.
+Build a type-checked graph of a code base into an embedded bbolt file (no external services) and query it from the CLI or from Go:
 
-### ParseReceiver Function
-
-The `ParseReceiver` function parses Go function signatures from stack traces and returns the function name and receiver type.
-
-```go
-import "github.com/wricardo/code-surgeon/neo4j2"
-
-// Parse simple method calls
-function, receiver, _ := neo4j2.ParseReceiver("(*MyStruct).DoSomething")
-// Returns: function="DoSomething", receiver="(*MyStruct)"
-
-// Parse complex generic types
-function, receiver, _ := neo4j2.ParseReceiver("(*Client[...]).CallUnary")
-// Returns: function="CallUnary", receiver="(*Client[...])"
-
-// Parse anonymous functions with middleware chains
-function, receiver, _ := neo4j2.ParseReceiver("GrpcServer.DefaultClientInterceptors.NewInterceptor.func6.1")
-// Returns: function="NewInterceptor", receiver="DefaultClientInterceptors"
-
-// Parse simple functions (no receiver)
-function, receiver, _ := neo4j2.ParseReceiver("ReportStacktrace")
-// Returns: function="ReportStacktrace", receiver=""
-```
-
-### Features
-
-- **Complex Type Support**: Handles generic types with `[...]` syntax
-- **Anonymous Functions**: Parses `func1`, `func2.1` patterns correctly
-- **Middleware Chains**: Understands complex call chains and method chaining
-- **Pointer Notation**: Preserves `(*Type)` receiver notation
-- **Edge Cases**: Robust handling of nested parentheses and brackets
-
-### Use Cases
-
-- **Debugging**: Extract clean function names from panic stack traces
-- **Profiling**: Analyze call patterns and receiver types
-- **Logging**: Clean up stack trace output for better readability
-- **Static Analysis**: Parse function signatures from runtime traces
-
-## Neo4j Integration & Testing
-
-Code Surgeon provides comprehensive Neo4j integration for storing and analyzing Go code structures.
-
-### Setup
-
-1. **Start Neo4j Services**:
 ```bash
-docker-compose up
+code-surgeon graph build --tests                 # once, and after code changes (--if-stale skips no-ops)
+code-surgeon graph find -k Method Subscribe      # find entry points
+code-surgeon graph search "welcome message"     # find by concept: name substring, doc comment or signature
+code-surgeon graph types github.com/x/y/pkg     # structs, interfaces and named types of a package
+code-surgeon graph funcs --exported pkg         # functions and methods of a package, with signatures
+code-surgeon graph decls pkg                    # everything a package declares
+code-surgeon graph describe Server              # everything about one node
+code-surgeon graph usages Server                # where a type is used (params, results, fields)
+code-surgeon graph tree -d 4 --no-ext Handle    # call tree, crossing interface calls
+code-surgeon graph roots queryDB                # which entry points reach this function?
+code-surgeon graph path Handle queryDB          # shortest call chain between two functions
+code-surgeon graph callers -d 0 ParseDirectory   # everything that transitively calls it
+code-surgeon graph callees SomeFunc              # what it calls
+code-surgeon graph implementers Shape            # who implements an interface
+code-surgeon graph unused                        # dead-code candidates
+code-surgeon graph impact                        # functions and tests affected by uncommitted changes
 ```
 
-2. **Run Tests**:
-```bash
-make test
-```
-
-### Testing Infrastructure
-
-- **Isolated Tests**: Each test runs with a clean Neo4j database
-- **Auto Infrastructure**: Tests automatically start/stop Docker containers
-- **No Persistence**: Test database data is ephemeral
-- **CI-Ready**: Skip integration tests with `SKIP_INTEGRATION_TESTS=true`
-
-### Neo4j Services
-
-- **Production**: `neo4j:7474/7687` (persistent data)
-- **Testing**: `neo4j-test:7475/7688` (ephemeral data)
-
-The test infrastructure automatically:
-- Starts the `neo4j-test` container before tests
-- Waits for Neo4j to be ready
-- Clears data between test cases
-- Stops and removes containers after tests
+- [docs/GRAPH.md](docs/GRAPH.md): usage guide with recipes (understand a feature, check what a change affects, find dead code, script with JSON, use from Go), pitfalls and limits.
+- [docs/COMMANDS.md](docs/COMMANDS.md#embedded-code-graph-commands): command reference, node kinds and relations.

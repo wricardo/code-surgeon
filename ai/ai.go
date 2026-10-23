@@ -1,6 +1,6 @@
 // Package ai provides unified AI integration with OpenAI and Anthropic APIs.
 // It uses instructor-go for type-safe structured outputs and supports operations
-// like question answering, cypher query generation, embeddings, and problem analysis.
+// like question answering, embeddings, and problem analysis.
 package ai
 
 import (
@@ -243,43 +243,6 @@ func EmbedText(client *openai.Client, text string) ([]float32, error) {
 		return nil, errors.New("no embedding found in response")
 	}
 	return resp.Data[0].Embedding, nil
-}
-
-// GenerateCypher uses AI to generate a Cypher query based on a natural language request.
-// It takes a question or description and returns a Neo4j Cypher query string that
-// can be executed against a Neo4j database.
-func GenerateCypher(client *instructor.InstructorOpenAI, ask string) (string, error) {
-	type AiOutput struct {
-		Cypher string `json:"cypher" jsonschema:"title=cypher,description=the cypher query to be executed on the neo4j database."`
-	}
-
-	ctx := context.Background()
-	var aiOut AiOutput
-
-	_, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model: openai.GPT4o,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    "system",
-				Content: "You are a helpful assistant which can generate cypher queries based on the user's request. You must answer in json format with the key being 'cypher'.",
-			},
-			{
-				Role:    "user",
-				Content: ask,
-			},
-		},
-		MaxTokens: 1000,
-	}, &aiOut)
-
-	if err != nil {
-		return "", fmt.Errorf("Failed to generate cypher query: %v", err)
-	}
-
-	if aiOut.Cypher == "" {
-		return "", nil
-	}
-
-	return aiOut.Cypher, nil
 }
 
 // GenerateFinalAnswer synthesizes an answer to a question based on previous question-answer pairs.

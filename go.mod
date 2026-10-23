@@ -1,22 +1,19 @@
 module github.com/wricardo/code-surgeon
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Knetic/govaluate v3.0.0+incompatible
-	github.com/google/uuid v1.6.0
 	github.com/instructor-ai/instructor-go v0.0.0-20240827181533-b63ca60f159b
 	github.com/joho/godotenv v1.5.1
-	github.com/neo4j/neo4j-go-driver/v5 v5.24.0
 	github.com/rs/zerolog v1.33.0
 	github.com/sashabaranov/go-openai v1.30.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.4
-	golang.org/x/mod v0.20.0
-	golang.org/x/tools v0.24.0
+	go.etcd.io/bbolt v1.5.0
+	golang.org/x/mod v0.27.0
+	golang.org/x/tools v0.36.0
 )
 
 require (
@@ -29,6 +26,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.21.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/invopop/jsonschema v0.12.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/liushuangls/go-anthropic/v2 v2.1.0 // indirect
@@ -39,11 +37,11 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
-	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

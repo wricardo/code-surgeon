@@ -5,3 +5,4 @@
 chats.json
 *__debug_*
 bin/*
+.codesurgeon/

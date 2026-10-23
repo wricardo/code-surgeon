@@ -2,7 +2,6 @@ package codesurgeon
 
 import (
 	"bytes"
-	"embed"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -17,11 +16,6 @@ import (
 
 	"golang.org/x/mod/modfile"
 )
-
-// FS embeds static files for the codesurgeon package.
-//
-//go:embed templates/*
-var FS embed.FS
 
 // ParsedInfo holds parsed information about Go packages.
 type ParsedInfo struct {

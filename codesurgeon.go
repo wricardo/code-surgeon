@@ -20,8 +20,6 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-var STATICFS = FS
-
 type (
 	FileChange struct {
 		PackageName string
